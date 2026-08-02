@@ -56,7 +56,7 @@ Professional sales goal:
 | Billing | Not Started | Shopify billing not implemented. |
 | App Store listing | Not Started | Strategy exists. Assets not built. |
 | Sales materials | Ongoing | Outreach copy exists. Demo/video/case study not done. |
-| GitHub repo | Ongoing | Needs init, commits, remote, push. |
+| GitHub repo | Done | Main branch pushed to GitHub remote. |
 
 ## Phase 0: Foundation And Repo
 
@@ -75,9 +75,9 @@ Tasks:
 | Create feature specification | Done | `FEATURES.md` exists and separates MVP/later features. |
 | Create work tracker | Done | `WORK_PLAN.md` exists and tracks Done/Ongoing/Not Started. |
 | Update README links | Done | README points to product plan files. |
-| Initialize git repo | Not Started | `.git` exists inside `PODesk`. |
-| Add GitHub remote | Not Started | Remote points to `developerbadsa/PODesk-Purchase-Orders-shopify-apps`. |
-| Push main branch | Not Started | Code is pushed to GitHub. |
+| Initialize git repo | Done | `.git` exists inside `PODesk`. |
+| Add GitHub remote | Done | Remote points to `developerbadsa/PODesk-Purchase-Orders-shopify-apps`. |
+| Push main branch | Done | Code is pushed to GitHub. |
 
 Definition of done:
 
@@ -406,7 +406,7 @@ This is the current priority order.
 | # | Task | Status |
 |---:|---|---|
 | 1 | Update README with `FEATURES.md` and `WORK_PLAN.md` links. | Done |
-| 2 | Initialize git repo and push clean first commit. | Not Started |
+| 2 | Initialize git repo and push clean first commit. | Done |
 | 3 | Run install/setup/typecheck after repo push. | Not Started |
 | 4 | Test Shopify install on development store. | Not Started |
 | 5 | Fix inventory sync pagination and error handling. | Not Started |
