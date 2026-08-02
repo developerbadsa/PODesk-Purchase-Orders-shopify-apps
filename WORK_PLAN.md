@@ -46,19 +46,19 @@ Professional sales goal:
 | Final name | Done | `PODesk: Purchase Orders` is final. |
 | Active folder | Done | Use `C:\A-Drive-Backup\Projects\shopify\shopify apps\PODesk`. |
 | Shopify scaffold | Done | React Router Shopify scaffold exists. |
-| Shopify OAuth/session | Done | Scaffold authentication exists. Needs real dev-store test. |
+| Shopify OAuth/session | Done | Dev-store install and embedded admin loading verified. |
 | Database schema | Done | Core models + SupplierVariantMapping + isArchived added. |
-| Inventory sync | Done (code) | Paginated product/order sync, error handling, idempotent upserts. Variant/location pagination limited. Live verification blocked. |
+| Inventory sync | Done (verified) | Dev-store sync verified on 2026-08-02: 17 products, 26 variants, 2 locations. Query cost issue fixed with smaller product/order pages. |
 | Supplier management | Done (code) | Full CRUD: create, list, edit, archive, restore, delete, detail page. Store scope hardened. Live verification blocked. |
 | SKU-supplier mapping | Done (code) | SupplierVariantMapping model, create/delete mappings, supplier SKU/cost/lead override, multiple suppliers per SKU, primary supplier enforcement. Store scope hardened. |
 | Purchase orders | Done (code) | Multi-line PO create, detail, edit draft, status lifecycle, duplicate, delete. Store scope & DRAFT status hardened. |
 | Reorder table | Done (code) | Dedicated page with 7/14/30/90d window, buffer, target days, risk classification, suggested qty, and create-draft-PO action from mapped suggestions. |
-| Stocky import | Ongoing | Placeholder page exists. CSV import not done. |
+| Stocky import | Ongoing | Supplier CSV paste/import works. SKU mapping and PO archive import not done. |
 | Billing | Not Started | Shopify billing not implemented. |
 | App Store listing | Not Started | Strategy exists. Assets not built. |
 | Sales materials | Ongoing | Outreach copy exists. Demo/video/case study not done. |
 | GitHub repo | Done | Main branch pushed to GitHub remote. |
-| Local verification | Done | 2026-08-02: setup, typecheck, lint, build all passed cleanly after store scope hardening and cleanup. |
+| Local verification | Done | 2026-08-02: setup, typecheck, lint, build all passed. Shopify dev install and inventory sync verified. |
 | Security audit | Blocked | `npm audit` reports high vulnerabilities that require breaking dependency changes; do not force-fix blindly. |
 
 ## Phase 0: Foundation And Repo
@@ -106,7 +106,7 @@ Tasks:
 | Embedded app route | Done | `/app` route loads after authentication. |
 | Session persistence | Done | Prisma session model exists. |
 | App navigation | Done | Dashboard and Stocky import links exist. |
-| Test with development store | Blocked | Requires interactive Shopify Partner/dev-store selection. CLI requires user login via device code. |
+| Test with development store | Done | App installs, opens, grants required scopes, and loads inside `test-store-fgyympec.myshopify.com`. |
 | Confirm required scopes | Done | Scopes are limited to read products, inventory, locations, orders. No write_inventory scope. |
 | Uninstall cleanup test | Not Started | Uninstall webhook is verified. |
 
@@ -117,7 +117,7 @@ Verification note, 2026-08-02 (Audit & Hardening):
 - `npm run lint`: Passed.
 - `npm run build`: Passed.
 - Store scope & DRAFT status verification: Hardened across all route forms and action handlers.
-- Shopify development-store install: Blocked (requires interactive Shopify Partner credentials and dev store linking).
+- Shopify development-store install: Passed. App loads in Shopify admin and sync completed with 17 products, 26 variants, and 2 locations.
 
 Do not build:
 
@@ -139,7 +139,7 @@ PODesk can read Shopify inventory data reliably enough to support purchase order
 Known limitations:
 
 - Variant pagination is not implemented yet. Current sync reads first 100 variants per product, which is acceptable for MVP testing but must be fixed before larger stores.
-- Inventory level pagination is not implemented yet. Current sync reads first 20 locations per variant.
+- Location-level inventory quantities are intentionally not synced in the dashboard action. The previous nested inventory-level query exceeded Shopify's single-query cost limit. Build this later with Shopify bulk operations or a dedicated low-cost inventory job.
 
 Tasks:
 
@@ -148,9 +148,9 @@ Tasks:
 | Sync products | Done | Products save with Shopify product ID, title, handle, status, vendor. Cursor-based pagination, up to 1000 products. |
 | Sync variants | Done | Variants save with SKU, barcode, inventory item ID, cost, tracked flag. |
 | Sync locations | Done | Active locations save with Shopify location ID. |
-| Sync inventory levels | Done | Inventory saves per variant/location with upsert. |
-| Sync recent orders | Done | Recent order quantities calculate SKU sales velocity. Paginated up to 1000 orders. |
-| Add pagination | Done | Products (50/page × 20 pages) and orders (100/page × 10 pages) paginated with cursor. |
+| Sync inventory levels | Later | Disabled in dashboard sync to avoid Shopify GraphQL query-cost failures. |
+| Sync recent orders | Done | Recent order quantities calculate SKU sales velocity with conservative order and line-item pages. |
+| Add pagination | Done | Products (25/page x 40 pages) and orders (25/page x 10 pages) paginated with cursor. |
 | Add sync progress UI | Done | Button shows syncing state, success/error message with counts. |
 | Add sync error logging | Done | GraphQL errors caught and displayed. Server-side console.error for debugging. |
 | Add resync safety | Done | All upserts are idempotent. Repeated sync does not create duplicates. |
@@ -426,13 +426,13 @@ This is the current priority order.
 | 1 | Update README with `FEATURES.md` and `WORK_PLAN.md` links. | Done |
 | 2 | Initialize git repo and push clean first commit. | Done |
 | 3 | Run install/setup/typecheck after repo push. | Done |
-| 4 | Test Shopify install on development store. | Blocked |
+| 4 | Test Shopify install on development store. | Done |
 | 5 | Fix inventory sync pagination and error handling. | Done |
 | 6 | Build supplier CRUD (list/create/edit/archive/detail). | Done |
 | 7 | Build SKU-to-supplier mapping. | Done |
 | 8 | Build PO detail/edit/multiple line items/status/duplicate. | Done |
 | 9 | Build reorder table with configurable windows and filters. | Done |
-| 10 | Build CSV upload/preview/mapping for Stocky/spreadsheet import. | Not Started |
+| 10 | Build CSV upload/preview/mapping for Stocky/spreadsheet import. | Ongoing |
 
 ## Hard Rules
 
