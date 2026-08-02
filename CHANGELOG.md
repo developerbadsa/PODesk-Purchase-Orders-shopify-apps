@@ -65,6 +65,7 @@
     - `screenshot-plan.md`: Visual capture plan for 10 key app screens with target data, merchant problem proofs, and captions.
     - `outreach-messages.md`: Honest outreach copy including cold emails for Stocky users, community replies, Reddit DMs, partner messages, follow-ups, and demo call invites.
     - `manual-test-checklist.md`: 12-point manual browser testing protocol covering all key merchant workflows.
+- Hardened server-side numeric validation for purchase order quantities, PO unit costs, supplier minimum order values, and SKU mapping lead times/costs.
 - Verified local `npm run typecheck`, `npm run lint`, and `npm run build`.
 
 ## Current MVP Limits

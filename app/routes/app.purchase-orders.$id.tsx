@@ -390,13 +390,20 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
       return { ok: false, message: "Lines can only be added to draft purchase orders." } satisfies ActionData;
     }
     const variantId = String(formData.get("variantId") || "").trim();
-    const quantity = parseInt(String(formData.get("quantity") || "0"), 10);
+    const quantityText = String(formData.get("quantity") || "").trim();
     const costStr = String(formData.get("unitCost") || "").trim();
-    const unitCost = costStr ? Number(costStr) : null;
+    const parsedUnitCost = costStr ? Number(costStr) : null;
 
-    if (!variantId || quantity <= 0) {
-      return { ok: false, message: "Variant and quantity are required." } satisfies ActionData;
+    if (!variantId) {
+      return { ok: false, message: "Variant is required." } satisfies ActionData;
     }
+    if (!/^\d+$/.test(quantityText) || Number(quantityText) <= 0) {
+      return { ok: false, message: "Quantity must be a positive whole number." } satisfies ActionData;
+    }
+    if (costStr && (parsedUnitCost === null || !Number.isFinite(parsedUnitCost) || parsedUnitCost < 0)) {
+      return { ok: false, message: "Unit cost must be a valid non-negative number." } satisfies ActionData;
+    }
+    const quantity = Number(quantityText);
 
     const variant = await prisma.shopifyVariant.findFirst({
       where: { id: variantId, storeId: store.id },
@@ -410,7 +417,7 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
         purchaseOrderId: po.id,
         variantId: variant.id,
         quantity,
-        unitCost: unitCost != null && Number.isFinite(unitCost) ? unitCost : null,
+        unitCost: parsedUnitCost,
       },
     });
     return { ok: true, message: "Line item added." } satisfies ActionData;

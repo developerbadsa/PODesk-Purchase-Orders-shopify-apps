@@ -54,7 +54,7 @@ Target Audience: Shopify merchants, retail operators, and Stocky users
 **Narration**:
 > "When you're ready to buy, select multiple SKUs belonging to the same supplier and click 'Create draft PO from selected'. PODesk automatically builds a multi-line draft purchase order, calculating the expected arrival date from the longest supplier lead time.
 >
-> From the PO detail page, you can review line costs, copy prefilled supplier emails, launch a mailto draft, or open the print view. The printable PO generates a professional business document formatted with your company logo, address, payment terms, and line details."
+> From the PO detail page, you can review line costs, copy prefilled supplier emails, launch a mailto draft, or open the print view. The printable PO generates a professional business document formatted with your company details, address, payment terms, and line details."
 
 **Action**: Create multi-row PO, click **Print PO**, and show the formatted print preview document.
 

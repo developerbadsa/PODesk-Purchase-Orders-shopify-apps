@@ -125,12 +125,23 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const lines: Array<{ variantId: string; quantity: number; unitCost: number | null }> = [];
     for (let i = 0; i < lineVariantIds.length; i++) {
       const variantId = lineVariantIds[i].trim();
-      const quantity = parseInt(String(lineQuantities[i] || "0"), 10);
+      const quantityText = String(lineQuantities[i] || "").trim();
       const costStr = String(lineUnitCosts[i] || "").trim();
-      const unitCost = costStr ? Number(costStr) : null;
+      const parsedUnitCost = costStr ? Number(costStr) : null;
 
-      if (variantId && validVariantSet.has(variantId) && quantity > 0) {
-        lines.push({ variantId, quantity, unitCost: unitCost != null && Number.isFinite(unitCost) ? unitCost : null });
+      if (!variantId) continue;
+      if (!validVariantSet.has(variantId)) continue;
+
+      if (!/^\d+$/.test(quantityText) || Number(quantityText) <= 0) {
+        return { ok: false, message: "Line quantity must be a positive whole number." } satisfies ActionData;
+      }
+      if (costStr && (parsedUnitCost === null || !Number.isFinite(parsedUnitCost) || parsedUnitCost < 0)) {
+        return { ok: false, message: "Line unit cost must be a valid non-negative number." } satisfies ActionData;
+      }
+
+      const quantity = Number(quantityText);
+      if (quantity > 0) {
+        lines.push({ variantId, quantity, unitCost: parsedUnitCost });
       }
     }
 

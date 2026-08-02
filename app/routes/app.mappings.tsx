@@ -362,14 +362,14 @@ function optionalNumber(value: FormDataEntryValue | null) {
   const s = String(value || "").trim();
   if (!s) return null;
   const parsed = Number(s);
-  return Number.isFinite(parsed) ? parsed : null;
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 }
 
 function optionalIntNumber(value: FormDataEntryValue | null) {
   const s = String(value || "").trim();
   if (!s) return null;
-  const parsed = parseInt(s, 10);
-  return Number.isFinite(parsed) ? parsed : null;
+  if (!/^\d+$/.test(s)) return null;
+  return Number(s);
 }
 
 // Styles

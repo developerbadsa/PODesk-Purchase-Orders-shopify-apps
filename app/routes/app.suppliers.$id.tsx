@@ -254,15 +254,16 @@ function optionalString(value: FormDataEntryValue | null) {
 }
 
 function numberFromForm(value: FormDataEntryValue | null, fallback: number) {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : fallback;
+  const s = String(value || "").trim();
+  if (!/^\d+$/.test(s)) return fallback;
+  return Number(s);
 }
 
 function optionalNumber(value: FormDataEntryValue | null) {
   const s = String(value || "").trim();
   if (!s) return null;
   const parsed = Number(s);
-  return Number.isFinite(parsed) ? parsed : null;
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 }
 
 function formatDate(value: string) {
