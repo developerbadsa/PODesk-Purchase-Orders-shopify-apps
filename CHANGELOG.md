@@ -24,12 +24,16 @@
 - Connected settings to PO creation with custom reference prefixes and auto-populating default PO notes.
 - Upgraded PO print view (`/app/purchase-orders/:id/print`) into a professional branded PO document with merchant address header, payment terms, currency formatting, and footer.
 - Formatted purchase order totals dynamically on list and detail views using store settings currency.
+- Added `ImportJob` and `ImportJobRow` database models for store-scoped CSV import tracking.
+- Built RFC-4180 compliant CSV parser (`app/imports.server.ts`) supporting quoted fields, escaped quotes, CRLF/LF line endings, auto-header detection, 1 MB max file size, and 1,000 max row limit.
+- Rebuilt `/app/imports` route into a full multi-step CSV import tool supporting file upload (`.csv`) or text paste, column mapping auto-detection/override, row validation preview, row-isolated import execution, and job history.
+- Integrated CSV supplier mapping import status into dashboard setup progress.
 - Verified local `npm run typecheck`, `npm run lint`, and `npm run build`.
 
 ## Current MVP Limits
 
 - Location-level inventory quantities are not synced in the dashboard action. Build this later with Shopify bulk operations or a dedicated low-cost inventory job.
-- Stocky SKU mapping import and PO archive import are not built yet.
+- Historical PO import from Stocky/spreadsheets is not built yet (CSV Supplier and SKU mapping import is complete).
 - PO PDF/email export is not built yet.
 - Shopify billing is not built yet.
 - App Store listing assets are not built yet.

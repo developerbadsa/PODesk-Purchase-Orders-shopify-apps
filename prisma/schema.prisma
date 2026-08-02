@@ -48,6 +48,7 @@ model Store {
   purchaseOrders  PurchaseOrder[]
   variantMappings SupplierVariantMapping[]
   settings        StoreSettings?
+  importJobs      ImportJob[]
 }
 
 model StoreSettings {
@@ -236,3 +237,42 @@ enum PurchaseOrderStatus {
   DELAYED
   CANCELLED
 }
+
+model ImportJob {
+  id                String         @id @default(cuid())
+  storeId           String
+  type              String         @default("SUPPLIER_MAPPINGS")
+  status            String         @default("PREVIEW")
+  filename          String?
+  originalHeaders   String?
+  detectedMapping   String?
+  totalRows         Int            @default(0)
+  validRows         Int            @default(0)
+  invalidRows       Int            @default(0)
+  importedSuppliers Int            @default(0)
+  importedMappings  Int            @default(0)
+  errorMessage      String?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  store Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  rows  ImportJobRow[]
+
+  @@index([storeId])
+}
+
+model ImportJobRow {
+  id             String   @id @default(cuid())
+  importJobId    String
+  rowNumber      Int
+  rawData        String
+  normalizedData String?
+  status         String   @default("PENDING")
+  errorMessage   String?
+  createdAt      DateTime @default(now())
+
+  importJob ImportJob @relation(fields: [importJobId], references: [id], onDelete: Cascade)
+
+  @@index([importJobId])
+}
+

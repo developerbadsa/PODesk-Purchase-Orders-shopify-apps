@@ -35,6 +35,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     supplierCount,
     mappedSkuCount,
     openPurchaseOrderCount,
+    importJobCount,
     atRiskVariants,
     recentPurchaseOrders,
     inventoryUnits,
@@ -48,6 +49,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         status: { in: ["DRAFT", "SENT", "CONFIRMED", "PARTIALLY_RECEIVED", "DELAYED"] },
       },
     }),
+    prisma.importJob.count({ where: { storeId: store.id } }),
     prisma.shopifyVariant.findMany({
       where: {
         storeId: store.id,
@@ -81,6 +83,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       supplierCount,
       mappedSkuCount,
       openPurchaseOrderCount,
+      importJobCount,
       totalInventory: inventoryUnits._sum.inventoryQuantity ?? 0,
       unitsSold30Days: inventoryUnits._sum.unitsSold30Days ?? 0,
     },
@@ -141,6 +144,7 @@ export default function Index() {
   const hasInventory = data.metrics.variantCount > 0;
   const hasSupplier = data.metrics.supplierCount > 0;
   const hasMapping = data.metrics.mappedSkuCount > 0;
+  const hasImport = data.metrics.importJobCount > 0;
   const hasPo = data.metrics.openPurchaseOrderCount > 0 || data.recentPurchaseOrders.length > 0;
 
   return (
@@ -195,6 +199,12 @@ export default function Index() {
             title="Map SKUs"
             text="Connect each Shopify SKU to the correct supplier and cost."
             href="/app/mappings"
+          />
+          <SetupStep
+            done={hasImport}
+            title="Stocky CSV import"
+            text="Import suppliers and SKU mappings from CSV."
+            href="/app/imports"
           />
           <SetupStep
             done={hasPo}

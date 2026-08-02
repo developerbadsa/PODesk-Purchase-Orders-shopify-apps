@@ -7,32 +7,94 @@ import { Form, useActionData, useLoaderData, useNavigation } from "react-router"
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticate } from "../shopify.server";
 import prisma from "../db.server";
+import { createImportPreview, executeImportJob } from "../imports.server";
+import {
+  FIELD_DEFINITIONS,
+  TARGET_FIELDS,
+  type TargetField,
+  type NormalizedRowData,
+} from "../utils";
 
 type ActionData = {
   ok: boolean;
   message: string;
-  details?: string[];
+  job?: {
+    id: string;
+    filename: string | null;
+    status: string;
+    totalRows: number;
+    validRows: number;
+    invalidRows: number;
+    importedSuppliers: number;
+    importedMappings: number;
+    originalHeaders: string[];
+    detectedMapping: Record<TargetField, string>;
+    rows: Array<{
+      id: string;
+      rowNumber: number;
+      status: string;
+      errorMessage: string | null;
+      rawData: Record<string, string>;
+      normalizedData: {
+        sku: string;
+        supplierName: string;
+        supplierSku: string | null;
+        supplierCost: number | null;
+        leadTimeDays: number | null;
+        paymentTerms: string | null;
+        minimumOrder: number | null;
+        notes: string | null;
+      } | null;
+    }>;
+  };
 };
 
-const SAMPLE_CSV = `name,email,phone,leadTimeDays,paymentTerms,minimumOrder,notes
-Acme Wholesale,buying@acme.test,+1 555 0100,14,Net 30,500,Main apparel supplier
-North Supply,orders@north.test,+1 555 0101,21,Prepaid,250,Backup supplier`;
-
-const MAX_CSV_CHARACTERS = 200_000;
-const MAX_CSV_ROWS = 500;
+const SAMPLE_CSV = `sku,supplierName,supplierSku,supplierCost,leadTimeDays,paymentTerms,minimumOrder,notes
+SKU-SHIRT-M,Acme Wholesale,ACME-101,12.50,14,Net 30,500,Main apparel supplier
+SKU-HAT-RED,North Supply,NS-99,8.00,21,Prepaid,250,Headwear supplier`;
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
   const store = await prisma.store.findUnique({ where: { shop: session.shop } });
-  if (!store) return { supplierCount: 0, mappingCount: 0, purchaseOrderCount: 0 };
+  if (!store) {
+    return {
+      supplierCount: 0,
+      mappingCount: 0,
+      purchaseOrderCount: 0,
+      importJobs: [],
+    };
+  }
 
-  const [supplierCount, mappingCount, purchaseOrderCount] = await Promise.all([
-    prisma.supplier.count({ where: { storeId: store.id } }),
-    prisma.supplierVariantMapping.count({ where: { storeId: store.id } }),
-    prisma.purchaseOrder.count({ where: { storeId: store.id } }),
-  ]);
+  const [supplierCount, mappingCount, purchaseOrderCount, importJobs] =
+    await Promise.all([
+      prisma.supplier.count({ where: { storeId: store.id } }),
+      prisma.supplierVariantMapping.count({ where: { storeId: store.id } }),
+      prisma.purchaseOrder.count({ where: { storeId: store.id } }),
+      prisma.importJob.findMany({
+        where: { storeId: store.id },
+        orderBy: { createdAt: "desc" },
+        take: 20,
+      }),
+    ]);
 
-  return { supplierCount, mappingCount, purchaseOrderCount };
+  return {
+    supplierCount,
+    mappingCount,
+    purchaseOrderCount,
+    importJobs: importJobs.map((job) => ({
+      id: job.id,
+      filename: job.filename ?? "Unnamed CSV",
+      type: job.type,
+      status: job.status,
+      totalRows: job.totalRows,
+      validRows: job.validRows,
+      invalidRows: job.invalidRows,
+      importedSuppliers: job.importedSuppliers,
+      importedMappings: job.importedMappings,
+      errorMessage: job.errorMessage,
+      createdAt: job.createdAt.toISOString(),
+    })),
+  };
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -42,104 +104,136 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     update: {},
     create: { shop: session.shop },
   });
-  const formData = await request.formData();
+
+  const contentType = request.headers.get("content-type") || "";
+  let formData: FormData;
+
+  if (contentType.includes("multipart/form-data")) {
+    formData = await request.formData();
+  } else {
+    formData = await request.formData();
+  }
+
   const intent = String(formData.get("intent") || "");
 
-  if (intent !== "import-suppliers") {
-    return { ok: false, message: "Unknown action." } satisfies ActionData;
-  }
+  if (intent === "preview-csv") {
+    let csvContent = "";
+    let filename = "supplier_mapping_import.csv";
 
-  const csv = String(formData.get("csv") || "").trim();
-  if (!csv) {
-    return { ok: false, message: "Paste supplier CSV before importing." } satisfies ActionData;
-  }
-
-  if (csv.length > MAX_CSV_CHARACTERS) {
-    return {
-      ok: false,
-      message: `CSV text is too large (${csv.length.toLocaleString()} characters). Limit is ${MAX_CSV_CHARACTERS.toLocaleString()} characters.`,
-    } satisfies ActionData;
-  }
-
-  try {
-    const rows = parseCsv(csv);
-    if (rows.length === 0) {
-      return { ok: false, message: "CSV has no valid data rows or header line." } satisfies ActionData;
+    const file = formData.get("csvFile");
+    if (file && typeof file === "object" && "text" in file && typeof file.text === "function") {
+      const uploadedFile = file as File;
+      if (uploadedFile.name) filename = uploadedFile.name;
+      csvContent = await uploadedFile.text();
     }
 
-    if (rows.length > MAX_CSV_ROWS) {
+    if (!csvContent.trim()) {
+      csvContent = String(formData.get("csvText") || "").trim();
+    }
+
+    if (!csvContent) {
       return {
         ok: false,
-        message: `CSV contains too many rows (${rows.length} rows). Limit is ${MAX_CSV_ROWS} rows per import.`,
+        message: "Please choose a CSV file or paste CSV text to preview.",
       } satisfies ActionData;
     }
 
-    const requiredColumns = ["name"];
-    const missingColumns = requiredColumns.filter((column) => !(column in rows[0]));
-    if (missingColumns.length > 0) {
-      const foundHeaders = Object.keys(rows[0]).join(", ");
+    try {
+      const job = await createImportPreview(store.id, filename, csvContent);
       return {
-        ok: false,
-        message: `CSV is missing required column: ${missingColumns.join(", ")}. Found headers: ${foundHeaders || "none"}`,
+        ok: true,
+        message: `CSV parsed successfully. Found ${job.validRows} valid row(s) and ${job.invalidRows} invalid row(s).`,
+        job: formatJobForAction(job),
       } satisfies ActionData;
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      return { ok: false, message: `CSV parsing failed: ${msg}` } satisfies ActionData;
     }
-
-    const existingSuppliers = await prisma.supplier.findMany({
-      where: { storeId: store.id },
-      select: { id: true, name: true },
-    });
-    const existingByName = new Map(
-      existingSuppliers.map((supplier) => [supplier.name.trim().toLowerCase(), supplier]),
-    );
-
-    let created = 0;
-    let updated = 0;
-    const skipped: string[] = [];
-
-    for (const [index, row] of rows.entries()) {
-      const name = clean(row.name);
-      if (!name) {
-        skipped.push(`Row ${index + 2}: missing supplier name`);
-        continue;
-      }
-
-      const data = {
-        name,
-        email: optionalString(row.email),
-        phone: optionalString(row.phone),
-        leadTimeDays: optionalInteger(row.leadTimeDays) ?? 14,
-        minimumOrder: optionalInteger(row.minimumOrder),
-        paymentTerms: optionalString(row.paymentTerms),
-        notes: optionalString(row.notes),
-        isArchived: false,
-      };
-
-      const existing = existingByName.get(name.toLowerCase());
-      if (existing) {
-        await prisma.supplier.update({
-          where: { id: existing.id },
-          data,
-        });
-        updated += 1;
-      } else {
-        const supplier = await prisma.supplier.create({
-          data: { storeId: store.id, ...data },
-        });
-        existingByName.set(name.toLowerCase(), supplier);
-        created += 1;
-      }
-    }
-
-    return {
-      ok: true,
-      message: `Supplier import complete. Created ${created}, updated ${updated}, skipped ${skipped.length}.`,
-      details: skipped.slice(0, 8),
-    } satisfies ActionData;
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return { ok: false, message: `Import failed: ${message}` } satisfies ActionData;
   }
+
+  if (intent === "confirm-import") {
+    const jobId = String(formData.get("jobId") || "").trim();
+    if (!jobId) {
+      return { ok: false, message: "Missing import job ID." } satisfies ActionData;
+    }
+
+    try {
+      const updatedJob = await executeImportJob(store.id, jobId);
+      return {
+        ok: true,
+        message: `Import completed successfully. Created/updated ${updatedJob.importedSuppliers} supplier(s) and ${updatedJob.importedMappings} SKU mapping(s).`,
+        job: formatJobForAction(updatedJob),
+      } satisfies ActionData;
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      return { ok: false, message: `Import execution failed: ${msg}` } satisfies ActionData;
+    }
+  }
+
+  if (intent === "delete-job") {
+    const jobId = String(formData.get("jobId") || "").trim();
+    if (jobId) {
+      await prisma.importJob.deleteMany({
+        where: { id: jobId, storeId: store.id },
+      });
+    }
+    return { ok: true, message: "Import record removed." } satisfies ActionData;
+  }
+
+  return { ok: false, message: "Unknown action." } satisfies ActionData;
 };
+
+
+
+// Helper format function for action response
+function formatJobForAction(job: {
+  id: string;
+  filename: string | null;
+  status: string;
+  totalRows: number;
+  validRows: number;
+  invalidRows: number;
+  importedSuppliers: number;
+  importedMappings: number;
+  originalHeaders: string | null;
+  detectedMapping: string | null;
+  rows: Array<{
+    id: string;
+    rowNumber: number;
+    status: string;
+    errorMessage: string | null;
+    rawData: string;
+    normalizedData: string | null;
+  }>;
+}) {
+  const originalHeaders = job.originalHeaders ? (JSON.parse(job.originalHeaders) as string[]) : [];
+  const detectedMapping = job.detectedMapping
+    ? (JSON.parse(job.detectedMapping) as Record<TargetField, string>)
+    : ({} as Record<TargetField, string>);
+
+  return {
+    id: job.id,
+    filename: job.filename,
+    status: job.status,
+    totalRows: job.totalRows,
+    validRows: job.validRows,
+    invalidRows: job.invalidRows,
+    importedSuppliers: job.importedSuppliers,
+    importedMappings: job.importedMappings,
+    originalHeaders,
+    detectedMapping,
+    rows: job.rows.map((r) => ({
+      id: r.id,
+      rowNumber: r.rowNumber,
+      status: r.status,
+      errorMessage: r.errorMessage,
+      rawData: r.rawData ? (JSON.parse(r.rawData) as Record<string, string>) : {},
+      normalizedData: r.normalizedData
+        ? (JSON.parse(r.normalizedData) as NormalizedRowData)
+        : null,
+    })),
+  };
+}
 
 export default function ImportsPage() {
   const data = useLoaderData<typeof loader>();
@@ -147,73 +241,217 @@ export default function ImportsPage() {
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";
 
+  const activeJob = actionData?.job;
+
   return (
     <s-page heading="Stocky import">
       {actionData?.message ? (
-        <div style={noticeStyle(actionData.ok)}>
-          <div>{actionData.message}</div>
-          {actionData.details && actionData.details.length > 0 ? (
-            <ul style={detailListStyle}>
-              {actionData.details.map((detail) => (
-                <li key={detail}>{detail}</li>
-              ))}
-            </ul>
-          ) : null}
-        </div>
+        <div style={noticeStyle(actionData.ok)}>{actionData.message}</div>
       ) : null}
 
-      <s-section heading="Migration status">
+      <s-section heading="Migration metrics">
         <div style={metricGridStyle}>
           <Metric label="Suppliers" value={data.supplierCount} />
           <Metric label="SKU mappings" value={data.mappingCount} />
           <Metric label="Purchase orders" value={data.purchaseOrderCount} />
+          <Metric label="Import jobs" value={data.importJobs.length} />
         </div>
       </s-section>
 
-      <s-section heading="Import suppliers from CSV">
+      {/* STEP 1: UPLOAD / PASTE FORM */}
+      <s-section heading="Upload supplier SKU mappings CSV">
         <p style={bodyStyle}>
-          Paste a supplier export from Stocky, spreadsheet, or another purchasing
-          tool. PODesk currently imports supplier records only. SKU mapping and PO
-          archive imports stay separate so bad data cannot damage the workflow.
+          Upload or paste a CSV export from Stocky, spreadsheets, or supplier lists to create suppliers and SKU mappings automatically.
         </p>
-        <Form method="post">
-          <input type="hidden" name="intent" value="import-suppliers" />
-          <label style={fieldLabelStyle}>
-            Supplier CSV
-            <textarea
-              name="csv"
-              rows={10}
-              placeholder={SAMPLE_CSV}
-              style={textareaStyle}
-            />
-          </label>
+
+        <Form method="post" encType="multipart/form-data">
+          <input type="hidden" name="intent" value="preview-csv" />
+
+          <div style={typeBadgeStyle}>
+            Type: <strong>Supplier SKU Mappings</strong>
+          </div>
+
+          <div style={{ marginBottom: "16px" }}>
+            <label style={fieldLabelStyle}>
+              Choose CSV File
+              <input
+                type="file"
+                name="csvFile"
+                accept=".csv,text/csv"
+                style={fileInputStyle}
+              />
+            </label>
+          </div>
+
+          <div style={{ marginBottom: "16px" }}>
+            <label style={fieldLabelStyle}>
+              Or Paste CSV Text
+              <textarea
+                name="csvText"
+                rows={6}
+                placeholder={SAMPLE_CSV}
+                style={textareaStyle}
+              />
+            </label>
+          </div>
+
           <button type="submit" disabled={isSubmitting} style={buttonStyle}>
-            {isSubmitting ? "Importing..." : "Import suppliers"}
+            {isSubmitting ? "Parsing CSV..." : "Preview CSV"}
           </button>
         </Form>
       </s-section>
 
-      <s-section heading="Required columns">
-        <div style={tableWrapStyle}>
-          <table style={tableStyle}>
-            <thead>
-              <tr>
-                <th style={thStyle}>Column</th>
-                <th style={thStyle}>Required</th>
-                <th style={thStyle}>Notes</th>
-              </tr>
-            </thead>
-            <tbody>
-              <Column name="name" required notes="Supplier company name. Used to detect duplicates." />
-              <Column name="email" notes="Purchasing or orders email." />
-              <Column name="phone" notes="Optional supplier phone." />
-              <Column name="leadTimeDays" notes="Defaults to 14 when blank or invalid." />
-              <Column name="paymentTerms" notes="Example: Net 30, Prepaid, COD." />
-              <Column name="minimumOrder" notes="Whole number minimum order amount or units." />
-              <Column name="notes" notes="Internal operations notes." />
-            </tbody>
-          </table>
-        </div>
+      {/* STEP 2: PREVIEW & CONFIRM IMPORT */}
+      {activeJob && (
+        <s-section heading={`Preview: ${activeJob.filename || "CSV Import"}`}>
+          <div style={previewSummaryStyle}>
+            <div>
+              <strong>Status:</strong>{" "}
+              <span style={statusBadgeStyle(activeJob.status)}>
+                {activeJob.status}
+              </span>
+            </div>
+            <div><strong>Total rows:</strong> {activeJob.totalRows}</div>
+            <div><strong style={{ color: "#0f5132" }}>Valid rows:</strong> {activeJob.validRows}</div>
+            <div><strong style={{ color: "#8a1f11" }}>Invalid rows:</strong> {activeJob.invalidRows}</div>
+          </div>
+
+          {/* COLUMN MAPPING DETECTION */}
+          <div style={{ marginTop: "16px", marginBottom: "16px" }}>
+            <div style={subHeadingStyle}>Detected Column Mapping</div>
+            <div style={mappingGridStyle}>
+              {TARGET_FIELDS.map((field) => {
+                const def = FIELD_DEFINITIONS[field];
+                const detectedHeader = activeJob.detectedMapping[field] || "";
+                return (
+                  <div key={field} style={mappingCardStyle}>
+                    <div style={{ fontWeight: 600, fontSize: "13px" }}>
+                      {def.label} {def.required && <span style={{ color: "#d72c0d" }}>*</span>}
+                    </div>
+                    <div style={mutedStyle}>{def.description}</div>
+                    <div style={{ marginTop: "4px", fontSize: "13px" }}>
+                      Mapped to:{" "}
+                      <code style={codeBadgeStyle}>
+                        {detectedHeader || "Not mapped"}
+                      </code>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* CONFIRM IMPORT BUTTON */}
+          {activeJob.status === "PREVIEW" && activeJob.validRows > 0 && (
+            <div style={{ marginTop: "20px", marginBottom: "20px" }}>
+              <Form method="post">
+                <input type="hidden" name="intent" value="confirm-import" />
+                <input type="hidden" name="jobId" value={activeJob.id} />
+                <button type="submit" disabled={isSubmitting} style={primaryButtonStyle}>
+                  {isSubmitting ? "Importing..." : `Confirm & Import ${activeJob.validRows} Valid Row(s)`}
+                </button>
+              </Form>
+            </div>
+          )}
+
+          {/* ROW PREVIEW TABLE */}
+          <div style={{ marginTop: "16px" }}>
+            <div style={subHeadingStyle}>Row Validation Preview ({activeJob.rows.length})</div>
+            <div style={tableWrapStyle}>
+              <table style={tableStyle}>
+                <thead>
+                  <tr>
+                    <th style={thStyle}>Row #</th>
+                    <th style={thStyle}>Status</th>
+                    <th style={thStyle}>SKU</th>
+                    <th style={thStyle}>Supplier</th>
+                    <th style={thStyle}>Supplier SKU</th>
+                    <th style={thStyle}>Cost</th>
+                    <th style={thStyle}>Lead Time</th>
+                    <th style={thStyle}>Notes / Error</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {activeJob.rows.map((r) => {
+                    const norm = r.normalizedData;
+                    return (
+                      <tr key={r.id} style={{ background: r.status === "INVALID" ? "#fff8f8" : "inherit" }}>
+                        <td style={tdStyle}>{r.rowNumber}</td>
+                        <td style={tdStyle}>
+                          <span style={statusBadgeStyle(r.status)}>{r.status}</span>
+                        </td>
+                        <td style={tdStyle}>{norm?.sku || r.rawData["sku"] || "-"}</td>
+                        <td style={tdStyle}>{norm?.supplierName || r.rawData["supplierName"] || "-"}</td>
+                        <td style={tdStyle}>{norm?.supplierSku || "-"}</td>
+                        <td style={tdStyle}>
+                          {norm?.supplierCost != null ? `$${norm.supplierCost.toFixed(2)}` : "-"}
+                        </td>
+                        <td style={tdStyle}>
+                          {norm?.leadTimeDays != null ? `${norm.leadTimeDays}d` : "-"}
+                        </td>
+                        <td style={tdStyle}>
+                          {r.errorMessage ? (
+                            <span style={{ color: "#d72c0d", fontWeight: 600 }}>{r.errorMessage}</span>
+                          ) : (
+                            norm?.notes || "-"
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </s-section>
+      )}
+
+      {/* IMPORT HISTORY */}
+      <s-section heading={`Import History (${data.importJobs.length})`}>
+        {data.importJobs.length === 0 ? (
+          <s-paragraph>No CSV imports performed yet. Upload or paste a CSV above to get started.</s-paragraph>
+        ) : (
+          <div style={tableWrapStyle}>
+            <table style={tableStyle}>
+              <thead>
+                <tr>
+                  <th style={thStyle}>Filename</th>
+                  <th style={thStyle}>Status</th>
+                  <th style={thStyle}>Total</th>
+                  <th style={thStyle}>Valid</th>
+                  <th style={thStyle}>Invalid</th>
+                  <th style={thStyle}>Imported Mappings</th>
+                  <th style={thStyle}>Date</th>
+                  <th style={thStyle}>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.importJobs.map((j) => (
+                  <tr key={j.id}>
+                    <td style={tdStyle}>
+                      <strong>{j.filename}</strong>
+                    </td>
+                    <td style={tdStyle}>
+                      <span style={statusBadgeStyle(j.status)}>{j.status}</span>
+                    </td>
+                    <td style={tdStyle}>{j.totalRows}</td>
+                    <td style={tdStyle}>{j.validRows}</td>
+                    <td style={tdStyle}>{j.invalidRows}</td>
+                    <td style={tdStyle}>{j.importedMappings}</td>
+                    <td style={tdStyle}>{formatDate(j.createdAt)}</td>
+                    <td style={tdStyle}>
+                      <Form method="post" style={{ display: "inline" }}>
+                        <input type="hidden" name="intent" value="delete-job" />
+                        <input type="hidden" name="jobId" value={j.id} />
+                        <button type="submit" style={smallBtnStyle}>Delete</button>
+                      </Form>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </s-section>
     </s-page>
   );
@@ -228,111 +466,38 @@ function Metric({ label, value }: { label: string; value: number }) {
   );
 }
 
-function Column({
-  name,
-  required = false,
-  notes,
-}: {
-  name: string;
-  required?: boolean;
-  notes: string;
-}) {
-  return (
-    <tr>
-      <td style={tdStyle}><code>{name}</code></td>
-      <td style={tdStyle}>{required ? "Yes" : "No"}</td>
-      <td style={tdStyle}>{notes}</td>
-    </tr>
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(
+    new Date(value)
   );
 }
 
-function normalizeHeader(raw: string): string {
-  const clean = raw.trim().toLowerCase().replace(/[\s_-]+/g, "");
-  if (clean === "name" || clean === "suppliername" || clean === "company") return "name";
-  if (clean === "email" || clean === "supplieremail") return "email";
-  if (clean === "phone" || clean === "telephone" || clean === "mobile") return "phone";
-  if (clean === "leadtimedays" || clean === "leadtime" || clean === "leadtimeindays") return "leadTimeDays";
-  if (clean === "paymentterms" || clean === "terms" || clean === "payterms") return "paymentTerms";
-  if (clean === "minimumorder" || clean === "moq" || clean === "minorder" || clean === "minimumorderquantity") return "minimumOrder";
-  if (clean === "notes" || clean === "note" || clean === "comments") return "notes";
-  return raw.trim();
+function statusBadgeStyle(status: string) {
+  const colors: Record<string, { bg: string; color: string }> = {
+    PREVIEW: { bg: "#eaf5fe", color: "#1f5199" },
+    VALID: { bg: "#effaf5", color: "#0f5132" },
+    INVALID: { bg: "#fff4f4", color: "#8a1f11" },
+    IMPORTED: { bg: "#effaf5", color: "#0f5132" },
+    COMPLETED: { bg: "#effaf5", color: "#0f5132" },
+    PARTIAL: { bg: "#fff7ed", color: "#8a5a00" },
+    FAILED: { bg: "#fff4f4", color: "#8a1f11" },
+  };
+  const c = colors[status] ?? { bg: "#f4f6f8", color: "#6d7175" };
+  return {
+    background: c.bg,
+    color: c.color,
+    padding: "3px 8px",
+    borderRadius: "4px",
+    fontSize: "12px",
+    fontWeight: 650,
+    display: "inline-block",
+  } as const;
 }
 
-function parseCsv(csv: string) {
-  const rows = parseCsvRows(csv);
-  if (rows.length < 2) return [];
-
-  const headers = rows[0].map((header) => normalizeHeader(header));
-  return rows.slice(1).map((cells) => {
-    const row: Record<string, string> = {};
-    headers.forEach((header, index) => {
-      row[header] = cells[index] ?? "";
-    });
-    return row;
-  });
-}
-
-function parseCsvRows(csv: string) {
-  const rows: string[][] = [];
-  let current = "";
-  let row: string[] = [];
-  let inQuotes = false;
-
-  for (let i = 0; i < csv.length; i++) {
-    const char = csv[i];
-    const next = csv[i + 1];
-
-    if (char === '"' && inQuotes && next === '"') {
-      current += '"';
-      i += 1;
-      continue;
-    }
-
-    if (char === '"') {
-      inQuotes = !inQuotes;
-      continue;
-    }
-
-    if (char === "," && !inQuotes) {
-      row.push(current.trim());
-      current = "";
-      continue;
-    }
-
-    if ((char === "\n" || char === "\r") && !inQuotes) {
-      if (char === "\r" && next === "\n") i += 1;
-      row.push(current.trim());
-      current = "";
-      if (row.some((cell) => cell.length > 0)) rows.push(row);
-      row = [];
-      continue;
-    }
-
-    current += char;
-  }
-
-  row.push(current.trim());
-  if (row.some((cell) => cell.length > 0)) rows.push(row);
-  return rows;
-}
-
-function clean(value: string | undefined) {
-  return String(value || "").trim();
-}
-
-function optionalString(value: string | undefined) {
-  const text = clean(value);
-  return text.length > 0 ? text : null;
-}
-
-function optionalInteger(value: string | undefined) {
-  const parsed = parseInt(clean(value), 10);
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
-}
-
+// Styles
 const metricGridStyle = {
   display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+  gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
   gap: "12px",
 } as const;
 
@@ -366,7 +531,15 @@ const fieldLabelStyle = {
   gap: "6px",
   fontSize: "13px",
   fontWeight: 600,
-  marginBottom: "12px",
+} as const;
+
+const fileInputStyle = {
+  border: "1px solid #c9cccf",
+  borderRadius: "6px",
+  padding: "8px 10px",
+  fontSize: "14px",
+  background: "#fff",
+  width: "100%",
 } as const;
 
 const textareaStyle = {
@@ -380,18 +553,82 @@ const textareaStyle = {
 } as const;
 
 const buttonStyle = {
+  border: "1px solid #c9cccf",
+  borderRadius: "6px",
+  padding: "9px 16px",
+  background: "#fff",
+  color: "#202223",
+  fontWeight: 650,
+  cursor: "pointer",
+} as const;
+
+const primaryButtonStyle = {
   border: "0",
   borderRadius: "6px",
-  padding: "10px 14px",
+  padding: "10px 18px",
   background: "#008060",
   color: "#fff",
   fontWeight: 650,
   cursor: "pointer",
 } as const;
 
-const detailListStyle = {
-  margin: "8px 0 0",
-  paddingLeft: "20px",
+const smallBtnStyle = {
+  border: "1px solid #c9cccf",
+  borderRadius: "4px",
+  padding: "4px 8px",
+  background: "#fff",
+  cursor: "pointer",
+  fontSize: "12px",
+} as const;
+
+const typeBadgeStyle = {
+  display: "inline-block",
+  background: "#f4f6f8",
+  border: "1px solid #dfe3e8",
+  borderRadius: "6px",
+  padding: "6px 12px",
+  fontSize: "13px",
+  color: "#202223",
+  marginBottom: "16px",
+} as const;
+
+const previewSummaryStyle = {
+  display: "flex",
+  gap: "24px",
+  alignItems: "center",
+  flexWrap: "wrap",
+  background: "#f9fafb",
+  padding: "12px 16px",
+  borderRadius: "6px",
+  border: "1px solid #e5e7eb",
+  fontSize: "14px",
+} as const;
+
+const subHeadingStyle = {
+  fontSize: "14px",
+  fontWeight: 700,
+  marginBottom: "8px",
+  color: "#202223",
+} as const;
+
+const mappingGridStyle = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+  gap: "10px",
+} as const;
+
+const mappingCardStyle = {
+  border: "1px solid #dfe3e8",
+  borderRadius: "6px",
+  padding: "10px",
+  background: "#fff",
+} as const;
+
+const codeBadgeStyle = {
+  background: "#f1f2f3",
+  padding: "2px 6px",
+  borderRadius: "4px",
+  fontFamily: "monospace",
 } as const;
 
 const tableWrapStyle = {
@@ -401,7 +638,7 @@ const tableWrapStyle = {
 const tableStyle = {
   width: "100%",
   borderCollapse: "collapse",
-  fontSize: "14px",
+  fontSize: "13px",
 } as const;
 
 const thStyle = {
@@ -409,6 +646,7 @@ const thStyle = {
   borderBottom: "1px solid #dfe3e8",
   padding: "10px 8px",
   whiteSpace: "nowrap",
+  background: "#f9fafb",
 } as const;
 
 const tdStyle = {

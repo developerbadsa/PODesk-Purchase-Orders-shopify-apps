@@ -79,11 +79,11 @@ Do not optimize early product decisions for:
 | Reorder planning | Suggested reorder quantity | Done | P0 | Merchant knows what to buy, not only what is low. |
 | Reorder planning | Configurable velocity window | Done | P0 | Merchant can use 7/14/30/90-day demand windows. |
 | Reorder planning | Exclude out-of-stock days | Not Started | P1 | Avoid bad velocity caused by stockouts. |
-| Stocky migration | Stocky import page | Ongoing | P0 | Supplier import workflow exists. SKU/PO archive imports are not done. |
-| Stocky migration | Supplier CSV import | Done | P0 | Merchant can paste supplier CSV and create/update supplier records. |
-| Stocky migration | File upload CSV import | Not Started | P0 | Merchant can upload Stocky/spreadsheet exports. |
-| Stocky migration | Column mapping preview | Not Started | P0 | Prevent bad imports before saving data. |
-| Stocky migration | Assisted migration notes | Not Started | P0 | Founder can manually support early customers. |
+| Stocky migration | Stocky import page | Done | P0 | Multi-step CSV import workflow with preview and validation. |
+| Stocky migration | Supplier & SKU mapping CSV import | Done | P0 | Merchant can upload or paste CSV to create/update suppliers and SKU mappings. |
+| Stocky migration | File upload & paste CSV import | Done | P0 | Supports .csv file upload and raw CSV text paste up to 1000 rows. |
+| Stocky migration | Column mapping auto-detection & preview | Done | P0 | Auto-detects headers, preview valid/invalid rows before execution. |
+| Stocky migration | PO history import | Later | P2 | Import historical PO records. |
 | Dashboard | Operations snapshot | Done | P0 | Merchant quickly sees synced variants, stock, suppliers, open POs. |
 | Dashboard | Actionable empty states | Done | P0 | New user knows next step after install. |
 | Billing | Shopify billing | Not Started | P1 | Convert trial users into paying users. |

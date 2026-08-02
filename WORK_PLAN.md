@@ -54,7 +54,7 @@ Professional sales goal:
 | Purchase orders | Done (verified) | Multi-line PO create, detail, draft reference editing, status state machine, duplicate redirect, delete draft, print view, and activity timestamps. Store scope hardened. |
 | Settings & Branded Output | Done (verified) | Store-scoped business identity, purchasing defaults, prefix customization, currency formatting, and merchant-branded PO output. |
 | Reorder table | Done (code) | Dedicated page with 7/14/30/90d window, buffer, target days, risk classification, suggested qty, and create-draft-PO action from mapped suggestions. |
-| Stocky import | Ongoing | Supplier CSV paste/import works. SKU mapping and PO archive import not done. |
+| Stocky import | Done (verified) | Full CSV supplier and SKU mapping import with file/paste, column detection, preview validation, import execution, and job history. PO history import reserved for later. |
 | Billing | Not Started | Shopify billing not implemented. |
 | App Store listing | Not Started | Strategy exists. Assets not built. |
 | Sales materials | Ongoing | Outreach copy exists. Demo/video/case study not done. |
