@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PODesk Project Status</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f7f8;
+      --panel: #ffffff;
+      --text: #202223;
+      --muted: #5c5f62;
+      --line: #dfe3e8;
+      --green: #008060;
+      --green-soft: #effaf5;
+      --blue: #2c6ecb;
+      --blue-soft: #eaf5fe;
+      --orange: #8a5a00;
+      --orange-soft: #fff7ed;
+      --red: #8a1f11;
+      --red-soft: #fff4f4;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      line-height: 1.45;
+    }
+
+    .page {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 28px 20px 48px;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      align-items: flex-start;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: 30px;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      margin: 0 0 14px;
+      font-size: 18px;
+    }
+
+    h3 {
+      margin: 0 0 8px;
+      font-size: 14px;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    p {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    a {
+      color: var(--blue);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .doc-links {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .doc-links a,
+    .button {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 13px;
+    }
+
+    .grid {
+      display: grid;
+      gap: 14px;
+    }
+
+    .summary-grid {
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      margin-bottom: 18px;
+    }
+
+    .two-col {
+      grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 16px;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    }
+
+    .metric {
+      display: grid;
+      gap: 6px;
+    }
+
+    .metric strong {
+      font-size: 28px;
+    }
+
+    .metric span {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    th,
+    td {
+      padding: 10px 8px;
+      text-align: left;
+      border-bottom: 1px solid #eef0f2;
+      vertical-align: top;
+    }
+
+    th {
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      background: #fafbfb;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .done {
+      background: var(--green-soft);
+      color: var(--green);
+    }
+
+    .ongoing {
+      background: var(--blue-soft);
+      color: var(--blue);
+    }
+
+    .blocked {
+      background: var(--red-soft);
+      color: var(--red);
+    }
+
+    .not-started {
+      background: var(--orange-soft);
+      color: var(--orange);
+    }
+
+    .later {
+      background: #f4f6f8;
+      color: var(--muted);
+    }
+
+    .list {
+      display: grid;
+      gap: 8px;
+      padding-left: 18px;
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .footer {
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    @media (max-width: 820px) {
+      .topbar,
+      .two-col {
+        display: grid;
+        grid-template-columns: 1fr;
+      }
+
+      .doc-links {
+        justify-content: flex-start;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="topbar">
+      <div>
+        <h1>PODesk Project Status</h1>
+        <p>Browser-friendly snapshot for PODesk: Purchase Orders. Last updated: 2026-08-02.</p>
+      </div>
+      <nav class="doc-links" aria-label="Project documents">
+        <a href="README.md">README</a>
+        <a href="FEATURES.md">Features MD</a>
+        <a href="WORK_PLAN.md">Work Plan MD</a>
+        <a href="CHANGELOG.md">Changelog MD</a>
+      </nav>
+    </header>
+
+    <section class="grid summary-grid" aria-label="Summary">
+      <div class="card metric">
+        <strong>80%</strong>
+        <span>Approximate MVP completion after CSV import and supplier sharing.</span>
+      </div>
+      <div class="card metric">
+        <strong>Done</strong>
+        <span>Core merchant workflow is demo-able inside Shopify admin.</span>
+      </div>
+      <div class="card metric">
+        <strong>Blocked</strong>
+        <span>Production launch blocked by upstream React Router audit advisory.</span>
+      </div>
+      <div class="card metric">
+        <strong>Next</strong>
+        <span>Receiving workflow, then billing and production hardening.</span>
+      </div>
+    </section>
+
+    <section class="grid two-col">
+      <div class="card">
+        <h2>Feature Status</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Area</th>
+              <th>Status</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Shopify foundation</td>
+              <td><span class="badge done">Done</span></td>
+              <td>Embedded app scaffold, OAuth, session storage, navigation, development-store install.</td>
+            </tr>
+            <tr>
+              <td>Inventory sync</td>
+              <td><span class="badge done">Done</span></td>
+              <td>Products, variants, locations, aggregate inventory, recent order sales velocity.</td>
+            </tr>
+            <tr>
+              <td>Supplier management</td>
+              <td><span class="badge done">Done</span></td>
+              <td>Create, list, edit, archive, restore, detail page, mapped SKUs, PO history.</td>
+            </tr>
+            <tr>
+              <td>SKU mappings</td>
+              <td><span class="badge done">Done</span></td>
+              <td>Supplier SKU, cost, lead-time override, primary supplier handling.</td>
+            </tr>
+            <tr>
+              <td>Purchase orders</td>
+              <td><span class="badge done">Done</span></td>
+              <td>Create, list, detail, edit draft, duplicate, state machine, print view.</td>
+            </tr>
+            <tr>
+              <td>Supplier sharing</td>
+              <td><span class="badge done">Done</span></td>
+              <td>Copy email, copy subject/message, mailto draft, printable PO, mark as sent.</td>
+            </tr>
+            <tr>
+              <td>Settings</td>
+              <td><span class="badge done">Done</span></td>
+              <td>Company profile, PO prefix, default notes, payment terms, currency formatting.</td>
+            </tr>
+            <tr>
+              <td>Reorder planning</td>
+              <td><span class="badge done">Done</span></td>
+              <td>7/14/30/90-day windows, buffer days, target stock days, draft PO creation.</td>
+            </tr>
+            <tr>
+              <td>Stocky/CSV import</td>
+              <td><span class="badge done">Done</span></td>
+              <td>CSV upload/paste, auto-detect, manual column override, preview, row errors, import history.</td>
+            </tr>
+            <tr>
+              <td>Receiving workflow</td>
+              <td><span class="badge not-started">Not Started</span></td>
+              <td>Track received quantities, partial receiving, close POs.</td>
+            </tr>
+            <tr>
+              <td>Billing</td>
+              <td><span class="badge not-started">Not Started</span></td>
+              <td>Shopify billing, trial flow, plan limits.</td>
+            </tr>
+            <tr>
+              <td>App Store readiness</td>
+              <td><span class="badge not-started">Not Started</span></td>
+              <td>Listing copy, screenshots, privacy policy, terms, demo video.</td>
+            </tr>
+            <tr>
+              <td>Security audit</td>
+              <td><span class="badge blocked">Blocked</span></td>
+              <td>React Router advisory requires a safe compatible dependency update, not force downgrade.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <aside class="grid">
+        <section class="card">
+          <h2>What Is Done</h2>
+          <ul class="list">
+            <li>Installed Shopify embedded app opens in development store.</li>
+            <li>Inventory sync works without query-cost failure.</li>
+            <li>Merchant can create suppliers and map SKUs.</li>
+            <li>Merchant can create, send, print, and track purchase orders.</li>
+            <li>Merchant can import supplier mappings from CSV with row-level validation.</li>
+          </ul>
+        </section>
+
+        <section class="card">
+          <h2>What Is Still Missing</h2>
+          <ul class="list">
+            <li>Receiving workflow for partial/full PO receiving.</li>
+            <li>Shopify billing and paid trial flow.</li>
+            <li>Production deployment database and monitoring.</li>
+            <li>Privacy policy, terms, screenshots, demo video, App Store listing.</li>
+            <li>Automated supplier email delivery and PDF download.</li>
+            <li>Historical Stocky PO archive import.</li>
+          </ul>
+        </section>
+
+        <section class="card">
+          <h2>Next Priority</h2>
+          <p>Build receiving workflow first. It closes the purchase order loop and makes PO statuses operational instead of just labels.</p>
+          <div class="footer">Recommended order: Receiving workflow, billing, production hardening, App Store assets.</div>
+        </section>
+      </aside>
+    </section>
+  </main>
+</body>
+</html>

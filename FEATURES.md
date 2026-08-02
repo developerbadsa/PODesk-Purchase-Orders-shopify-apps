@@ -254,7 +254,7 @@ Not in first MVP:
 
 - full accounting sync
 - vendor invoice matching
-- automated supplier emails
+- direct automated supplier emails through SMTP/provider
 - advanced approval workflow
 
 ### 6. Reorder Table
@@ -408,7 +408,7 @@ Not required before first paying users:
 | Purchase Orders List | View all POs and statuses. | Done |
 | Purchase Order Detail | Edit lines, status, cost, arrival. | Done |
 | Create Purchase Order | Build PO from SKUs and supplier. | Done |
-| Stocky Import | Paste/import supplier CSV now; SKU/PO archive import later. | Ongoing |
+| Stocky Import | Upload/paste supplier CSV, override column mapping, preview rows, import valid supplier SKU mappings, and review import history. PO archive import later. | Done |
 | Settings | Company profile, PO defaults, prefix, currency code. | Done |
 | Billing | Trial and plan management. | Not Started |
 
@@ -425,11 +425,14 @@ Current core tables:
 - PurchaseOrder
 - PurchaseOrderLine
 
-Needed additions:
+Implemented additions:
 
 - SupplierVariantMapping
-- ImportBatch
-- ImportRow
+- ImportJob
+- ImportJobRow
+
+Still needed later:
+
 - ReorderSettings
 - ReorderSnapshot
 - BillingSubscription

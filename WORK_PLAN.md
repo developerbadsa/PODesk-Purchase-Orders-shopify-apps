@@ -49,11 +49,11 @@ Professional sales goal:
 | Shopify OAuth/session | Done | Dev-store install and embedded admin loading verified. |
 | Database schema | Done | Core models + SupplierVariantMapping + isArchived added. |
 | Inventory sync | Done (verified) | Dev-store sync verified on 2026-08-02: 17 products, 26 variants, 2 locations. Query cost issue fixed with smaller product/order pages. |
-| Supplier management | Done (code) | Full CRUD: create, list, edit, archive, restore, delete, detail page. Needs browser workflow test after sync milestone. |
-| SKU-supplier mapping | Done (code) | SupplierVariantMapping model, create/delete mappings, supplier SKU/cost/lead override, multiple suppliers per SKU, primary supplier enforcement. Store scope hardened. |
+| Supplier management | Done (verified) | Full CRUD: create, list, edit, archive, restore, delete, detail page. Browser workflow tested during MVP verification. |
+| SKU-supplier mapping | Done (verified) | SupplierVariantMapping model, create/delete/update mappings, supplier SKU/cost/lead override, multiple suppliers per SKU, primary supplier enforcement. Store scope hardened. |
 | Purchase orders | Done (verified) | Multi-line PO create, detail, draft reference editing, status state machine, duplicate redirect, delete draft, print view, and activity timestamps. Store scope hardened. |
 | Settings & Branded Output | Done (verified) | Store-scoped business identity, purchasing defaults, prefix customization, currency formatting, and merchant-branded PO output. |
-| Reorder table | Done (code) | Dedicated page with 7/14/30/90d window, buffer, target days, risk classification, suggested qty, and create-draft-PO action from mapped suggestions. |
+| Reorder table | Done (verified) | Dedicated page with 7/14/30/90d window, buffer, target days, risk classification, suggested qty, and create-draft-PO action from mapped suggestions. |
 | Stocky import | Done (verified) | Full CSV supplier and SKU mapping import with file/paste, column detection, manual column override, preview validation, import execution, and job history. PO history import reserved for later. |
 | Billing | Not Started | Shopify billing not implemented. |
 | App Store listing | Not Started | Strategy exists. Assets not built. |
@@ -182,7 +182,7 @@ Tasks:
 | Supplier delete/archive | Done | Archive (soft delete) and restore. Hard delete only if no POs reference the supplier. |
 | Supplier detail page | Done | Shows edit form, mapped SKUs, purchase order history. |
 | SKU-to-supplier mapping | Done | /app/mappings page. SupplierVariantMapping model with supplier SKU, cost, lead time override, multiple suppliers per SKU, and one primary supplier enforced per variant. |
-| Supplier import from CSV | Not Started | CSV can create suppliers with preview and validation. |
+| Supplier import from CSV | Done | CSV creates/reuses suppliers through `/app/imports` with preview, validation, and import history. |
 
 Definition of done:
 
@@ -259,15 +259,16 @@ Tasks:
 
 | Task | Status | Acceptance Criteria |
 |---|---|---|
-| Stocky import page | Ongoing | Placeholder page exists. |
-| Migration checklist copy | Ongoing | Landing and outreach content exists. |
-| CSV upload | Not Started | Merchant can upload CSV securely. |
-| CSV preview | Not Started | Merchant sees first rows before import. |
-| Column mapping | Not Started | Merchant maps CSV columns to PODesk fields. |
-| Supplier import | Not Started | CSV creates supplier records. |
-| SKU-supplier import | Not Started | CSV maps SKUs to suppliers when data exists. |
+| Stocky import page | Done | `/app/imports` is a working import tool, not a placeholder. |
+| Migration checklist copy | Ongoing | Landing and outreach content exists. Dedicated public landing page still not built. |
+| CSV upload | Done | Merchant can upload `.csv` file up to 1 MB. |
+| CSV paste | Done | Merchant can paste raw CSV text. |
+| CSV preview | Done | Merchant sees row validation before import. |
+| Column mapping | Done | App auto-detects columns and merchant can override mapping before import. |
+| Supplier import | Done | CSV creates/reuses supplier records with validation. |
+| SKU-supplier import | Done | CSV maps synced Shopify SKUs to suppliers when data is valid. |
 | PO history import | Not Started | Import old POs when structure is usable. |
-| Error report | Not Started | Invalid rows are shown with reasons. |
+| Error report | Done | Invalid rows are shown with row-level reasons and skipped safely. |
 | Assisted migration flow | Not Started | Founder can manually review and complete messy imports. |
 
 Definition of done:
@@ -390,7 +391,7 @@ Expansion features after traction:
 
 - receiving workflow
 - multi-location reorder planning
-- purchase order PDF/email workflow
+- automated supplier email delivery and PDF download
 - weekly reorder report
 - supplier performance report
 - bulk edit and import tools
@@ -433,7 +434,7 @@ This is the current priority order.
 | 7 | Build SKU-to-supplier mapping. | Done |
 | 8 | Build PO detail/edit/multiple line items/status/duplicate. | Done |
 | 9 | Build reorder table with configurable windows and filters. | Done |
-| 10 | Build CSV upload/preview/mapping for Stocky/spreadsheet import. | Ongoing |
+| 10 | Build CSV upload/preview/mapping for Stocky/spreadsheet import. | Done |
 
 ## Hard Rules
 
