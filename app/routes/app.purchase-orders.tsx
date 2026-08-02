@@ -55,6 +55,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       lineCount: po.lines.length,
       totalCost: po.lines.reduce((sum, l) => sum + (l.unitCost ?? 0) * l.quantity, 0),
       expectedArrival: po.expectedArrival?.toISOString() ?? null,
+      lastSentAt: po.lastSentAt?.toISOString() ?? null,
+      sentCount: po.sentCount,
       createdAt: po.createdAt.toISOString(),
       updatedAt: po.updatedAt.toISOString(),
     })),
@@ -298,6 +300,7 @@ export default function PurchaseOrdersPage() {
                   <th style={thStyle}>Lines</th>
                   <th style={thStyle}>Total</th>
                   <th style={thStyle}>Expected</th>
+                  <th style={thStyle}>Sent</th>
                   <th style={thStyle}>Created</th>
                   <th style={thStyle}>Updated</th>
                   <th style={thStyle}>Actions</th>
@@ -316,6 +319,7 @@ export default function PurchaseOrdersPage() {
                     <td style={tdStyle}>{po.lineCount}</td>
                     <td style={tdStyle}>{po.totalCost > 0 ? formatCurrency(po.totalCost, currencyCode) : "-"}</td>
                     <td style={tdStyle}>{po.expectedArrival ? formatDate(po.expectedArrival) : "-"}</td>
+                    <td style={tdStyle}>{po.lastSentAt ? `${formatDate(po.lastSentAt)} (${po.sentCount}x)` : "-"}</td>
                     <td style={tdStyle}>{formatDate(po.createdAt)}</td>
                     <td style={tdStyle}>{formatDate(po.updatedAt)}</td>
                     <td style={tdStyle}>

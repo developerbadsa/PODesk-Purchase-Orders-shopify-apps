@@ -28,13 +28,21 @@
 - Built RFC-4180 compliant CSV parser (`app/imports.server.ts`) supporting quoted fields, escaped quotes, CRLF/LF line endings, auto-header detection, 1 MB max file size, and 1,000 max row limit.
 - Rebuilt `/app/imports` route into a full multi-step CSV import tool supporting file upload (`.csv`) or text paste, column mapping auto-detection/override, row validation preview, row-isolated import execution, and job history.
 - Integrated CSV supplier mapping import status into dashboard setup progress.
+- Built professional Purchase Order export and supplier email workflow:
+  - Extended `PurchaseOrder` database schema with `lastSentAt`, `supplierEmailSnapshot`, and `sentCount` fields and applied Prisma migration `20260802094034_add_po_supplier_sharing_fields`.
+  - Added interactive "Supplier sharing" section on PO detail route (`/app/purchase-orders/$id`) with prefilled default subject (`Purchase Order {PO_REFERENCE} from {COMPANY_NAME}`), message template, and editable supplier email snapshot.
+  - Implemented client-side copy buttons for email, subject, and message text using `navigator.clipboard`.
+  - Added `mailto:` draft launcher and target="_blank" printable PO link.
+  - Implemented store-scoped `mark-sent` server action: updates `DRAFT` PO status to `SENT`, records `lastSentAt` timestamp, increments `sentCount`, validates email input, and blocks `CANCELLED`/`RECEIVED` orders.
+  - Updated PO list table (`/app/purchase-orders`) to show last sent date and sent count.
+  - Updated PO print view (`/app/purchase-orders/$id/print`) with supplier email snapshot, `lastSentAt`, and `sentCount` metadata.
 - Verified local `npm run typecheck`, `npm run lint`, and `npm run build`.
 
 ## Current MVP Limits
 
 - Location-level inventory quantities are not synced in the dashboard action. Build this later with Shopify bulk operations or a dedicated low-cost inventory job.
 - Historical PO import from Stocky/spreadsheets is not built yet (CSV Supplier and SKU mapping import is complete).
-- PO PDF/email export is not built yet.
+- Direct automated SMTP/provider email sending and PDF download remain future work (manual email sharing, mailto drafts, and printable POs are complete).
 - Shopify billing is not built yet.
 - App Store listing assets are not built yet.
 - `npm audit` still reports high-severity dependency advisories that require careful dependency upgrades, not blind force-fix.

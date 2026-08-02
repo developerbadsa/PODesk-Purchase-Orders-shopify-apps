@@ -74,7 +74,7 @@ Do not optimize early product decisions for:
 | Purchase orders | PO edit | Done | P0 | Merchant can correct drafts before sending. |
 | Purchase orders | PO line item table | Done | P0 | Merchant can attach SKUs and quantities to POs. |
 | Purchase orders | PO statuses | Done | P0 | Track draft, sent, confirmed, delayed, received, cancelled. |
-| Purchase orders | PO PDF/email export | Not Started | P1 | Merchant can send PO to supplier. |
+| Purchase orders | PO supplier email & share workflow | Done | P0 | Merchant can format, copy, mailto draft, print, and mark PO as sent to supplier. Automated SMTP sending remains future work. |
 | Reorder planning | Reorder attention table | Done | P0 | Merchant sees SKUs at risk. |
 | Reorder planning | Suggested reorder quantity | Done | P0 | Merchant knows what to buy, not only what is low. |
 | Reorder planning | Configurable velocity window | Done | P0 | Merchant can use 7/14/30/90-day demand windows. |

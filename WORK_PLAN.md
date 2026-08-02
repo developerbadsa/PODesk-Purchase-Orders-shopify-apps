@@ -210,8 +210,8 @@ Tasks:
 | Edit draft PO | Done | Draft POs allow editing notes, arrival date, adding/removing lines. |
 | Update PO status | Done | Status buttons for all 7 states: draft/sent/confirmed/partially received/received/delayed/cancelled. |
 | Duplicate PO | Done | One-click duplicate creates new draft PO from existing. |
-| Export PO PDF | Not Started | Merchant can download supplier-ready PO. |
-| Email PO to supplier | Later | Only after PDF/export is stable. |
+| Manual supplier email & share workflow | Done | Merchant can copy email/subject/message, launch mailto draft, open printable PO, and track lastSentAt and sentCount with Mark as Sent action. |
+| Automated SMTP email sending | Later | Direct background email delivery remains future work. |
 
 Definition of done:
 

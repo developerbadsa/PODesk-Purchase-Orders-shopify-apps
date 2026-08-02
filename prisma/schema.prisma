@@ -194,15 +194,18 @@ model SupplierVariantMapping {
 }
 
 model PurchaseOrder {
-  id              String              @id @default(cuid())
-  storeId         String
-  supplierId      String
-  reference       String
-  status          PurchaseOrderStatus @default(DRAFT)
-  expectedArrival DateTime?
-  notes           String?
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
+  id                    String              @id @default(cuid())
+  storeId               String
+  supplierId            String
+  reference             String
+  status                PurchaseOrderStatus @default(DRAFT)
+  expectedArrival       DateTime?
+  notes                 String?
+  lastSentAt            DateTime?
+  supplierEmailSnapshot String?
+  sentCount             Int                 @default(0)
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
 
   store    Store               @relation(fields: [storeId], references: [id], onDelete: Cascade)
   supplier Supplier            @relation(fields: [supplierId], references: [id], onDelete: Cascade)

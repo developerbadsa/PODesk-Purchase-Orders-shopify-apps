@@ -56,9 +56,11 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
       notes: po.notes,
       createdAt: po.createdAt.toISOString(),
       updatedAt: po.updatedAt.toISOString(),
+      lastSentAt: po.lastSentAt ? po.lastSentAt.toISOString() : null,
+      sentCount: po.sentCount,
       supplier: {
         name: po.supplier.name,
-        email: po.supplier.email,
+        email: po.supplierEmailSnapshot || po.supplier.email,
         phone: po.supplier.phone,
         paymentTerms: po.supplier.paymentTerms || settings?.defaultPaymentTerms || null,
         notes: po.supplier.notes,
@@ -127,6 +129,11 @@ export default function PurchaseOrderPrintPage() {
               {po.expectedArrival && (
                 <div>
                   <strong>Expected:</strong> {formatDate(po.expectedArrival)}
+                </div>
+              )}
+              {po.lastSentAt && (
+                <div>
+                  <strong>Last sent:</strong> {formatDate(po.lastSentAt)} ({po.sentCount}x)
                 </div>
               )}
             </div>

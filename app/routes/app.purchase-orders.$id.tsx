@@ -56,17 +56,32 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   if (!po) throw new Response("Purchase order not found", { status: 404 });
 
   const currencyCode = settings?.currencyCode || "USD";
+  const companyName = settings?.companyName || store.name || store.shop;
+  const supplierEmail = po.supplierEmailSnapshot || po.supplier.email || "";
+  const defaultSubject = `Purchase Order ${po.reference} from ${companyName}`;
+  const arrivalFormatted = po.expectedArrival
+    ? new Intl.DateTimeFormat("en", { dateStyle: "medium" }).format(po.expectedArrival)
+    : "Not set";
+  const defaultMessage = `Hello ${po.supplier.name},\n\nPlease find purchase order ${po.reference} below.\n\nExpected arrival: ${arrivalFormatted}\n\nThank you.`;
 
   return {
     currencyCode,
+    companyName,
+    defaultSubject,
+    defaultMessage,
+    supplierEmail,
     po: {
       id: po.id,
       reference: po.reference,
       supplierId: po.supplierId,
       supplierName: po.supplier.name,
+      supplierEmail: po.supplier.email,
+      supplierEmailSnapshot: po.supplierEmailSnapshot,
       status: po.status,
       expectedArrival: po.expectedArrival?.toISOString().slice(0, 10) ?? "",
       notes: po.notes,
+      lastSentAt: po.lastSentAt?.toISOString() ?? null,
+      sentCount: po.sentCount,
       createdAt: po.createdAt.toISOString(),
       updatedAt: po.updatedAt.toISOString(),
       lines: po.lines.map((l) => ({
@@ -94,6 +109,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
       supplierCost: m.supplierCost,
     })),
     isDraft: po.status === "DRAFT",
+    canMarkSent: ["DRAFT", "SENT", "CONFIRMED"].includes(po.status),
   };
 };
 
@@ -104,11 +120,46 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
 
   const po = await prisma.purchaseOrder.findFirst({
     where: { id: params.id, storeId: store.id },
+    include: { supplier: true },
   });
   if (!po) return { ok: false, message: "Purchase order not found." } satisfies ActionData;
 
   const formData = await request.formData();
   const intent = String(formData.get("intent") || "");
+
+  if (intent === "mark-sent") {
+    if (!["DRAFT", "SENT", "CONFIRMED"].includes(po.status)) {
+      return {
+        ok: false,
+        message: `Mark as sent is not available for ${po.status.replaceAll("_", " ")} purchase orders.`,
+      } satisfies ActionData;
+    }
+
+    const emailInput = String(formData.get("supplierEmail") || "").trim();
+    if (emailInput && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailInput)) {
+      return {
+        ok: false,
+        message: "Please enter a valid supplier email address.",
+      } satisfies ActionData;
+    }
+
+    const nextStatus = po.status === "DRAFT" ? "SENT" : po.status;
+
+    await prisma.purchaseOrder.update({
+      where: { id: po.id },
+      data: {
+        status: nextStatus as PurchaseOrderStatus,
+        lastSentAt: new Date(),
+        sentCount: { increment: 1 },
+        supplierEmailSnapshot: emailInput || po.supplierEmailSnapshot || po.supplier.email || null,
+      },
+    });
+
+    return {
+      ok: true,
+      message: `Purchase order marked as sent${nextStatus === "SENT" && po.status === "DRAFT" ? " (status moved to SENT)" : ""}.`,
+    } satisfies ActionData;
+  }
 
   if (intent === "update-status") {
     const nextStatus = String(formData.get("status") || "");
@@ -245,11 +296,45 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
 };
 
 export default function PurchaseOrderDetailPage() {
-  const { currencyCode, po, variants, mappings, isDraft } = useLoaderData<typeof loader>();
+  const {
+    currencyCode,
+    defaultSubject,
+    defaultMessage,
+    supplierEmail,
+    po,
+    variants,
+    mappings,
+    isDraft,
+    canMarkSent,
+  } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";
   const [unitCost, setUnitCost] = useState("");
+
+  const [recipientEmail, setRecipientEmail] = useState(po.supplierEmailSnapshot || supplierEmail || "");
+  const [emailSubject, setEmailSubject] = useState(defaultSubject);
+  const [emailMessage, setEmailMessage] = useState(defaultMessage);
+  const [copyNotice, setCopyNotice] = useState("");
+
+  async function handleCopy(text: string, label: string) {
+    if (!text) {
+      setCopyNotice(`No ${label.toLowerCase()} available to copy.`);
+      setTimeout(() => setCopyNotice(""), 3000);
+      return;
+    }
+    try {
+      if (typeof navigator !== "undefined" && navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+        setCopyNotice(`${label} copied to clipboard!`);
+      } else {
+        setCopyNotice(`Clipboard API unavailable. Please select text manually.`);
+      }
+    } catch {
+      setCopyNotice(`Could not copy ${label.toLowerCase()}. Please select text manually.`);
+    }
+    setTimeout(() => setCopyNotice(""), 3000);
+  }
 
   function handleVariantChange(variantId: string) {
     if (!variantId) return;
@@ -264,6 +349,9 @@ export default function PurchaseOrderDetailPage() {
   const allowedTransitions = ALLOWED_STATUS_TRANSITIONS[po.status] || [];
   const isTerminalState = allowedTransitions.length === 0;
 
+  const mailtoBody = `${emailMessage}\n\nNote: Open PODesk and print PO ${po.reference} from the purchase order page.`;
+  const mailtoUrl = `mailto:${encodeURIComponent(recipientEmail)}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(mailtoBody)}`;
+
   return (
     <s-page heading={po.reference}>
       {actionData?.message ? (
@@ -277,6 +365,8 @@ export default function PurchaseOrderDetailPage() {
             <div><strong>Status:</strong> <span style={statusBadge(po.status)}>{po.status.replaceAll("_", " ")}</span></div>
             <div><strong>Total cost:</strong> {po.totalCost > 0 ? formatCurrency(po.totalCost, currencyCode) : "-"}</div>
             <div><strong>Currency:</strong> {currencyCode}</div>
+            <div><strong>Last sent:</strong> {po.lastSentAt ? formatDate(po.lastSentAt) : "Not sent yet"}</div>
+            <div><strong>Sent count:</strong> {po.sentCount} time(s)</div>
             <div><strong>Created:</strong> {formatDate(po.createdAt)}</div>
             <div><strong>Last updated:</strong> {formatDate(po.updatedAt)}</div>
           </div>
@@ -286,6 +376,119 @@ export default function PurchaseOrderDetailPage() {
           >
             Print PO
           </a>
+        </div>
+      </s-section>
+
+      <s-section heading="Supplier sharing">
+        {copyNotice ? (
+          <div style={noticeStyle(true)}>{copyNotice}</div>
+        ) : null}
+
+        <div style={{ display: "grid", gap: "12px", marginBottom: "16px" }}>
+          <div style={{ display: "grid", gap: "6px" }}>
+            <label style={fieldLabelStyle}>
+              Supplier email address
+              <div style={{ display: "flex", gap: "8px" }}>
+                <input
+                  type="email"
+                  value={recipientEmail}
+                  onChange={(e) => setRecipientEmail(e.target.value)}
+                  placeholder="e.g. supplier@example.com"
+                  style={inputStyle}
+                />
+                <button
+                  type="button"
+                  onClick={() => handleCopy(recipientEmail, "Supplier email")}
+                  style={smallBtnStyle}
+                >
+                  Copy email
+                </button>
+              </div>
+            </label>
+            {!recipientEmail && (
+              <div style={mutedStyle}>No email saved for this supplier. Enter email above to share.</div>
+            )}
+          </div>
+
+          <div style={{ display: "grid", gap: "6px" }}>
+            <label style={fieldLabelStyle}>
+              Email subject
+              <div style={{ display: "flex", gap: "8px" }}>
+                <input
+                  type="text"
+                  value={emailSubject}
+                  onChange={(e) => setEmailSubject(e.target.value)}
+                  style={inputStyle}
+                />
+                <button
+                  type="button"
+                  onClick={() => handleCopy(emailSubject, "Subject")}
+                  style={smallBtnStyle}
+                >
+                  Copy subject
+                </button>
+              </div>
+            </label>
+          </div>
+
+          <div style={{ display: "grid", gap: "6px" }}>
+            <label style={fieldLabelStyle}>
+              Message template
+              <textarea
+                rows={5}
+                value={emailMessage}
+                onChange={(e) => setEmailMessage(e.target.value)}
+                style={textareaStyle}
+              />
+            </label>
+            <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
+              <button
+                type="button"
+                onClick={() => handleCopy(emailMessage, "Message")}
+                style={smallBtnStyle}
+              >
+                Copy message
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center", paddingTop: "12px", borderTop: "1px solid #dfe3e8" }}>
+          <a
+            href={mailtoUrl}
+            style={secondaryBtnLinkStyle}
+          >
+            Open email draft
+          </a>
+
+          <a
+            href={`/app/purchase-orders/${po.id}/print`}
+            target="_blank"
+            rel="noreferrer"
+            style={secondaryBtnLinkStyle}
+          >
+            Open printable PO
+          </a>
+
+          {canMarkSent && (
+            <Form method="post" style={{ display: "inline" }}>
+              <input type="hidden" name="intent" value="mark-sent" />
+              <input type="hidden" name="supplierEmail" value={recipientEmail} />
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                style={buttonStyle}
+              >
+                {isSubmitting ? "Updating..." : "Mark as sent"}
+              </button>
+            </Form>
+          )}
+
+          {po.lastSentAt && (
+            <div style={mutedStyle}>
+              Last sent: {formatDate(po.lastSentAt)} ({po.sentCount}x)
+            </div>
+          )}
         </div>
       </s-section>
 
@@ -483,6 +686,7 @@ const dangerBtnStyle = { border: "1px solid #d72c0d", borderRadius: "6px", paddi
 const statusBtn = { border: "1px solid #c9cccf", borderRadius: "4px", padding: "6px 12px", background: "#fff", cursor: "pointer", fontSize: "12px" } as const;
 const linkStyle = { color: "#2c6ecb", textDecoration: "none" } as const;
 const printBtnLinkStyle = { display: "inline-block", border: "1px solid #008060", borderRadius: "6px", padding: "8px 14px", background: "#008060", color: "#fff", fontWeight: 650, textDecoration: "none", fontSize: "13px" } as const;
+const secondaryBtnLinkStyle = { display: "inline-block", border: "1px solid #c9cccf", borderRadius: "6px", padding: "8px 14px", background: "#ffffff", color: "#202223", fontWeight: 650, textDecoration: "none", fontSize: "13px" } as const;
 const mutedStyle = { color: "#6d7175", fontSize: "13px", marginTop: "4px" } as const;
 const tableWrapStyle = { overflowX: "auto" } as const;
 const tableStyle = { width: "100%", borderCollapse: "collapse", fontSize: "14px" } as const;
