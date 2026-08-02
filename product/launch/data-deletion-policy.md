@@ -69,7 +69,7 @@ Upon verification, our support team will manually execute the store data deletio
 
 ## 7. GDPR Mandatory Webhook Endpoints
 
-PODesk complies with Shopify's mandatory GDPR privacy webhooks:
-- `customers/data_request`: PODesk processes store-level inventory data and does not store customer personal data. Responds with an empty confirmation payload.
-- `customers/redact`: No-op response confirming no customer PII is retained.
-- `shop/redact`: Executes full shop data purge in accordance with this policy 30 days after shop redact request.
+Before production App Store submission, PODesk must implement Shopify's mandatory GDPR privacy webhooks:
+- `customers/data_request`: PODesk processes store-level inventory data and does not store customer personal data. Handler should return an empty confirmation payload.
+- `customers/redact`: Handler should acknowledge the request because PODesk does not retain customer PII.
+- `shop/redact`: Handler should execute or queue full shop data purge in accordance with this policy.

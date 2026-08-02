@@ -71,6 +71,6 @@ Audio: Clear voiceover narration with subtle background music.
 ---
 
 ### Scene 8: Call to Action & Outro (2:45 - 3:00)
-- **Visual**: Return to Dashboard showing completed operations snapshot. Animated closing slide with PODesk logo and Shopify App Store Install prompt.
+- **Visual**: Return to Dashboard showing completed operations snapshot. Closing slide with PODesk wordmark text and Shopify App Store install prompt.
 - **Action**: End on clean CTA screen with text: *"PODesk: Purchase Orders - Free Launch Beta"*.
 - **Voiceover**: *"Take control of your inventory reordering and supplier purchasing today. Install PODesk: Purchase Orders 100% free during our launch beta on the Shopify App Store!"*

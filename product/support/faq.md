@@ -72,4 +72,4 @@ PODesk syncs active locations and computes aggregate store inventory. Reorder ca
 ---
 
 ### Q11: How do I uninstall PODesk or request data deletion?
-You can uninstall PODesk at any time via **Shopify Admin > Settings > Apps and sales channels > Uninstall**. Upon receiving Shopify's `app/uninstalled` webhook, all OAuth session tokens are revoked and your store data is scheduled for complete deletion within 30 days per our [Data Deletion Policy](file:///c:/A-Drive-Backup/Projects/shopify/shopify%20apps/PODesk/product/launch/data-deletion-policy.md). For immediate data removal, email support at `support@example.com`.
+You can uninstall PODesk at any time via **Shopify Admin > Settings > Apps and sales channels > Uninstall**. Upon receiving Shopify's `app/uninstalled` webhook, all OAuth session tokens are revoked. Full store data deletion workflow is defined in the [Data Deletion Policy](../launch/data-deletion-policy.md) and must be implemented before production App Store submission. For immediate data removal during beta, email support at `support@example.com`.
