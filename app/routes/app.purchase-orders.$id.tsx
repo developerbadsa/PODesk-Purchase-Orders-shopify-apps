@@ -201,9 +201,10 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
     let receivedAt = new Date();
     if (receivedAtInput) {
       const parsedDate = new Date(`${receivedAtInput}T00:00:00.000Z`);
-      if (!isNaN(parsedDate.getTime())) {
-        receivedAt = parsedDate;
+      if (Number.isNaN(parsedDate.getTime())) {
+        return { ok: false, message: "Received date must be a valid date." } satisfies ActionData;
       }
+      receivedAt = parsedDate;
     }
 
     const poWithLines = await prisma.purchaseOrder.findFirst({
@@ -227,10 +228,11 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
       const inputStr = String(formData.get(`qty_${line.id}`) || "").trim();
       if (!inputStr) continue;
 
-      const qty = parseInt(inputStr, 10);
-      if (isNaN(qty) || qty < 0) {
+      if (!/^\d+$/.test(inputStr)) {
         return { ok: false, message: "Invalid quantity specified for line item." } satisfies ActionData;
       }
+
+      const qty = parseInt(inputStr, 10);
       if (qty === 0) continue;
 
       const existingReceived = line.receiptLines.reduce((sum, rl) => sum + rl.quantityReceived, 0);

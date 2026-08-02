@@ -26,14 +26,16 @@ Implemented:
 
 - Shopify React Router embedded app scaffold
 - Prisma session storage
-- Prisma models for stores, synced products/variants, inventory locations, suppliers, supplier SKU mappings, purchase orders, PO lines, settings, and import jobs
+- Prisma models for stores, synced products/variants, inventory locations, suppliers, supplier SKU mappings, purchase orders, PO lines, receipts, settings, import jobs, and billing scaffold
 - Dashboard route
 - Shopify product, variant, inventory, location, and recent order sync action
 - Reorder planning with configurable sales window, buffer days, target days, supplier filters, and draft PO creation
 - Supplier create/list/edit/archive/restore/detail workflow
 - SKU-to-supplier mapping with supplier SKU, cost, lead time, and primary supplier support
 - Purchase-order create/list/detail/status/duplicate/print workflow
+- Purchase-order receiving workflow with partial/full receipts, receipt history, and receiving progress
 - Manual supplier sharing workflow with copy buttons, mailto draft, printable PO, and Mark as Sent tracking
+- Billing scaffold with non-blocking plan overview route
 - Settings page for company profile, PO defaults, prefix, and currency
 - Stocky/spreadsheet supplier CSV import with file/paste, column detection, manual override, preview validation, row-level errors, import execution, and history
 - Product, strategy, and sales planning docs
@@ -43,11 +45,11 @@ Not implemented yet:
 - Historical Stocky PO archive import
 - Automated supplier email delivery
 - PO PDF download
-- billing
+- production Shopify billing enforcement
 - app-store submission setup
 - automatic Shopify inventory write-back
 - alerts
-- real receiving workflow
+- production deployment and monitoring
 
 ## Local Setup
 

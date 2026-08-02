@@ -436,6 +436,8 @@ This is the current priority order.
 | 8 | Build PO detail/edit/multiple line items/status/duplicate. | Done |
 | 9 | Build reorder table with configurable windows and filters. | Done |
 | 10 | Build CSV upload/preview/mapping for Stocky/spreadsheet import. | Done |
+| 11 | Build PO receiving workflow. | Done |
+| 12 | Build real Shopify billing approval/trial/plan enforcement. | Not Started |
 
 ## Hard Rules
 

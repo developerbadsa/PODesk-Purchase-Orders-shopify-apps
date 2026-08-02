@@ -428,14 +428,16 @@ Current core tables:
 Implemented additions:
 
 - SupplierVariantMapping
+- PurchaseOrderReceipt
+- PurchaseOrderReceiptLine
 - ImportJob
 - ImportJobRow
+- BillingSubscription
 
 Still needed later:
 
 - ReorderSettings
 - ReorderSnapshot
-- BillingSubscription
 - AuditEvent
 
 ## App Store Feature Positioning
