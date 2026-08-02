@@ -57,6 +57,8 @@ Professional sales goal:
 | App Store listing | Not Started | Strategy exists. Assets not built. |
 | Sales materials | Ongoing | Outreach copy exists. Demo/video/case study not done. |
 | GitHub repo | Done | Main branch pushed to GitHub remote. |
+| Local verification | Done | 2026-08-02: install, Prisma setup, typecheck, lint, and build passed. |
+| Security audit | Blocked | `npm audit` reports high vulnerabilities that require breaking dependency changes; do not force-fix blindly. |
 
 ## Phase 0: Foundation And Repo
 
@@ -103,9 +105,20 @@ Tasks:
 | Embedded app route | Done | `/app` route loads after authentication. |
 | Session persistence | Done | Prisma session model exists. |
 | App navigation | Done | Dashboard and Stocky import links exist. |
-| Test with development store | Not Started | Install succeeds on a real Shopify dev store. |
-| Confirm required scopes | Ongoing | Scopes are limited to read products, inventory, locations, orders. |
+| Test with development store | Blocked | Requires interactive Shopify Partner/dev-store selection. Bounded CLI run timed out without completing install. |
+| Confirm required scopes | Done | Scopes are limited to read products, inventory, locations, orders. |
 | Uninstall cleanup test | Not Started | Uninstall webhook is verified. |
+
+Verification note, 2026-08-02:
+
+- `npm install` passed.
+- `npm run setup` passed.
+- `npm run typecheck` passed.
+- `npm run lint` passed.
+- `npm run build` passed.
+- Shopify CLI is available: `3.94.3`.
+- `npm audit --omit=dev --audit-level=high` still reports React Router high-severity advisories. The suggested automatic fix requires breaking dependency changes, so this needs a controlled dependency review before production release.
+- Shopify development-store install was not verified in this run because `shopify app dev --use-localhost --no-color` did not complete in the bounded verification window.
 
 Do not build:
 
@@ -408,7 +421,7 @@ This is the current priority order.
 | 1 | Update README with `FEATURES.md` and `WORK_PLAN.md` links. | Done |
 | 2 | Initialize git repo and push clean first commit. | Done |
 | 3 | Run install/setup/typecheck after repo push. | Done |
-| 4 | Test Shopify install on development store. | Not Started |
+| 4 | Test Shopify install on development store. | Blocked |
 | 5 | Fix inventory sync pagination and error handling. | Not Started |
 | 6 | Build supplier edit/archive screen. | Not Started |
 | 7 | Build SKU-to-supplier mapping. | Not Started |
