@@ -1,3 +1,35 @@
+# PODesk Changelog
+
+## 2026-08-02
+
+- Locked public app name as `PODesk: Purchase Orders`.
+- Added Shopify React Router embedded app scaffold with Prisma session storage.
+- Added store, product, variant, location, supplier, SKU mapping, purchase order, and PO line data models.
+- Built the dashboard with Shopify inventory sync, setup progress, operations snapshot, reorder attention, and recent PO sections.
+- Verified development-store install inside `test-store-fgyympec.myshopify.com`.
+- Verified Shopify sync with 17 products, 26 variants, and 2 locations.
+- Fixed stale scope handling and documented dev reinstall steps for access-denied errors.
+- Reduced Shopify GraphQL query cost by using smaller product/order pages and disabling nested location-level inventory sync in the dashboard action.
+- Added supplier management: create, list, edit, archive, restore, delete, and detail view.
+- Added SKU-to-supplier mappings with supplier SKU, cost, lead-time override, and primary supplier support.
+- Added purchase order workflows: multi-line create, list, detail, draft edit, status update, duplicate, and delete draft.
+- Added reorder planning page with configurable velocity window, buffer days, target stock days, risk filters, supplier filters, and create-draft-PO action.
+- Replaced Stocky import placeholder with supplier CSV paste/import for early migration workflow.
+- Verified local `npm run setup`, `npm run typecheck`, `npm run lint`, and `npm run build`.
+
+## Current MVP Limits
+
+- Location-level inventory quantities are not synced in the dashboard action. Build this later with Shopify bulk operations or a dedicated low-cost inventory job.
+- Stocky SKU mapping import and PO archive import are not built yet.
+- PO PDF/email export is not built yet.
+- Shopify billing is not built yet.
+- App Store listing assets are not built yet.
+- `npm audit` still reports high-severity dependency advisories that require careful dependency upgrades, not blind force-fix.
+
+# Shopify Template History
+
+This project started from Shopify's React Router app template. Original template history is kept below for dependency context.
+
 # @shopify/shopify-app-template-react-router
 
 ## 2026.01.08

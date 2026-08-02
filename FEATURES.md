@@ -48,7 +48,8 @@ Do not optimize early product decisions for:
 
 | Status | Meaning |
 |---|---|
-| Done | Built in the current codebase, but still needs real-store testing. |
+| Done | Built and working in the current codebase. |
+| Done (Verified) | Built and verified on the development Shopify store. |
 | Ongoing | Started, but incomplete or not production-ready. |
 | Not Started | Planned but not built. |
 | Later | Valuable, but intentionally out of MVP scope. |
@@ -60,10 +61,10 @@ Do not optimize early product decisions for:
 |---|---|---:|---:|---|
 | Shopify foundation | Embedded Shopify app scaffold | Done | P0 | Merchant can install and open the app inside Shopify. |
 | Shopify foundation | OAuth and session storage | Done | P0 | App can authenticate stores securely. |
-| Shopify sync | Product sync | Done | P0 | Pull Shopify product catalog into PODesk. |
-| Shopify sync | Variant sync | Done | P0 | Connect SKUs and inventory items to reorder workflow. |
-| Shopify sync | Location sync | Done | P0 | Prepare for multi-location inventory visibility. |
-| Shopify sync | Inventory quantity sync | Done | P0 | Show current stock by SKU and location. |
+| Shopify sync | Product sync | Done (Verified) | P0 | Pull Shopify product catalog into PODesk. |
+| Shopify sync | Variant sync | Done (Verified) | P0 | Connect SKUs and inventory items to reorder workflow. |
+| Shopify sync | Location sync | Done (Verified) | P0 | Read active Shopify locations. |
+| Shopify sync | Inventory quantity sync | Done (Verified) | P0 | Show current aggregate stock by SKU. Location-level quantities are later. |
 | Shopify sync | Recent order sales sync | Done | P0 | Estimate velocity and stockout risk from sales history. |
 | Suppliers | Supplier create/list | Done | P0 | Merchant can rebuild supplier records. |
 | Suppliers | Supplier edit/delete | Done | P0 | Fix supplier details without support. |
@@ -78,14 +79,15 @@ Do not optimize early product decisions for:
 | Reorder planning | Suggested reorder quantity | Done | P0 | Merchant knows what to buy, not only what is low. |
 | Reorder planning | Configurable velocity window | Done | P0 | Merchant can use 7/14/30/90-day demand windows. |
 | Reorder planning | Exclude out-of-stock days | Not Started | P1 | Avoid bad velocity caused by stockouts. |
-| Stocky migration | Stocky import page | Ongoing | P0 | Landing area exists for migration workflow. |
-| Stocky migration | CSV upload | Not Started | P0 | Merchant can upload Stocky/spreadsheet exports. |
+| Stocky migration | Stocky import page | Ongoing | P0 | Supplier import workflow exists. SKU/PO archive imports are not done. |
+| Stocky migration | Supplier CSV import | Done | P0 | Merchant can paste supplier CSV and create/update supplier records. |
+| Stocky migration | File upload CSV import | Not Started | P0 | Merchant can upload Stocky/spreadsheet exports. |
 | Stocky migration | Column mapping preview | Not Started | P0 | Prevent bad imports before saving data. |
 | Stocky migration | Assisted migration notes | Not Started | P0 | Founder can manually support early customers. |
 | Dashboard | Operations snapshot | Done | P0 | Merchant quickly sees synced variants, stock, suppliers, open POs. |
-| Dashboard | Actionable empty states | Not Started | P0 | New user knows next step after install. |
+| Dashboard | Actionable empty states | Done | P0 | New user knows next step after install. |
 | Billing | Shopify billing | Not Started | P1 | Convert trial users into paying users. |
-| Onboarding | First-run setup checklist | Not Started | P0 | Move merchant from install to first PO fast. |
+| Onboarding | First-run setup checklist | Done | P0 | Move merchant from install to first PO fast. |
 | App Store | Listing copy and screenshots | Not Started | P1 | Improve install conversion after submission. |
 | Reporting | Weekly reorder summary | Not Started | P2 | Bring merchant back to app every week. |
 | Automation | Low-stock email alerts | Not Started | P2 | Notify merchant before stockout. |
@@ -406,7 +408,7 @@ Not required before first paying users:
 | Purchase Orders List | View all POs and statuses. | Done |
 | Purchase Order Detail | Edit lines, status, cost, arrival. | Done |
 | Create Purchase Order | Build PO from SKUs and supplier. | Done |
-| Stocky Import | Upload and map CSV files. | Ongoing placeholder |
+| Stocky Import | Paste/import supplier CSV now; SKU/PO archive import later. | Ongoing |
 | Settings | Reorder defaults, sales window, buffer days. | Not Started |
 | Billing | Trial and plan management. | Not Started |
 
