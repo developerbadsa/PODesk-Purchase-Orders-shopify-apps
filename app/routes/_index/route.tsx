@@ -7,50 +7,47 @@ import styles from "./styles.module.css";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
+  const params = url.searchParams.toString();
 
-  if (url.searchParams.get("shop")) {
-    throw redirect(`/app?${url.searchParams.toString()}`);
+  if (
+    url.searchParams.has("shop") ||
+    url.searchParams.has("host") ||
+    url.searchParams.has("embedded") ||
+    url.searchParams.has("id_token")
+  ) {
+    throw redirect(`/app${params ? `?${params}` : ""}`);
   }
 
   return { showForm: Boolean(login) };
 };
 
-export default function App() {
+export default function IndexRoute() {
   const { showForm } = useLoaderData<typeof loader>();
 
   return (
     <div className={styles.index}>
       <div className={styles.content}>
-        <h1 className={styles.heading}>A short heading about [your app]</h1>
+        <h1 className={styles.heading}>PODesk: Purchase Orders</h1>
         <p className={styles.text}>
-          A tagline about [your app] that describes your value proposition.
+          Inventory buying, suppliers, SKU mappings, and purchase orders for
+          Shopify merchants.
         </p>
         {showForm && (
           <Form className={styles.form} method="post" action="/auth/login">
             <label className={styles.label}>
               <span>Shop domain</span>
-              <input className={styles.input} type="text" name="shop" />
-              <span>e.g: my-shop-domain.myshopify.com</span>
+              <input
+                className={styles.input}
+                type="text"
+                name="shop"
+                placeholder="your-store.myshopify.com"
+              />
             </label>
             <button className={styles.button} type="submit">
-              Log in
+              Open app
             </button>
           </Form>
         )}
-        <ul className={styles.list}>
-          <li>
-            <strong>Product feature</strong>. Some detail about your feature and
-            its benefit to your customer.
-          </li>
-          <li>
-            <strong>Product feature</strong>. Some detail about your feature and
-            its benefit to your customer.
-          </li>
-          <li>
-            <strong>Product feature</strong>. Some detail about your feature and
-            its benefit to your customer.
-          </li>
-        </ul>
       </div>
     </div>
   );
