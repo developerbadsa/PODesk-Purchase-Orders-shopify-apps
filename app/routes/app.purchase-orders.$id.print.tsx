@@ -19,6 +19,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
         lines: {
           include: {
             variant: { include: { product: true } },
+            receiptLines: true,
           },
         },
       },
@@ -28,6 +29,11 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   if (!po) throw new Response("Purchase order not found", { status: 404 });
 
   const totalQuantity = po.lines.reduce((sum, l) => sum + l.quantity, 0);
+  const totalReceived = po.lines.reduce(
+    (sum, l) => sum + l.receiptLines.reduce((rSum, rl) => rSum + rl.quantityReceived, 0),
+    0
+  );
+  const totalRemaining = Math.max(0, totalQuantity - totalReceived);
   const totalCost = po.lines.reduce((sum, l) => sum + (l.unitCost ?? 0) * l.quantity, 0);
   const currencyCode = settings?.currencyCode || "USD";
 
@@ -65,16 +71,23 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
         paymentTerms: po.supplier.paymentTerms || settings?.defaultPaymentTerms || null,
         notes: po.supplier.notes,
       },
-      lines: po.lines.map((l) => ({
-        id: l.id,
-        productTitle: l.variant.product.title,
-        variantTitle: l.variant.title,
-        sku: l.variant.sku,
-        quantity: l.quantity,
-        unitCost: l.unitCost,
-        subtotal: (l.unitCost ?? 0) * l.quantity,
-      })),
+      lines: po.lines.map((l) => {
+        const received = l.receiptLines.reduce((sum, rl) => sum + rl.quantityReceived, 0);
+        return {
+          id: l.id,
+          productTitle: l.variant.product.title,
+          variantTitle: l.variant.title,
+          sku: l.variant.sku,
+          quantity: l.quantity,
+          receivedQuantity: received,
+          remainingQuantity: Math.max(0, l.quantity - received),
+          unitCost: l.unitCost,
+          subtotal: (l.unitCost ?? 0) * l.quantity,
+        };
+      }),
       totalQuantity,
+      totalReceived,
+      totalRemaining,
       totalCost,
     },
   };
@@ -186,6 +199,21 @@ export default function PurchaseOrderPrintPage() {
               <div style={{ ...infoRowStyle, color: "#6b7280" }}>No notes provided.</div>
             )}
           </div>
+        </div>
+
+        {/* Receiving Summary */}
+        <div style={{ ...infoBlockStyle, marginBottom: "24px" }}>
+          <h3 style={sectionHeadingStyle}>Receiving Summary</h3>
+          {po.totalReceived === 0 ? (
+            <div style={{ fontSize: "13px", color: "#6b7280" }}>No items received yet.</div>
+          ) : (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: "12px", fontSize: "13px" }}>
+              <div><strong>Ordered quantity:</strong> {po.totalQuantity}</div>
+              <div><strong>Received quantity:</strong> {po.totalReceived}</div>
+              <div><strong>Remaining quantity:</strong> {po.totalRemaining}</div>
+              <div><strong>Status:</strong> {po.status.replaceAll("_", " ")}</div>
+            </div>
+          )}
         </div>
 
         {/* Line Items Table */}

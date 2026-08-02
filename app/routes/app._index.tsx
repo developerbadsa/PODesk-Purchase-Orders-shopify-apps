@@ -65,7 +65,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     }),
     prisma.purchaseOrder.findMany({
       where: { storeId: store.id },
-      include: { supplier: true, lines: true },
+      include: { supplier: true, lines: { include: { receiptLines: true } } },
       orderBy: { createdAt: "desc" },
       take: 5,
     }),
@@ -96,15 +96,24 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       unitsSold30Days: variant.unitsSold30Days,
       daysUntilStockout: variant.daysUntilStockout,
     })),
-    recentPurchaseOrders: recentPurchaseOrders.map((po) => ({
-      id: po.id,
-      reference: po.reference,
-      supplier: po.supplier.name,
-      status: po.status,
-      expectedArrival: po.expectedArrival?.toISOString() ?? null,
-      lineCount: po.lines.length,
-      createdAt: po.createdAt.toISOString(),
-    })),
+    recentPurchaseOrders: recentPurchaseOrders.map((po) => {
+      const totalOrdered = po.lines.reduce((sum, l) => sum + l.quantity, 0);
+      const totalReceived = po.lines.reduce(
+        (sum, l) => sum + l.receiptLines.reduce((rSum, rl) => rSum + rl.quantityReceived, 0),
+        0
+      );
+      return {
+        id: po.id,
+        reference: po.reference,
+        supplier: po.supplier.name,
+        status: po.status,
+        expectedArrival: po.expectedArrival?.toISOString() ?? null,
+        lineCount: po.lines.length,
+        totalOrdered,
+        totalReceived,
+        createdAt: po.createdAt.toISOString(),
+      };
+    }),
   };
 };
 
@@ -286,6 +295,7 @@ export default function Index() {
                   <th style={thStyle}>Supplier</th>
                   <th style={thStyle}>Status</th>
                   <th style={thStyle}>Lines</th>
+                  <th style={thStyle}>Receiving</th>
                   <th style={thStyle}>Expected</th>
                 </tr>
               </thead>
@@ -300,6 +310,9 @@ export default function Index() {
                     <td style={tdStyle}>{po.supplier}</td>
                     <td style={tdStyle}>{po.status.replaceAll("_", " ")}</td>
                     <td style={tdStyle}>{po.lineCount}</td>
+                    <td style={tdStyle}>
+                      {po.totalOrdered > 0 ? `${po.totalReceived} / ${po.totalOrdered} received` : "-"}
+                    </td>
                     <td style={tdStyle}>
                       {po.expectedArrival ? formatDate(po.expectedArrival) : "Not set"}
                     </td>

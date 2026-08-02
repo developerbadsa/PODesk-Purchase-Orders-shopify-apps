@@ -46,6 +46,7 @@ model Store {
   locations       InventoryLocation[]
   suppliers       Supplier[]
   purchaseOrders  PurchaseOrder[]
+  receipts        PurchaseOrderReceipt[]
   variantMappings SupplierVariantMapping[]
   settings        StoreSettings?
   importJobs      ImportJob[]
@@ -207,9 +208,10 @@ model PurchaseOrder {
   createdAt             DateTime            @default(now())
   updatedAt             DateTime            @updatedAt
 
-  store    Store               @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  supplier Supplier            @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  store    Store                  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  supplier Supplier               @relation(fields: [supplierId], references: [id], onDelete: Cascade)
   lines    PurchaseOrderLine[]
+  receipts PurchaseOrderReceipt[]
 
   @@unique([storeId, reference])
   @@index([storeId])
@@ -224,11 +226,43 @@ model PurchaseOrderLine {
   unitCost        Float?
   createdAt       DateTime @default(now())
 
-  purchaseOrder PurchaseOrder  @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
-  variant       ShopifyVariant @relation(fields: [variantId], references: [id], onDelete: Restrict)
+  purchaseOrder PurchaseOrder            @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  variant       ShopifyVariant           @relation(fields: [variantId], references: [id], onDelete: Restrict)
+  receiptLines  PurchaseOrderReceiptLine[]
 
   @@index([purchaseOrderId])
   @@index([variantId])
+}
+
+model PurchaseOrderReceipt {
+  id              String   @id @default(cuid())
+  storeId         String
+  purchaseOrderId String
+  receivedAt      DateTime @default(now())
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  store         Store                    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  purchaseOrder PurchaseOrder            @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  lines         PurchaseOrderReceiptLine[]
+
+  @@index([storeId])
+  @@index([purchaseOrderId])
+}
+
+model PurchaseOrderReceiptLine {
+  id                  String   @id @default(cuid())
+  receiptId           String
+  purchaseOrderLineId String
+  quantityReceived    Int
+  createdAt           DateTime @default(now())
+
+  receipt           PurchaseOrderReceipt @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+  purchaseOrderLine PurchaseOrderLine    @relation(fields: [purchaseOrderLineId], references: [id], onDelete: Cascade)
+
+  @@index([receiptId])
+  @@index([purchaseOrderLineId])
 }
 
 enum PurchaseOrderStatus {

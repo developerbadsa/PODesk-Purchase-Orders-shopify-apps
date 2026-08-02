@@ -38,7 +38,22 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
         lines: {
           include: {
             variant: { include: { product: true } },
+            receiptLines: true,
           },
+        },
+        receipts: {
+          include: {
+            lines: {
+              include: {
+                purchaseOrderLine: {
+                  include: {
+                    variant: { include: { product: true } },
+                  },
+                },
+              },
+            },
+          },
+          orderBy: { receivedAt: "desc" },
         },
       },
     }),
@@ -64,6 +79,59 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     : "Not set";
   const defaultMessage = `Hello ${po.supplier.name},\n\nPlease find purchase order ${po.reference} below.\n\nExpected arrival: ${arrivalFormatted}\n\nThank you.`;
 
+  // Line receiving calculations
+  const processedLines = po.lines.map((l) => {
+    const orderedQuantity = l.quantity;
+    const receivedQuantity = l.receiptLines.reduce((sum, rl) => sum + rl.quantityReceived, 0);
+    const remainingQuantity = Math.max(0, orderedQuantity - receivedQuantity);
+    const receivingStatus =
+      receivedQuantity === 0
+        ? "NOT_RECEIVED"
+        : receivedQuantity >= orderedQuantity
+        ? "RECEIVED"
+        : "PARTIAL";
+
+    return {
+      id: l.id,
+      variantId: l.variantId,
+      productTitle: l.variant.product.title,
+      variantTitle: l.variant.title,
+      sku: l.variant.sku,
+      quantity: l.quantity,
+      unitCost: l.unitCost,
+      subtotal: (l.unitCost ?? 0) * l.quantity,
+      orderedQuantity,
+      receivedQuantity,
+      remainingQuantity,
+      receivingStatus,
+    };
+  });
+
+  const totalOrderedQuantity = processedLines.reduce((sum, l) => sum + l.orderedQuantity, 0);
+  const totalReceivedQuantity = processedLines.reduce((sum, l) => sum + l.receivedQuantity, 0);
+  const totalRemainingQuantity = processedLines.reduce((sum, l) => sum + l.remainingQuantity, 0);
+  const receiveProgressPercent =
+    totalOrderedQuantity > 0
+      ? Math.min(100, Math.round((totalReceivedQuantity / totalOrderedQuantity) * 100))
+      : 0;
+
+  const canReceive = ["SENT", "CONFIRMED", "PARTIALLY_RECEIVED", "DELAYED"].includes(po.status);
+
+  // Format receipts history
+  const receiptHistory = po.receipts.map((r) => ({
+    id: r.id,
+    receivedAt: r.receivedAt.toISOString(),
+    notes: r.notes,
+    totalQuantity: r.lines.reduce((sum, rl) => sum + rl.quantityReceived, 0),
+    lines: r.lines.map((rl) => ({
+      id: rl.id,
+      sku: rl.purchaseOrderLine.variant.sku || "-",
+      productTitle: rl.purchaseOrderLine.variant.product.title,
+      variantTitle: rl.purchaseOrderLine.variant.title,
+      quantityReceived: rl.quantityReceived,
+    })),
+  }));
+
   return {
     currencyCode,
     companyName,
@@ -84,18 +152,15 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
       sentCount: po.sentCount,
       createdAt: po.createdAt.toISOString(),
       updatedAt: po.updatedAt.toISOString(),
-      lines: po.lines.map((l) => ({
-        id: l.id,
-        variantId: l.variantId,
-        productTitle: l.variant.product.title,
-        variantTitle: l.variant.title,
-        sku: l.variant.sku,
-        quantity: l.quantity,
-        unitCost: l.unitCost,
-        subtotal: (l.unitCost ?? 0) * l.quantity,
-      })),
-      totalCost: po.lines.reduce((sum, l) => sum + (l.unitCost ?? 0) * l.quantity, 0),
+      lines: processedLines,
+      totalCost: processedLines.reduce((sum, l) => sum + l.subtotal, 0),
+      totalOrderedQuantity,
+      totalReceivedQuantity,
+      totalRemainingQuantity,
+      receiveProgressPercent,
+      canReceive,
     },
+    receiptHistory,
     variants: variants.map((v) => ({
       id: v.id,
       productTitle: v.product.title,
@@ -126,6 +191,115 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
 
   const formData = await request.formData();
   const intent = String(formData.get("intent") || "");
+
+  if (intent === "record-receipt") {
+    if (!["SENT", "CONFIRMED", "PARTIALLY_RECEIVED", "DELAYED"].includes(po.status)) {
+      if (po.status === "DRAFT") {
+        return { ok: false, message: "Send or confirm this PO before receiving items." } satisfies ActionData;
+      }
+      if (po.status === "RECEIVED") {
+        return { ok: false, message: "This PO is fully received." } satisfies ActionData;
+      }
+      if (po.status === "CANCELLED") {
+        return { ok: false, message: "Cancelled purchase orders cannot be received." } satisfies ActionData;
+      }
+      return { ok: false, message: `Receiving is not available for ${po.status.replaceAll("_", " ")} purchase orders.` } satisfies ActionData;
+    }
+
+    const receivedAtInput = String(formData.get("receivedAt") || "").trim();
+    const notes = optionalString(formData.get("notes"));
+    let receivedAt = new Date();
+    if (receivedAtInput) {
+      const parsedDate = new Date(`${receivedAtInput}T00:00:00.000Z`);
+      if (!isNaN(parsedDate.getTime())) {
+        receivedAt = parsedDate;
+      }
+    }
+
+    const poWithLines = await prisma.purchaseOrder.findFirst({
+      where: { id: po.id, storeId: store.id },
+      include: {
+        lines: {
+          include: {
+            variant: { include: { product: true } },
+            receiptLines: true,
+          },
+        },
+      },
+    });
+
+    if (!poWithLines) return { ok: false, message: "Purchase order not found." } satisfies ActionData;
+
+    const receiptLinesToCreate: Array<{ purchaseOrderLineId: string; quantityReceived: number }> = [];
+    let newReceiptTotalQty = 0;
+
+    for (const line of poWithLines.lines) {
+      const inputStr = String(formData.get(`qty_${line.id}`) || "").trim();
+      if (!inputStr) continue;
+
+      const qty = parseInt(inputStr, 10);
+      if (isNaN(qty) || qty < 0) {
+        return { ok: false, message: "Invalid quantity specified for line item." } satisfies ActionData;
+      }
+      if (qty === 0) continue;
+
+      const existingReceived = line.receiptLines.reduce((sum, rl) => sum + rl.quantityReceived, 0);
+      const remaining = Math.max(0, line.quantity - existingReceived);
+
+      if (qty > remaining) {
+        return {
+          ok: false,
+          message: `Cannot receive ${qty} units of "${line.variant.product.title} - ${line.variant.title}". Remaining quantity is only ${remaining}.`,
+        } satisfies ActionData;
+      }
+
+      receiptLinesToCreate.push({
+        purchaseOrderLineId: line.id,
+        quantityReceived: qty,
+      });
+      newReceiptTotalQty += qty;
+    }
+
+    if (receiptLinesToCreate.length === 0 || newReceiptTotalQty <= 0) {
+      return { ok: false, message: "At least one line item must have a receive quantity greater than zero." } satisfies ActionData;
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.purchaseOrderReceipt.create({
+        data: {
+          storeId: store.id,
+          purchaseOrderId: po.id,
+          receivedAt,
+          notes,
+          lines: {
+            create: receiptLinesToCreate,
+          },
+        },
+      });
+
+      let totalOrdered = 0;
+      let totalReceived = 0;
+
+      for (const line of poWithLines.lines) {
+        totalOrdered += line.quantity;
+        const previousReceived = line.receiptLines.reduce((sum, rl) => sum + rl.quantityReceived, 0);
+        const newlyReceived = receiptLinesToCreate.find((r) => r.purchaseOrderLineId === line.id)?.quantityReceived ?? 0;
+        totalReceived += previousReceived + newlyReceived;
+      }
+
+      const nextStatus = totalReceived >= totalOrdered ? "RECEIVED" : "PARTIALLY_RECEIVED";
+
+      await tx.purchaseOrder.update({
+        where: { id: po.id },
+        data: {
+          status: nextStatus as PurchaseOrderStatus,
+          updatedAt: new Date(),
+        },
+      });
+    });
+
+    return { ok: true, message: `Receipt of ${newReceiptTotalQty} unit(s) recorded successfully.` } satisfies ActionData;
+  }
 
   if (intent === "mark-sent") {
     if (!["DRAFT", "SENT", "CONFIRMED"].includes(po.status)) {
@@ -302,6 +476,7 @@ export default function PurchaseOrderDetailPage() {
     defaultMessage,
     supplierEmail,
     po,
+    receiptHistory,
     variants,
     mappings,
     isDraft,
@@ -352,6 +527,8 @@ export default function PurchaseOrderDetailPage() {
   const mailtoBody = `${emailMessage}\n\nNote: Open PODesk and print PO ${po.reference} from the purchase order page.`;
   const mailtoUrl = `mailto:${encodeURIComponent(recipientEmail)}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(mailtoBody)}`;
 
+  const todayIso = new Date().toISOString().slice(0, 10);
+
   return (
     <s-page heading={po.reference}>
       {actionData?.message ? (
@@ -365,6 +542,7 @@ export default function PurchaseOrderDetailPage() {
             <div><strong>Status:</strong> <span style={statusBadge(po.status)}>{po.status.replaceAll("_", " ")}</span></div>
             <div><strong>Total cost:</strong> {po.totalCost > 0 ? formatCurrency(po.totalCost, currencyCode) : "-"}</div>
             <div><strong>Currency:</strong> {currencyCode}</div>
+            <div><strong>Receiving:</strong> {po.totalReceivedQuantity} / {po.totalOrderedQuantity} received ({po.receiveProgressPercent}%)</div>
             <div><strong>Last sent:</strong> {po.lastSentAt ? formatDate(po.lastSentAt) : "Not sent yet"}</div>
             <div><strong>Sent count:</strong> {po.sentCount} time(s)</div>
             <div><strong>Created:</strong> {formatDate(po.createdAt)}</div>
@@ -377,6 +555,156 @@ export default function PurchaseOrderDetailPage() {
             Print PO
           </a>
         </div>
+      </s-section>
+
+      <s-section heading="Receiving">
+        <div style={receivingGridStyle}>
+          <div style={cardMetricStyle}>
+            <div style={metricLabelStyle}>Total ordered</div>
+            <div style={metricValueStyle}>{po.totalOrderedQuantity}</div>
+          </div>
+          <div style={cardMetricStyle}>
+            <div style={metricLabelStyle}>Total received</div>
+            <div style={metricValueStyle}>{po.totalReceivedQuantity}</div>
+          </div>
+          <div style={cardMetricStyle}>
+            <div style={metricLabelStyle}>Remaining</div>
+            <div style={metricValueStyle}>{po.totalRemainingQuantity}</div>
+          </div>
+          <div style={cardMetricStyle}>
+            <div style={metricLabelStyle}>Progress</div>
+            <div style={metricValueStyle}>{po.receiveProgressPercent}%</div>
+            <div style={progressTrackStyle}>
+              <div style={{ ...progressBarFillStyle, width: `${po.receiveProgressPercent}%` }} />
+            </div>
+          </div>
+        </div>
+
+        {!po.canReceive ? (
+          <div style={mutedBannerStyle}>
+            {po.status === "DRAFT" && "Send or confirm this PO before receiving items."}
+            {po.status === "RECEIVED" && "This PO is fully received."}
+            {po.status === "CANCELLED" && "Cancelled purchase orders cannot be received."}
+          </div>
+        ) : (
+          <Form method="post" style={{ marginTop: "16px" }}>
+            <input type="hidden" name="intent" value="record-receipt" />
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "12px", marginBottom: "16px" }}>
+              <label style={fieldLabelStyle}>
+                Date received
+                <input
+                  name="receivedAt"
+                  type="date"
+                  defaultValue={todayIso}
+                  required
+                  style={inputStyle}
+                />
+              </label>
+              <label style={fieldLabelStyle}>
+                Notes
+                <input
+                  name="notes"
+                  type="text"
+                  placeholder="Optional receiving notes (e.g. Packing slip #1234)"
+                  style={inputStyle}
+                />
+              </label>
+            </div>
+
+            <div style={tableWrapStyle}>
+              <table style={tableStyle}>
+                <thead>
+                  <tr>
+                    <th style={thStyle}>Product</th>
+                    <th style={thStyle}>SKU</th>
+                    <th style={thStyle}>Ordered</th>
+                    <th style={thStyle}>Received</th>
+                    <th style={thStyle}>Remaining</th>
+                    <th style={thStyle}>Receive now</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {po.lines.map((line) => (
+                    <tr key={line.id}>
+                      <td style={tdStyle}>
+                        {line.productTitle}
+                        <div style={mutedStyle}>{line.variantTitle}</div>
+                      </td>
+                      <td style={tdStyle}>{line.sku || "-"}</td>
+                      <td style={tdStyle}>{line.orderedQuantity}</td>
+                      <td style={tdStyle}>{line.receivedQuantity}</td>
+                      <td style={tdStyle}>
+                        <strong>{line.remainingQuantity}</strong>
+                      </td>
+                      <td style={tdStyle}>
+                        {line.remainingQuantity > 0 ? (
+                          <input
+                            name={`qty_${line.id}`}
+                            type="number"
+                            min="0"
+                            max={line.remainingQuantity}
+                            placeholder="0"
+                            style={{ ...inputStyle, width: "100px" }}
+                          />
+                        ) : (
+                          <span style={completeBadgeStyle}>Done</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div style={{ marginTop: "14px" }}>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                style={buttonStyle}
+              >
+                {isSubmitting ? "Recording receipt..." : "Record receipt"}
+              </button>
+            </div>
+          </Form>
+        )}
+      </s-section>
+
+      <s-section heading="Receipt history">
+        {receiptHistory.length === 0 ? (
+          <div style={mutedStyle}>No receipts recorded yet.</div>
+        ) : (
+          <div style={tableWrapStyle}>
+            <table style={tableStyle}>
+              <thead>
+                <tr>
+                  <th style={thStyle}>Date</th>
+                  <th style={thStyle}>Lines received</th>
+                  <th style={thStyle}>Total quantity</th>
+                  <th style={thStyle}>Notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {receiptHistory.map((receipt) => (
+                  <tr key={receipt.id}>
+                    <td style={tdStyle}>{formatDate(receipt.receivedAt)}</td>
+                    <td style={tdStyle}>
+                      {receipt.lines.map((rl) => (
+                        <div key={rl.id}>
+                          {rl.productTitle} - {rl.variantTitle} {rl.sku !== "-" ? `(${rl.sku})` : ""}: <strong>+{rl.quantityReceived}</strong>
+                        </div>
+                      ))}
+                    </td>
+                    <td style={tdStyle}>
+                      <strong>+{receipt.totalQuantity}</strong>
+                    </td>
+                    <td style={tdStyle}>{receipt.notes || "-"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </s-section>
 
       <s-section heading="Supplier sharing">
@@ -521,7 +849,9 @@ export default function PurchaseOrderDetailPage() {
               <tr>
                 <th style={thStyle}>Product</th>
                 <th style={thStyle}>SKU</th>
-                <th style={thStyle}>Qty</th>
+                <th style={thStyle}>Ordered</th>
+                <th style={thStyle}>Received</th>
+                <th style={thStyle}>Remaining</th>
                 <th style={thStyle}>Unit cost</th>
                 <th style={thStyle}>Subtotal</th>
                 {isDraft && <th style={thStyle}>Actions</th>}
@@ -535,7 +865,9 @@ export default function PurchaseOrderDetailPage() {
                     <div style={mutedStyle}>{line.variantTitle}</div>
                   </td>
                   <td style={tdStyle}>{line.sku || "-"}</td>
-                  <td style={tdStyle}>{line.quantity}</td>
+                  <td style={tdStyle}>{line.orderedQuantity}</td>
+                  <td style={tdStyle}>{line.receivedQuantity}</td>
+                  <td style={tdStyle}>{line.remainingQuantity}</td>
                   <td style={tdStyle}>{line.unitCost != null ? formatCurrency(line.unitCost, currencyCode) : "-"}</td>
                   <td style={tdStyle}>{line.subtotal > 0 ? formatCurrency(line.subtotal, currencyCode) : "-"}</td>
                   {isDraft && (
@@ -693,6 +1025,15 @@ const tableStyle = { width: "100%", borderCollapse: "collapse", fontSize: "14px"
 const thStyle = { textAlign: "left", borderBottom: "1px solid #dfe3e8", padding: "10px 8px", whiteSpace: "nowrap" } as const;
 const tdStyle = { borderBottom: "1px solid #f1f2f3", padding: "10px 8px", verticalAlign: "top" } as const;
 const noticeStyle = (ok: boolean) => ({ border: `1px solid ${ok ? "#95c9b4" : "#e0b3b2"}`, background: ok ? "#effaf5" : "#fff4f4", borderRadius: "8px", marginTop: "12px", marginBottom: "12px", padding: "10px 12px", color: ok ? "#0f5132" : "#8a1f11" }) as const;
+
+const receivingGridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "12px", marginBottom: "12px" } as const;
+const cardMetricStyle = { border: "1px solid #dfe3e8", borderRadius: "8px", padding: "12px", background: "#f6f6f7" } as const;
+const metricLabelStyle = { color: "#6d7175", fontSize: "12px", fontWeight: 600 } as const;
+const metricValueStyle = { marginTop: "4px", fontSize: "18px", fontWeight: 700 } as const;
+const progressTrackStyle = { width: "100%", background: "#dfe3e8", borderRadius: "4px", height: "6px", marginTop: "8px", overflow: "hidden" } as const;
+const progressBarFillStyle = { background: "#008060", height: "100%", transition: "width 0.3s ease" } as const;
+const mutedBannerStyle = { border: "1px solid #dfe3e8", background: "#f6f6f7", color: "#5c5f62", padding: "12px", borderRadius: "6px", fontSize: "13px", fontWeight: 500, marginTop: "8px" } as const;
+const completeBadgeStyle = { background: "#effaf5", color: "#0f5132", padding: "2px 8px", borderRadius: "4px", fontSize: "12px", fontWeight: 600, display: "inline-block" } as const;
 
 export const headers: HeadersFunction = (headersArgs) => {
   return boundary.headers(headersArgs);

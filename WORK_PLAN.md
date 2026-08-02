@@ -52,6 +52,7 @@ Professional sales goal:
 | Supplier management | Done (verified) | Full CRUD: create, list, edit, archive, restore, delete, detail page. Browser workflow tested during MVP verification. |
 | SKU-supplier mapping | Done (verified) | SupplierVariantMapping model, create/delete/update mappings, supplier SKU/cost/lead override, multiple suppliers per SKU, primary supplier enforcement. Store scope hardened. |
 | Purchase orders | Done (verified) | Multi-line PO create, detail, draft reference editing, status state machine, duplicate redirect, delete draft, print view, and activity timestamps. Store scope hardened. |
+| PO Receiving | Done (verified) | PurchaseOrderReceipt & PurchaseOrderReceiptLine models, per-line and PO-level receiving calculations, record-receipt server action, partial/full receive status transitions (PARTIALLY_RECEIVED / RECEIVED), receipt history log, list page progress, dashboard integration, and print view summary. |
 | Settings & Branded Output | Done (verified) | Store-scoped business identity, purchasing defaults, prefix customization, currency formatting, and merchant-branded PO output. |
 | Reorder table | Done (verified) | Dedicated page with 7/14/30/90d window, buffer, target days, risk classification, suggested qty, and create-draft-PO action from mapped suggestions. |
 | Stocky import | Done (verified) | Full CSV supplier and SKU mapping import with file/paste, column detection, manual column override, preview validation, import execution, and job history. PO history import reserved for later. |

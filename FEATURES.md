@@ -91,7 +91,7 @@ Do not optimize early product decisions for:
 | App Store | Listing copy and screenshots | Not Started | P1 | Improve install conversion after submission. |
 | Reporting | Weekly reorder summary | Not Started | P2 | Bring merchant back to app every week. |
 | Automation | Low-stock email alerts | Not Started | P2 | Notify merchant before stockout. |
-| Receiving | Receive PO into PODesk | Not Started | P2 | Track incoming stock and close purchase orders. |
+| Receiving | Receive PO into PODesk | Done | P0 | Track received quantities, partial receiving, history log, and close purchase orders. |
 | Shopify writes | Write inventory back to Shopify | Later | P3 | Useful later, risky before trust and testing. |
 | AI | AI reorder assistant | Later | P4 | Useful only after clean data and enough workflow history. |
 

@@ -24,7 +24,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       where: { storeId: store.id },
       include: {
         supplier: true,
-        lines: { include: { variant: { include: { product: true } } } },
+        lines: { include: { variant: { include: { product: true } }, receiptLines: true } },
       },
       orderBy: { createdAt: "desc" },
     }),
@@ -47,19 +47,32 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
   return {
     currencyCode,
-    purchaseOrders: purchaseOrders.map((po) => ({
-      id: po.id,
-      reference: po.reference,
-      supplierName: po.supplier.name,
-      status: po.status,
-      lineCount: po.lines.length,
-      totalCost: po.lines.reduce((sum, l) => sum + (l.unitCost ?? 0) * l.quantity, 0),
-      expectedArrival: po.expectedArrival?.toISOString() ?? null,
-      lastSentAt: po.lastSentAt?.toISOString() ?? null,
-      sentCount: po.sentCount,
-      createdAt: po.createdAt.toISOString(),
-      updatedAt: po.updatedAt.toISOString(),
-    })),
+    purchaseOrders: purchaseOrders.map((po) => {
+      const totalOrdered = po.lines.reduce((sum, l) => sum + l.quantity, 0);
+      const totalReceived = po.lines.reduce(
+        (sum, l) => sum + l.receiptLines.reduce((rSum, rl) => rSum + rl.quantityReceived, 0),
+        0
+      );
+      const receiveProgressPercent =
+        totalOrdered > 0 ? Math.min(100, Math.round((totalReceived / totalOrdered) * 100)) : 0;
+
+      return {
+        id: po.id,
+        reference: po.reference,
+        supplierName: po.supplier.name,
+        status: po.status,
+        lineCount: po.lines.length,
+        totalCost: po.lines.reduce((sum, l) => sum + (l.unitCost ?? 0) * l.quantity, 0),
+        totalOrdered,
+        totalReceived,
+        receiveProgressPercent,
+        expectedArrival: po.expectedArrival?.toISOString() ?? null,
+        lastSentAt: po.lastSentAt?.toISOString() ?? null,
+        sentCount: po.sentCount,
+        createdAt: po.createdAt.toISOString(),
+        updatedAt: po.updatedAt.toISOString(),
+      };
+    }),
     suppliers: suppliers.map((s) => ({ id: s.id, name: s.name })),
     variants: variants.map((v) => ({
       id: v.id,
@@ -298,6 +311,7 @@ export default function PurchaseOrdersPage() {
                   <th style={thStyle}>Supplier</th>
                   <th style={thStyle}>Status</th>
                   <th style={thStyle}>Lines</th>
+                  <th style={thStyle}>Receiving</th>
                   <th style={thStyle}>Total</th>
                   <th style={thStyle}>Expected</th>
                   <th style={thStyle}>Sent</th>
@@ -317,6 +331,11 @@ export default function PurchaseOrdersPage() {
                       <span style={statusBadge(po.status)}>{po.status.replaceAll("_", " ")}</span>
                     </td>
                     <td style={tdStyle}>{po.lineCount}</td>
+                    <td style={tdStyle}>
+                      {po.totalOrdered > 0
+                        ? `${po.totalReceived} / ${po.totalOrdered} (${po.receiveProgressPercent}%)`
+                        : "-"}
+                    </td>
                     <td style={tdStyle}>{po.totalCost > 0 ? formatCurrency(po.totalCost, currencyCode) : "-"}</td>
                     <td style={tdStyle}>{po.expectedArrival ? formatDate(po.expectedArrival) : "-"}</td>
                     <td style={tdStyle}>{po.lastSentAt ? `${formatDate(po.lastSentAt)} (${po.sentCount}x)` : "-"}</td>

@@ -35,7 +35,15 @@
   - Added `mailto:` draft launcher and target="_blank" printable PO link.
   - Implemented store-scoped `mark-sent` server action: updates `DRAFT` PO status to `SENT`, records `lastSentAt` timestamp, increments `sentCount`, validates email input, and blocks `CANCELLED`/`RECEIVED` orders.
   - Updated PO list table (`/app/purchase-orders`) to show last sent date and sent count.
-  - Updated PO print view (`/app/purchase-orders/$id/print`) with supplier email snapshot, `lastSentAt`, and `sentCount` metadata.
+  - Built Purchase Order Receiving Workflow:
+  - Added `PurchaseOrderReceipt` and `PurchaseOrderReceiptLine` database models and applied Prisma migration `20260802100011_add_po_receipts`.
+  - Added per-line and PO-level receiving calculations (`orderedQuantity`, `receivedQuantity`, `remainingQuantity`, `receivingStatus`, `receiveProgressPercent`, `canReceive`).
+  - Added store-scoped `record-receipt` server action on `/app/purchase-orders/$id` with strict validation (blocking `DRAFT`/`RECEIVED`/`CANCELLED` states, validating positive integer input boundaries, ensuring items don't exceed remaining quantities, and automatically updating PO status to `RECEIVED` or `PARTIALLY_RECEIVED`).
+  - Added Receiving UI section on PO detail page with progress bar, summary metrics, contextual state banners, date picker, notes input, and per-line receive quantity input table.
+  - Added Receipt History log table on PO detail view displaying receipt date, SKU breakdown with received quantities, total quantity, and notes.
+  - Updated PO list table (`/app/purchase-orders`) to show compact receiving progress (`X / Y received (Z%)`).
+  - Updated Dashboard (`/app`) recent purchase orders table with receiving progress.
+  - Updated PO print view (`/app/purchase-orders/$id/print`) with a Receiving Summary section (or "No items received yet.").
 - Verified local `npm run typecheck`, `npm run lint`, and `npm run build`.
 
 ## Current MVP Limits
