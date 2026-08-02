@@ -180,7 +180,7 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
         purchaseOrderId: po.id,
         variantId: variant.id,
         quantity,
-        unitCost: unitCost && Number.isFinite(unitCost) ? unitCost : null,
+        unitCost: unitCost != null && Number.isFinite(unitCost) ? unitCost : null,
       },
     });
     return { ok: true, message: "Line item added." } satisfies ActionData;

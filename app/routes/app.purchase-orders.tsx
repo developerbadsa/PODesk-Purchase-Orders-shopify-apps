@@ -110,7 +110,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       const unitCost = costStr ? Number(costStr) : null;
 
       if (variantId && validVariantSet.has(variantId) && quantity > 0) {
-        lines.push({ variantId, quantity, unitCost: unitCost && Number.isFinite(unitCost) ? unitCost : null });
+        lines.push({ variantId, quantity, unitCost: unitCost != null && Number.isFinite(unitCost) ? unitCost : null });
       }
     }
 
