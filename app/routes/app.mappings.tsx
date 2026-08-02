@@ -91,7 +91,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       return { ok: false, message: "Supplier or variant not found." } satisfies ActionData;
     }
 
-    // Check if mapping already exists
     const existing = await prisma.supplierVariantMapping.findUnique({
       where: { supplierId_variantId: { supplierId, variantId } },
     });
@@ -99,16 +98,26 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       return { ok: false, message: "This supplier-variant mapping already exists." } satisfies ActionData;
     }
 
-    await prisma.supplierVariantMapping.create({
-      data: {
-        storeId: store.id,
-        supplierId,
-        variantId,
-        supplierSku: optionalString(formData.get("supplierSku")),
-        supplierCost: optionalNumber(formData.get("supplierCost")),
-        supplierLeadTimeDays: optionalIntNumber(formData.get("supplierLeadTimeDays")),
-        isPrimary: formData.get("isPrimary") === "on",
-      },
+    const isPrimary = formData.get("isPrimary") === "on";
+    await prisma.$transaction(async (tx) => {
+      if (isPrimary) {
+        await tx.supplierVariantMapping.updateMany({
+          where: { storeId: store.id, variantId },
+          data: { isPrimary: false },
+        });
+      }
+
+      await tx.supplierVariantMapping.create({
+        data: {
+          storeId: store.id,
+          supplierId,
+          variantId,
+          supplierSku: optionalString(formData.get("supplierSku")),
+          supplierCost: optionalNumber(formData.get("supplierCost")),
+          supplierLeadTimeDays: optionalIntNumber(formData.get("supplierLeadTimeDays")),
+          isPrimary,
+        },
+      });
     });
     return { ok: true, message: "SKU-supplier mapping created." } satisfies ActionData;
   }
@@ -117,14 +126,29 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const mappingId = String(formData.get("mappingId") || "").trim();
     if (!mappingId) return { ok: false, message: "Mapping ID required." } satisfies ActionData;
 
-    await prisma.supplierVariantMapping.updateMany({
+    const mapping = await prisma.supplierVariantMapping.findFirst({
       where: { id: mappingId, storeId: store.id },
-      data: {
-        supplierSku: optionalString(formData.get("supplierSku")),
-        supplierCost: optionalNumber(formData.get("supplierCost")),
-        supplierLeadTimeDays: optionalIntNumber(formData.get("supplierLeadTimeDays")),
-        isPrimary: formData.get("isPrimary") === "on",
-      },
+    });
+    if (!mapping) return { ok: false, message: "Mapping not found." } satisfies ActionData;
+
+    const isPrimary = formData.get("isPrimary") === "on";
+    await prisma.$transaction(async (tx) => {
+      if (isPrimary) {
+        await tx.supplierVariantMapping.updateMany({
+          where: { storeId: store.id, variantId: mapping.variantId, id: { not: mappingId } },
+          data: { isPrimary: false },
+        });
+      }
+
+      await tx.supplierVariantMapping.update({
+        where: { id: mappingId },
+        data: {
+          supplierSku: optionalString(formData.get("supplierSku")),
+          supplierCost: optionalNumber(formData.get("supplierCost")),
+          supplierLeadTimeDays: optionalIntNumber(formData.get("supplierLeadTimeDays")),
+          isPrimary,
+        },
+      });
     });
     return { ok: true, message: "Mapping updated." } satisfies ActionData;
   }
@@ -146,7 +170,6 @@ export default function MappingsPage() {
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";
 
-  // Track which variants already have a mapping
   const mappedVariantIds = new Set(mappings.map((m) => m.variantId));
   const unmappedVariants = variants.filter((v) => !mappedVariantIds.has(v.id));
 
@@ -182,9 +205,10 @@ export default function MappingsPage() {
                 Variant / SKU
                 <select name="variantId" required style={inputStyle}>
                   <option value="">Select variant</option>
-                  {unmappedVariants.map((v) => (
+                  {variants.map((v) => (
                     <option key={v.id} value={v.id}>
                       {v.productTitle} - {v.variantTitle} {v.sku ? `(${v.sku})` : ""}
+                      {mappedVariantIds.has(v.id) ? " - already mapped" : ""}
                     </option>
                   ))}
                 </select>

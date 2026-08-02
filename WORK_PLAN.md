@@ -50,9 +50,9 @@ Professional sales goal:
 | Database schema | Done | Core models + SupplierVariantMapping + isArchived added. |
 | Inventory sync | Done (code) | Paginated product/order sync, error handling, idempotent upserts. Variant/location pagination limited. Live verification blocked. |
 | Supplier management | Done (code) | Full CRUD: create, list, edit, archive, restore, delete, detail page. Store scope hardened. Live verification blocked. |
-| SKU-supplier mapping | Done (code) | SupplierVariantMapping model, create/delete mappings, supplier SKU/cost/lead override. Store scope hardened. |
+| SKU-supplier mapping | Done (code) | SupplierVariantMapping model, create/delete mappings, supplier SKU/cost/lead override, multiple suppliers per SKU, primary supplier enforcement. Store scope hardened. |
 | Purchase orders | Done (code) | Multi-line PO create, detail, edit draft, status lifecycle, duplicate, delete. Store scope & DRAFT status hardened. |
-| Reorder table | Done (code) | Dedicated page with 7/14/30/90d window, buffer, target days, risk classification, suggested qty. "Create PO from suggestion" Not Started. |
+| Reorder table | Done (code) | Dedicated page with 7/14/30/90d window, buffer, target days, risk classification, suggested qty, and create-draft-PO action from mapped suggestions. |
 | Stocky import | Ongoing | Placeholder page exists. CSV import not done. |
 | Billing | Not Started | Shopify billing not implemented. |
 | App Store listing | Not Started | Strategy exists. Assets not built. |
@@ -180,7 +180,7 @@ Tasks:
 | Supplier edit | Done | /app/suppliers/:id detail page allows editing all fields. |
 | Supplier delete/archive | Done | Archive (soft delete) and restore. Hard delete only if no POs reference the supplier. |
 | Supplier detail page | Done | Shows edit form, mapped SKUs, purchase order history. |
-| SKU-to-supplier mapping | Done | /app/mappings page. SupplierVariantMapping model with supplier SKU, cost, lead time override, primary flag. |
+| SKU-to-supplier mapping | Done | /app/mappings page. SupplierVariantMapping model with supplier SKU, cost, lead time override, multiple suppliers per SKU, and one primary supplier enforced per variant. |
 | Supplier import from CSV | Not Started | CSV can create suppliers with preview and validation. |
 
 Definition of done:
@@ -236,7 +236,7 @@ Tasks:
 | Lead time in risk formula | Done | Supplier lead time from mapping or supplier default used in risk classification. |
 | Manual buffer days | Done | Adjustable buffer days parameter. |
 | Suggested reorder quantity | Done | Calculated from target days × avg daily sales − current stock. |
-| Create PO from suggestion | Not Started | Button to convert suggested reorder items into draft PO. |
+| Create PO from suggestion | Done | Mapped reorder suggestions can create a draft purchase order with suggested quantity and expected arrival based on lead time. |
 | Exclude OOS days | Not Started | Formula does not punish products that were out of stock. |
 | Manual override | Not Started | Merchant can override suggested quantity. |
 

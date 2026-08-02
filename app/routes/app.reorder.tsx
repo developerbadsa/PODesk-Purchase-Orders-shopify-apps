@@ -1,8 +1,9 @@
 import type {
+  ActionFunctionArgs,
   HeadersFunction,
   LoaderFunctionArgs,
 } from "react-router";
-import { useLoaderData, useSearchParams } from "react-router";
+import { Form, useActionData, useLoaderData, useNavigation, useSearchParams } from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticate } from "../shopify.server";
 import prisma from "../db.server";
@@ -10,6 +11,8 @@ import prisma from "../db.server";
 const SALES_WINDOWS = [7, 14, 30, 90] as const;
 const DEFAULT_BUFFER_DAYS = 3;
 const DEFAULT_TARGET_DAYS = 30;
+
+type ActionData = { ok: boolean; message: string };
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
@@ -116,9 +119,65 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   };
 };
 
+export const action = async ({ request }: ActionFunctionArgs) => {
+  const { session } = await authenticate.admin(request);
+  const store = await prisma.store.findUnique({ where: { shop: session.shop } });
+  if (!store) return { ok: false, message: "Store not found. Open the dashboard first." } satisfies ActionData;
+
+  const formData = await request.formData();
+  const intent = String(formData.get("intent") || "");
+
+  if (intent === "create-reorder-po") {
+    const variantId = String(formData.get("variantId") || "").trim();
+    const supplierId = String(formData.get("supplierId") || "").trim();
+    const quantity = numberFromForm(formData.get("quantity"), 0);
+
+    if (!variantId || !supplierId || quantity <= 0) {
+      return { ok: false, message: "Variant, supplier, and quantity are required." } satisfies ActionData;
+    }
+
+    const mapping = await prisma.supplierVariantMapping.findFirst({
+      where: { storeId: store.id, variantId, supplierId },
+      include: { supplier: true, variant: true },
+    });
+    if (!mapping || mapping.supplier.isArchived) {
+      return { ok: false, message: "Active supplier mapping not found for this SKU." } satisfies ActionData;
+    }
+
+    const expectedArrival = new Date();
+    const leadTime = mapping.supplierLeadTimeDays ?? mapping.supplier.leadTimeDays;
+    expectedArrival.setDate(expectedArrival.getDate() + leadTime);
+
+    const reference = `PO-${Date.now()}`;
+    await prisma.purchaseOrder.create({
+      data: {
+        storeId: store.id,
+        supplierId,
+        reference,
+        expectedArrival,
+        notes: "Created from reorder planning suggestion.",
+        lines: {
+          create: {
+            variantId,
+            quantity,
+            unitCost: mapping.supplierCost ?? mapping.variant.unitCostAmount,
+          },
+        },
+      },
+    });
+
+    return { ok: true, message: `Draft purchase order ${reference} created.` } satisfies ActionData;
+  }
+
+  return { ok: false, message: "Unknown action." } satisfies ActionData;
+};
+
 export default function ReorderPage() {
   const data = useLoaderData<typeof loader>();
+  const actionData = useActionData<typeof action>();
+  const navigation = useNavigation();
   const [searchParams, setSearchParams] = useSearchParams();
+  const isSubmitting = navigation.state === "submitting";
 
   const currentWindow = searchParams.get("window") || "30";
   const currentBuffer = searchParams.get("buffer") || String(DEFAULT_BUFFER_DAYS);
@@ -135,6 +194,10 @@ export default function ReorderPage() {
 
   return (
     <s-page heading="Reorder Planning">
+      {actionData?.message ? (
+        <div style={noticeStyle(actionData.ok)}>{actionData.message}</div>
+      ) : null}
+
       <s-section heading="Risk summary">
         <div style={metricGridStyle}>
           <div style={riskMetric("#d72c0d")}>
@@ -244,6 +307,7 @@ export default function ReorderPage() {
                   <th style={thStyle}>Lead</th>
                   <th style={thStyle}>Risk</th>
                   <th style={thStyle}>Suggested qty</th>
+                  <th style={thStyle}>Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -270,6 +334,21 @@ export default function ReorderPage() {
                       <span style={riskBadge(v.risk)}>{v.risk}</span>
                     </td>
                     <td style={tdStyle}>{v.suggestedQty != null ? v.suggestedQty : "-"}</td>
+                    <td style={tdStyle}>
+                      {v.supplierId && v.suggestedQty && v.suggestedQty > 0 ? (
+                        <Form method="post">
+                          <input type="hidden" name="intent" value="create-reorder-po" />
+                          <input type="hidden" name="variantId" value={v.id} />
+                          <input type="hidden" name="supplierId" value={v.supplierId} />
+                          <input type="hidden" name="quantity" value={v.suggestedQty} />
+                          <button type="submit" disabled={isSubmitting} style={smallBtnStyle}>
+                            Create draft PO
+                          </button>
+                        </Form>
+                      ) : (
+                        <span style={mutedStyle}>Map supplier first</span>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -283,6 +362,11 @@ export default function ReorderPage() {
 
 function formatDateTime(value: string) {
   return new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
+}
+
+function numberFromForm(value: FormDataEntryValue | null, fallback: number) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
 }
 
 function riskBadge(risk: string) {
@@ -304,10 +388,12 @@ const mutedStyle = { color: "#6d7175", fontSize: "13px", marginTop: "4px" } as c
 const fieldLabelStyle = { display: "grid", gap: "6px", color: "#202223", fontSize: "13px", fontWeight: 600 } as const;
 const inputStyle = { border: "1px solid #c9cccf", borderRadius: "6px", padding: "9px 10px", fontSize: "14px", width: "100%" } as const;
 const linkStyle = { color: "#2c6ecb", textDecoration: "none" } as const;
+const smallBtnStyle = { border: "1px solid #c9cccf", borderRadius: "4px", padding: "4px 10px", background: "#fff", cursor: "pointer", fontSize: "12px", whiteSpace: "nowrap" } as const;
 const tableWrapStyle = { overflowX: "auto" } as const;
 const tableStyle = { width: "100%", borderCollapse: "collapse", fontSize: "14px" } as const;
 const thStyle = { textAlign: "left", borderBottom: "1px solid #dfe3e8", padding: "10px 8px", whiteSpace: "nowrap" } as const;
 const tdStyle = { borderBottom: "1px solid #f1f2f3", padding: "10px 8px", verticalAlign: "top" } as const;
+const noticeStyle = (ok: boolean) => ({ border: `1px solid ${ok ? "#95c9b4" : "#e0b3b2"}`, background: ok ? "#effaf5" : "#fff4f4", borderRadius: "8px", marginTop: "12px", marginBottom: "12px", padding: "10px 12px", color: ok ? "#0f5132" : "#8a1f11" }) as const;
 
 export const headers: HeadersFunction = (headersArgs) => {
   return boundary.headers(headersArgs);
