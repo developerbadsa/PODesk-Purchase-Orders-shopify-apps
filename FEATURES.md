@@ -78,17 +78,22 @@ Do not optimize early product decisions for:
 | Reorder planning | Reorder attention table | Done | P0 | Merchant sees SKUs at risk. |
 | Reorder planning | Suggested reorder quantity | Done | P0 | Merchant knows what to buy, not only what is low. |
 | Reorder planning | Configurable velocity window | Done | P0 | Merchant can use 7/14/30/90-day demand windows. |
-| Reorder planning | Exclude out-of-stock days | Not Started | P1 | Avoid bad velocity caused by stockouts. |
+| Reorder planning | Manual reorder quantity override | Done | P0 | Merchant can manually override formula suggested quantities before creating draft POs. |
+| Reorder planning | Multi-row create PO | Done | P0 | Merchant can select multiple reorder rows for the same supplier and create one multi-line draft PO. |
+| Reorder planning | Exact merchant risk reasons | Done | P0 | Clear human-readable reasons (out of stock, lead time risk, low stock, stock ok, no recent sales, map supplier first). |
+| Reorder planning | Exclude out-of-stock days | Not Started | P1 | Logic structure prepared in app/reorder.server.ts. Avoid bad velocity caused by stockouts when tracking is available. |
 | Stocky migration | Stocky import page | Done | P0 | Multi-step CSV import workflow with preview and validation. |
 | Stocky migration | Supplier & SKU mapping CSV import | Done | P0 | Merchant can upload or paste CSV to create/update suppliers and SKU mappings. |
+| Stocky migration | Download sample CSV | Done | P0 | Downloadable template CSV (podesk-supplier-sku-import-sample.csv) with standard column headers. |
+| Stocky migration | Export invalid import rows | Done | P0 | Export invalid CSV import rows with original data and error reasons. |
 | Stocky migration | File upload & paste CSV import | Done | P0 | Supports .csv file upload and raw CSV text paste up to 1000 rows. |
 | Stocky migration | Column mapping auto-detection, override & preview | Done | P0 | Auto-detects headers, allows merchant override, then previews valid/invalid rows before execution. |
 | Stocky migration | PO history import | Later | P2 | Import historical PO records. |
 | Dashboard | Operations snapshot | Done | P0 | Merchant quickly sees synced variants, stock, suppliers, open POs. |
-| Dashboard | Actionable empty states | Done | P0 | New user knows next step after install. |
+| Dashboard | Actionable empty states | Done | P0 | Contextual empty states across Suppliers, Mappings, POs, Reorder, and Import routes. |
 | Billing | Shopify billing | Scaffold | P1 | Convert trial users into paying users. Presentation tier with plan options; non-blocking in dev. |
 | Onboarding | First-run setup checklist | Done | P0 | Move merchant from install to first PO fast. |
-| App Store | Listing copy and screenshots | Not Started | P1 | Improve install conversion after submission. |
+| App Store | Listing copy, demo script & asset plans | Done | P0 | Product sales copy, 3-minute demo script, screenshot plan, outreach templates, and manual test checklist built in product/assets/. |
 | Reporting | Weekly reorder summary | Not Started | P2 | Bring merchant back to app every week. |
 | Automation | Low-stock email alerts | Not Started | P2 | Notify merchant before stockout. |
 | Receiving | Receive PO into PODesk | Done | P0 | Track received quantities, partial receiving, history log, and close purchase orders. |

@@ -301,7 +301,16 @@ export default function PurchaseOrdersPage() {
 
       <s-section heading={`All purchase orders (${purchaseOrders.length})`}>
         {purchaseOrders.length === 0 ? (
-          <s-paragraph>No purchase orders yet.</s-paragraph>
+          <div style={{ padding: "18px", background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: "8px" }}>
+            <div style={{ fontWeight: 650, fontSize: "14px", marginBottom: "6px" }}>No purchase orders created yet</div>
+            <p style={{ margin: "0 0 12px", color: "#6d7175", fontSize: "13px" }}>
+              Create your first draft purchase order using the form above or review automated reorder suggestions based on your sales velocity.
+            </p>
+            <div style={{ display: "flex", gap: "10px" }}>
+              <a href="/app/reorder" style={buttonStyle}>Open Reorder Planning</a>
+              <a href="/app/mappings" style={buttonStyle}>Map Suppliers & SKUs</a>
+            </div>
+          </div>
         ) : (
           <div style={tableWrapStyle}>
             <table style={tableStyle}>

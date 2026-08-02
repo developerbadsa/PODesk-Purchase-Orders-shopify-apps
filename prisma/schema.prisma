@@ -41,16 +41,17 @@ model Store {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  products        ShopifyProduct[]
-  variants        ShopifyVariant[]
-  locations       InventoryLocation[]
-  suppliers       Supplier[]
-  purchaseOrders  PurchaseOrder[]
-  receipts        PurchaseOrderReceipt[]
-  variantMappings SupplierVariantMapping[]
-  settings        StoreSettings?
-  importJobs      ImportJob[]
+  products            ShopifyProduct[]
+  variants            ShopifyVariant[]
+  locations           InventoryLocation[]
+  suppliers           Supplier[]
+  purchaseOrders      PurchaseOrder[]
+  receipts            PurchaseOrderReceipt[]
+  variantMappings     SupplierVariantMapping[]
+  settings            StoreSettings?
+  importJobs          ImportJob[]
   billingSubscription BillingSubscription?
+  reorderOverrides    ReorderOverride[]
 }
 
 model StoreSettings {
@@ -112,11 +113,12 @@ model ShopifyVariant {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
-  store           Store            @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  product         ShopifyProduct   @relation(fields: [productId], references: [id], onDelete: Cascade)
-  inventoryLevels  InventoryLevel[]
+  store            Store                    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  product          ShopifyProduct           @relation(fields: [productId], references: [id], onDelete: Cascade)
+  inventoryLevels   InventoryLevel[]
   poLines          PurchaseOrderLine[]
   supplierMappings SupplierVariantMapping[]
+  reorderOverrides ReorderOverride[]
 
   @@unique([storeId, shopifyVariantId])
   @@index([storeId])
@@ -328,3 +330,20 @@ model BillingSubscription {
   store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
 }
 
+model ReorderOverride {
+  id               String         @id @default(cuid())
+  storeId          String
+  variantId        String
+  overrideQuantity Int?
+  reason           String?
+  notes            String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  store   Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  variant ShopifyVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, variantId])
+  @@index([storeId])
+  @@index([variantId])
+}

@@ -1,12 +1,17 @@
+import { useState } from "react";
 import type {
   ActionFunctionArgs,
   HeadersFunction,
   LoaderFunctionArgs,
 } from "react-router";
-import { Form, useActionData, useLoaderData, useNavigation, useSearchParams } from "react-router";
+import { Form, useActionData, useLoaderData, useNavigation, useSearchParams, redirect } from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticate } from "../shopify.server";
 import prisma from "../db.server";
+import {
+  calculateReorderRecommendation,
+  getFinalSuggestedQuantity,
+} from "../reorder.server";
 
 const SALES_WINDOWS = [7, 14, 30, 90] as const;
 const DEFAULT_BUFFER_DAYS = 3;
@@ -17,7 +22,16 @@ type ActionData = { ok: boolean; message: string };
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
   const store = await prisma.store.findUnique({ where: { shop: session.shop } });
-  if (!store) return { variants: [], suppliers: [], lastSyncAt: null, totalCount: 0, filteredCount: 0, riskCounts: { critical: 0, reorderSoon: 0, watch: 0, healthy: 0 } };
+  if (!store) {
+    return {
+      variants: [],
+      suppliers: [],
+      lastSyncAt: null,
+      totalCount: 0,
+      filteredCount: 0,
+      riskCounts: { critical: 0, reorderSoon: 0, watch: 0, healthy: 0 },
+    };
+  }
 
   const url = new URL(request.url);
   const salesWindow = parseInt(url.searchParams.get("window") || "30", 10);
@@ -26,7 +40,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const filterSupplier = url.searchParams.get("supplier") || "";
   const filterRisk = url.searchParams.get("risk") || "";
 
-  // Get all variants with their mappings
+  // Get all tracked variants with primary supplier mappings and saved reorder overrides
   const variants = await prisma.shopifyVariant.findMany({
     where: { storeId: store.id, tracked: true },
     include: {
@@ -34,6 +48,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       supplierMappings: {
         where: { isPrimary: true },
         include: { supplier: true },
+        take: 1,
+      },
+      reorderOverrides: {
+        where: { storeId: store.id },
         take: 1,
       },
     },
@@ -45,38 +63,33 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     orderBy: { name: "asc" },
   });
 
-  // Calculate reorder metrics per variant
+  // Calculate reorder metrics & overrides per variant
   const reorderData = variants.map((v) => {
     const primaryMapping = v.supplierMappings[0] ?? null;
     const supplierName = primaryMapping?.supplier.name ?? null;
     const supplierId = primaryMapping?.supplierId ?? null;
     const supplierLeadTime = primaryMapping?.supplierLeadTimeDays ?? primaryMapping?.supplier.leadTimeDays ?? null;
 
-    // Recalculate based on selected sales window
-    const scaleFactor = salesWindow / 30;
-    const unitsSoldInWindow = Math.round(v.unitsSold30Days * scaleFactor);
-    const avgDailySales = salesWindow > 0 ? unitsSoldInWindow / salesWindow : 0;
-    const daysLeft = avgDailySales > 0 ? v.inventoryQuantity / avgDailySales : null;
+    const calc = calculateReorderRecommendation({
+      inventoryQuantity: v.inventoryQuantity,
+      unitsSold30Days: v.unitsSold30Days,
+      salesWindow,
+      targetDays,
+      bufferDays,
+      supplierLeadTime,
+      hasSupplier: Boolean(primaryMapping),
+    });
 
-    // Risk classification
-    let risk: "Critical" | "Reorder Soon" | "Watch" | "Healthy" = "Healthy";
-    if (daysLeft != null && supplierLeadTime != null) {
-      if (daysLeft < supplierLeadTime) risk = "Critical";
-      else if (daysLeft < supplierLeadTime + bufferDays) risk = "Reorder Soon";
-      else if (daysLeft < supplierLeadTime + bufferDays + 7) risk = "Watch";
-    } else if (daysLeft != null) {
-      if (daysLeft < 7) risk = "Critical";
-      else if (daysLeft < 14) risk = "Reorder Soon";
-      else if (daysLeft < 21) risk = "Watch";
-    }
+    const activeOverride = v.reorderOverrides[0] ?? null;
+    const overrideQuantity = activeOverride?.overrideQuantity ?? null;
+    const overrideReason = activeOverride?.reason ?? null;
+    const overrideNotes = activeOverride?.notes ?? null;
+    const hasOverride = overrideQuantity !== null;
 
-    // Suggested reorder quantity
-    let suggestedQty: number | null = null;
-    if (avgDailySales > 0) {
-      const needed = targetDays * avgDailySales;
-      const deficit = needed - v.inventoryQuantity;
-      suggestedQty = deficit > 0 ? Math.ceil(deficit) : 0;
-    }
+    const finalSuggestedQty = getFinalSuggestedQuantity(
+      calc.suggestedQtyFormula,
+      overrideQuantity
+    );
 
     return {
       id: v.id,
@@ -84,14 +97,20 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       variantTitle: v.title,
       sku: v.sku,
       inventoryQuantity: v.inventoryQuantity,
-      unitsSoldInWindow: unitsSoldInWindow,
-      avgDailySales: Math.round(avgDailySales * 100) / 100,
-      daysLeft: daysLeft != null ? Math.round(daysLeft) : null,
+      unitsSoldInWindow: calc.unitsSoldInWindow,
+      avgDailySales: calc.avgDailySales,
+      daysLeft: calc.daysLeft,
       supplierName,
       supplierId,
       supplierLeadTime,
-      risk,
-      suggestedQty,
+      risk: calc.risk,
+      riskReason: calc.riskReason,
+      suggestedQtyFormula: calc.suggestedQtyFormula,
+      overrideQuantity,
+      finalSuggestedQty,
+      overrideReason,
+      overrideNotes,
+      hasOverride,
     };
   });
 
@@ -127,29 +146,135 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const formData = await request.formData();
   const intent = String(formData.get("intent") || "");
 
+  if (intent === "save-override") {
+    const variantId = String(formData.get("variantId") || "").trim();
+    const rawOverrideQty = formData.get("overrideQuantity");
+    const notes = String(formData.get("notes") || "").trim();
+
+    if (!variantId) {
+      return { ok: false, message: "Variant ID is required." } satisfies ActionData;
+    }
+
+    const variant = await prisma.shopifyVariant.findFirst({
+      where: { id: variantId, storeId: store.id },
+    });
+    if (!variant) {
+      return { ok: false, message: "Variant not found or does not belong to this store." } satisfies ActionData;
+    }
+
+    if (notes.length > 300) {
+      return { ok: false, message: "Notes/reason must be 300 characters or fewer." } satisfies ActionData;
+    }
+
+    // Blank or empty input clears override
+    if (rawOverrideQty === null || rawOverrideQty === "" || String(rawOverrideQty).trim() === "") {
+      await prisma.reorderOverride.deleteMany({
+        where: { storeId: store.id, variantId },
+      });
+      return { ok: true, message: "Manual override cleared." } satisfies ActionData;
+    }
+
+    const overrideQuantity = Number(rawOverrideQty);
+    if (!Number.isInteger(overrideQuantity) || overrideQuantity < 0) {
+      return { ok: false, message: "Override quantity must be a whole number greater than or equal to 0." } satisfies ActionData;
+    }
+
+    await prisma.reorderOverride.upsert({
+      where: {
+        storeId_variantId: {
+          storeId: store.id,
+          variantId,
+        },
+      },
+      create: {
+        storeId: store.id,
+        variantId,
+        overrideQuantity,
+        notes: notes || null,
+      },
+      update: {
+        overrideQuantity,
+        notes: notes || null,
+      },
+    });
+
+    return { ok: true, message: "Manual override saved successfully." } satisfies ActionData;
+  }
+
+  if (intent === "clear-override") {
+    const variantId = String(formData.get("variantId") || "").trim();
+
+    if (!variantId) {
+      return { ok: false, message: "Variant ID is required." } satisfies ActionData;
+    }
+
+    const variant = await prisma.shopifyVariant.findFirst({
+      where: { id: variantId, storeId: store.id },
+    });
+    if (!variant) {
+      return { ok: false, message: "Variant not found or does not belong to this store." } satisfies ActionData;
+    }
+
+    await prisma.reorderOverride.deleteMany({
+      where: { storeId: store.id, variantId },
+    });
+
+    return { ok: true, message: "Manual override cleared." } satisfies ActionData;
+  }
+
   if (intent === "create-reorder-po") {
     const variantId = String(formData.get("variantId") || "").trim();
     const supplierId = String(formData.get("supplierId") || "").trim();
-    const quantity = numberFromForm(formData.get("quantity"), 0);
+    const salesWindow = numberFromForm(formData.get("window"), 30);
+    const bufferDays = numberFromForm(formData.get("buffer"), DEFAULT_BUFFER_DAYS);
+    const targetDays = numberFromForm(formData.get("target"), DEFAULT_TARGET_DAYS);
 
-    if (!variantId || !supplierId || quantity <= 0) {
-      return { ok: false, message: "Variant, supplier, and quantity are required." } satisfies ActionData;
+    if (!variantId || !supplierId) {
+      return { ok: false, message: "Variant and supplier are required." } satisfies ActionData;
     }
 
     const mapping = await prisma.supplierVariantMapping.findFirst({
       where: { storeId: store.id, variantId, supplierId },
-      include: { supplier: true, variant: true },
+      include: {
+        supplier: true,
+        variant: {
+          include: {
+            reorderOverrides: {
+              where: { storeId: store.id },
+              take: 1,
+            },
+          },
+        },
+      },
     });
     if (!mapping || mapping.supplier.isArchived) {
       return { ok: false, message: "Active supplier mapping not found for this SKU." } satisfies ActionData;
     }
 
+    const supplierLeadTime = mapping.supplierLeadTimeDays ?? mapping.supplier.leadTimeDays;
+    const calc = calculateReorderRecommendation({
+      inventoryQuantity: mapping.variant.inventoryQuantity,
+      unitsSold30Days: mapping.variant.unitsSold30Days,
+      salesWindow,
+      targetDays,
+      bufferDays,
+      supplierLeadTime,
+      hasSupplier: true,
+    });
+    const quantity = getFinalSuggestedQuantity(
+      calc.suggestedQtyFormula,
+      mapping.variant.reorderOverrides[0]?.overrideQuantity ?? null,
+    );
+
+    if (!quantity || quantity <= 0) {
+      return { ok: false, message: "This SKU does not have a positive final suggested reorder quantity." } satisfies ActionData;
+    }
+
     const expectedArrival = new Date();
-    const leadTime = mapping.supplierLeadTimeDays ?? mapping.supplier.leadTimeDays;
-    expectedArrival.setDate(expectedArrival.getDate() + leadTime);
+    expectedArrival.setDate(expectedArrival.getDate() + supplierLeadTime);
 
     const reference = `PO-${Date.now()}`;
-    await prisma.purchaseOrder.create({
+    const newPo = await prisma.purchaseOrder.create({
       data: {
         storeId: store.id,
         supplierId,
@@ -166,7 +291,109 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       },
     });
 
-    return { ok: true, message: `Draft purchase order ${reference} created.` } satisfies ActionData;
+    return redirect(`/app/purchase-orders/${newPo.id}`);
+  }
+
+  if (intent === "create-multi-reorder-po") {
+    const rawVariantIds = formData.getAll("variantIds").map(String);
+    const variantIds = Array.from(new Set(rawVariantIds.filter(Boolean)));
+
+    if (variantIds.length === 0) {
+      return { ok: false, message: "Please select at least one reorder row to create a purchase order." } satisfies ActionData;
+    }
+
+    const salesWindow = numberFromForm(formData.get("window"), 30);
+    const bufferDays = numberFromForm(formData.get("buffer"), DEFAULT_BUFFER_DAYS);
+    const targetDays = numberFromForm(formData.get("target"), DEFAULT_TARGET_DAYS);
+
+    // Fetch and validate selected variants
+    const selectedVariants = await prisma.shopifyVariant.findMany({
+      where: { storeId: store.id, id: { in: variantIds } },
+      include: {
+        product: true,
+        supplierMappings: {
+          where: { isPrimary: true },
+          include: { supplier: true },
+          take: 1,
+        },
+        reorderOverrides: {
+          where: { storeId: store.id },
+          take: 1,
+        },
+      },
+    });
+
+    if (selectedVariants.length !== variantIds.length) {
+      return { ok: false, message: "One or more selected variants were not found in this store." } satisfies ActionData;
+    }
+
+    const supplierIds = new Set<string>();
+    const lineItemsToCreate: Array<{ variantId: string; quantity: number; unitCost: number | null; leadTime: number }> = [];
+
+    for (const v of selectedVariants) {
+      const primaryMapping = v.supplierMappings[0] ?? null;
+      if (!primaryMapping || primaryMapping.supplier.isArchived) {
+        return { ok: false, message: `Variant "${v.product.title} (${v.title})` + `" does not have an active mapped supplier.` } satisfies ActionData;
+      }
+
+      supplierIds.add(primaryMapping.supplierId);
+
+      const supplierLeadTime = primaryMapping.supplierLeadTimeDays ?? primaryMapping.supplier.leadTimeDays;
+      const calc = calculateReorderRecommendation({
+        inventoryQuantity: v.inventoryQuantity,
+        unitsSold30Days: v.unitsSold30Days,
+        salesWindow,
+        targetDays,
+        bufferDays,
+        supplierLeadTime,
+        hasSupplier: true,
+      });
+
+      const activeOverride = v.reorderOverrides[0] ?? null;
+      const finalSuggestedQty = getFinalSuggestedQuantity(calc.suggestedQtyFormula, activeOverride?.overrideQuantity ?? null);
+
+      if (!finalSuggestedQty || finalSuggestedQty <= 0) {
+        return { ok: false, message: `Variant "${v.product.title} (${v.title})` + `" does not have a positive final suggested reorder quantity.` } satisfies ActionData;
+      }
+
+      const unitCost = primaryMapping.supplierCost ?? v.unitCostAmount;
+      lineItemsToCreate.push({
+        variantId: v.id,
+        quantity: finalSuggestedQty,
+        unitCost,
+        leadTime: supplierLeadTime,
+      });
+    }
+
+    if (supplierIds.size > 1) {
+      return { ok: false, message: "All selected reorder rows must share the same supplier to create a single purchase order." } satisfies ActionData;
+    }
+
+    const supplierId = Array.from(supplierIds)[0];
+    const maxLeadTime = Math.max(...lineItemsToCreate.map((l) => l.leadTime), 14);
+
+    const expectedArrival = new Date();
+    expectedArrival.setDate(expectedArrival.getDate() + maxLeadTime);
+
+    const reference = `PO-${Date.now()}`;
+    const newPo = await prisma.purchaseOrder.create({
+      data: {
+        storeId: store.id,
+        supplierId,
+        reference,
+        expectedArrival,
+        notes: `Created from reorder planning selection (${lineItemsToCreate.length} line items).`,
+        lines: {
+          create: lineItemsToCreate.map((item) => ({
+            variantId: item.variantId,
+            quantity: item.quantity,
+            unitCost: item.unitCost,
+          })),
+        },
+      },
+    });
+
+    return redirect(`/app/purchase-orders/${newPo.id}`);
   }
 
   return { ok: false, message: "Unknown action." } satisfies ActionData;
@@ -179,6 +406,8 @@ export default function ReorderPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const isSubmitting = navigation.state === "submitting";
 
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
   const currentWindow = searchParams.get("window") || "30";
   const currentBuffer = searchParams.get("buffer") || String(DEFAULT_BUFFER_DAYS);
   const currentTarget = searchParams.get("target") || String(DEFAULT_TARGET_DAYS);
@@ -190,6 +419,34 @@ export default function ReorderPage() {
     if (value) next.set(key, value);
     else next.delete(key);
     setSearchParams(next);
+  }
+
+  // Eligible variants for bulk selection: must have supplier & finalSuggestedQty > 0
+  const selectableVariants = data.variants.filter(
+    (v) => Boolean(v.supplierId) && Boolean(v.finalSuggestedQty) && v.finalSuggestedQty! > 0
+  );
+
+  const selectedVariantObjects = data.variants.filter((v) => selectedIds.includes(v.id));
+  const selectedSuppliers = Array.from(new Set(selectedVariantObjects.map((v) => v.supplierName).filter(Boolean)));
+  const hasMixedSuppliers = selectedSuppliers.length > 1;
+  const sharedSupplierName = selectedSuppliers.length === 1 ? selectedSuppliers[0] : null;
+
+  const isAllSelectableChecked =
+    selectableVariants.length > 0 &&
+    selectableVariants.every((v) => selectedIds.includes(v.id));
+
+  function handleToggleAll() {
+    if (isAllSelectableChecked) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(selectableVariants.map((v) => v.id));
+    }
+  }
+
+  function handleToggleRow(id: string) {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
   }
 
   return (
@@ -223,7 +480,7 @@ export default function ReorderPage() {
       </s-section>
 
       <s-section heading="Filters">
-        <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", alignItems: "end" }}>
+        <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", alignItems: "end", marginBottom: "12px" }}>
           <label style={fieldLabelStyle}>
             Sales window model
             <select
@@ -284,8 +541,9 @@ export default function ReorderPage() {
             </select>
           </label>
         </div>
-        <div style={{ marginBottom: "12px", padding: "10px 14px", background: "#effaf5", border: "1px solid #95c9b4", borderRadius: "6px", color: "#0f5132", fontSize: "13px" }}>
-          <strong>Read-only safety note:</strong> PODesk recommendations are read-only and do not change Shopify inventory.
+
+        <div style={formulaExplanationStyle}>
+          <strong>Formula explanation:</strong> Suggested qty = target stock days x average daily sales - current stock. Lead time and buffer affect risk level. Manual overrides do not change Shopify inventory.
         </div>
 
         <div style={{ ...mutedStyle, marginTop: "8px", marginBottom: "16px" }}>
@@ -294,13 +552,66 @@ export default function ReorderPage() {
       </s-section>
 
       <s-section heading="Reorder table">
+        {/* BULK ACTION BAR */}
+        {selectedIds.length > 0 && (
+          <div style={bulkActionBarStyle}>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+              <strong>{selectedIds.length} item(s) selected</strong>
+              {sharedSupplierName ? (
+                <span style={supplierBadgeStyle}>Supplier: {sharedSupplierName}</span>
+              ) : hasMixedSuppliers ? (
+                <span style={warningBadgeStyle}>Mixed suppliers selected (Single supplier required)</span>
+              ) : null}
+            </div>
+
+            <Form method="post" style={{ display: "flex", gap: "8px" }}>
+              <input type="hidden" name="intent" value="create-multi-reorder-po" />
+              <input type="hidden" name="window" value={currentWindow} />
+              <input type="hidden" name="buffer" value={currentBuffer} />
+              <input type="hidden" name="target" value={currentTarget} />
+              {selectedIds.map((id) => (
+                <input key={id} type="hidden" name="variantIds" value={id} />
+              ))}
+              <button
+                type="submit"
+                disabled={isSubmitting || hasMixedSuppliers || selectedIds.length === 0}
+                style={hasMixedSuppliers ? disabledPrimaryBtnStyle : actionBtnStyle}
+              >
+                {isSubmitting ? "Creating PO..." : `Create draft PO from selected (${selectedIds.length})`}
+              </button>
+            </Form>
+          </div>
+        )}
+
         {data.variants.length === 0 ? (
-          <s-paragraph>No variants match the current filters.</s-paragraph>
+          <div style={emptyCardStyle}>
+            <div style={{ fontWeight: 650, fontSize: "15px", marginBottom: "6px" }}>No variants match the current reorder view</div>
+            <p style={{ margin: "0 0 12px", color: "#6d7175", fontSize: "13px" }}>
+              {data.totalCount === 0
+                ? "No tracked variants found in PODesk. Sync your inventory from the dashboard or create SKU mappings to calculate reorder suggestions."
+                : "Try adjusting your supplier or risk filters above to inspect other SKUs."}
+            </p>
+            {data.totalCount === 0 ? (
+              <div style={{ display: "flex", gap: "10px" }}>
+                <a href="/app" style={actionBtnStyle}>Go to Dashboard to Sync</a>
+                <a href="/app/mappings" style={secondaryLinkBtnStyle}>Map SKUs</a>
+              </div>
+            ) : null}
+          </div>
         ) : (
           <div style={tableWrapStyle}>
             <table style={tableStyle}>
               <thead>
                 <tr>
+                  <th style={{ ...thStyle, width: "36px", textAlign: "center" }}>
+                    <input
+                      type="checkbox"
+                      checked={isAllSelectableChecked}
+                      onChange={handleToggleAll}
+                      disabled={selectableVariants.length === 0}
+                      title="Select all eligible rows for bulk PO"
+                    />
+                  </th>
                   <th style={thStyle}>Product</th>
                   <th style={thStyle}>SKU</th>
                   <th style={thStyle}>Stock</th>
@@ -309,56 +620,123 @@ export default function ReorderPage() {
                   <th style={thStyle}>Days left</th>
                   <th style={thStyle}>Supplier</th>
                   <th style={thStyle}>Lead</th>
-                  <th style={thStyle}>Risk</th>
-                  <th style={thStyle}>Suggested qty</th>
+                  <th style={thStyle}>Reason</th>
+                  <th style={thStyle}>Formula qty</th>
+                  <th style={thStyle}>Final qty</th>
+                  <th style={thStyle}>Override</th>
                   <th style={thStyle}>Action</th>
                 </tr>
               </thead>
               <tbody>
-                {data.variants.map((v) => (
-                  <tr key={v.id}>
-                    <td style={tdStyle}>
-                      {v.productTitle}
-                      <div style={mutedStyle}>{v.variantTitle}</div>
-                    </td>
-                    <td style={tdStyle}>{v.sku || "-"}</td>
-                    <td style={tdStyle}>{v.inventoryQuantity}</td>
-                    <td style={tdStyle}>{v.unitsSoldInWindow}</td>
-                    <td style={tdStyle}>{v.avgDailySales}</td>
-                    <td style={tdStyle}>{v.daysLeft != null ? v.daysLeft : "-"}</td>
-                    <td style={tdStyle}>
-                      {v.supplierName ? (
-                        <a href={`/app/suppliers/${v.supplierId}`} style={linkStyle}>{v.supplierName}</a>
-                      ) : (
-                        <span style={mutedStyle}>Unmapped</span>
-                      )}
-                    </td>
-                    <td style={tdStyle}>{v.supplierLeadTime != null ? `${v.supplierLeadTime}d` : "-"}</td>
-                    <td style={tdStyle}>
-                      <span style={riskBadge(v.risk)}>{v.risk}</span>
-                    </td>
-                    <td style={tdStyle}>{v.suggestedQty != null ? v.suggestedQty : "-"}</td>
-                    <td style={tdStyle}>
-                      {v.supplierId && v.suggestedQty && v.suggestedQty > 0 ? (
-                        <Form method="post">
-                          <input type="hidden" name="intent" value="create-reorder-po" />
-                          <input type="hidden" name="variantId" value={v.id} />
-                          <input type="hidden" name="supplierId" value={v.supplierId} />
-                          <input type="hidden" name="quantity" value={v.suggestedQty} />
-                          <button type="submit" disabled={isSubmitting} style={smallBtnStyle}>
-                            Create draft PO
-                          </button>
-                        </Form>
-                      ) : !v.supplierId ? (
-                        <a href="/app/mappings" style={{ ...linkStyle, fontSize: "12px" }}>Map supplier</a>
-                      ) : v.avgDailySales === 0 ? (
-                        <span style={{ ...mutedStyle, fontSize: "12px" }}>No recent sales</span>
-                      ) : (
-                        <span style={{ ...mutedStyle, fontSize: "12px" }}>Stock OK</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                {data.variants.map((v) => {
+                  const isSelectable = Boolean(v.supplierId) && Boolean(v.finalSuggestedQty) && v.finalSuggestedQty! > 0;
+                  const isChecked = selectedIds.includes(v.id);
+
+                  return (
+                    <tr key={v.id} style={{ background: isChecked ? "#f0f7ff" : "inherit" }}>
+                      <td style={{ ...tdStyle, textAlign: "center" }}>
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => handleToggleRow(v.id)}
+                          disabled={!isSelectable}
+                          title={isSelectable ? "Select for draft PO" : "Requires mapped supplier & final suggested qty > 0"}
+                        />
+                      </td>
+                      <td style={tdStyle}>
+                        {v.productTitle}
+                        <div style={mutedStyle}>{v.variantTitle}</div>
+                      </td>
+                      <td style={tdStyle}>{v.sku || "-"}</td>
+                      <td style={tdStyle}>{v.inventoryQuantity}</td>
+                      <td style={tdStyle}>{v.unitsSoldInWindow}</td>
+                      <td style={tdStyle}>{v.avgDailySales}</td>
+                      <td style={tdStyle}>{v.daysLeft != null ? v.daysLeft : "-"}</td>
+                      <td style={tdStyle}>
+                        {v.supplierName ? (
+                          <a href={`/app/suppliers/${v.supplierId}`} style={linkStyle}>{v.supplierName}</a>
+                        ) : (
+                          <span style={mutedStyle}>Unmapped</span>
+                        )}
+                      </td>
+                      <td style={tdStyle}>{v.supplierLeadTime != null ? `${v.supplierLeadTime}d` : "-"}</td>
+                      <td style={tdStyle}>
+                        <span style={riskBadge(v.risk)}>{v.risk}</span>
+                        <div style={riskReasonSubtextStyle}>{v.riskReason}</div>
+                      </td>
+                      <td style={tdStyle}>{v.suggestedQtyFormula != null ? v.suggestedQtyFormula : "-"}</td>
+                      <td style={{ ...tdStyle, fontWeight: v.hasOverride ? 700 : 400 }}>
+                        {v.finalSuggestedQty != null ? (
+                          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                            <span>{v.finalSuggestedQty}</span>
+                            {v.hasOverride ? (
+                              <span style={overrideBadgeStyle}>Manual override</span>
+                            ) : null}
+                          </div>
+                        ) : (
+                          "-"
+                        )}
+                      </td>
+                      <td style={tdStyle}>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                          <Form method="post" style={{ display: "flex", gap: "4px", alignItems: "center" }}>
+                            <input type="hidden" name="intent" value="save-override" />
+                            <input type="hidden" name="variantId" value={v.id} />
+                            <input
+                              type="number"
+                              name="overrideQuantity"
+                              defaultValue={v.overrideQuantity != null ? v.overrideQuantity : ""}
+                              placeholder="Qty"
+                              min="0"
+                              style={overrideInputStyle}
+                            />
+                            <input
+                              type="text"
+                              name="notes"
+                              defaultValue={v.overrideNotes || ""}
+                              maxLength={300}
+                              placeholder="Reason"
+                              style={overrideReasonInputStyle}
+                            />
+                            <button type="submit" disabled={isSubmitting} style={smallBtnStyle}>
+                              Save
+                            </button>
+                          </Form>
+                          {v.hasOverride ? (
+                            <Form method="post" style={{ marginTop: "2px" }}>
+                              <input type="hidden" name="intent" value="clear-override" />
+                              <input type="hidden" name="variantId" value={v.id} />
+                              <button type="submit" disabled={isSubmitting} style={clearBtnStyle}>
+                                Clear override
+                              </button>
+                            </Form>
+                          ) : null}
+                        </div>
+                      </td>
+                      <td style={tdStyle}>
+                        {v.supplierId && v.finalSuggestedQty && v.finalSuggestedQty > 0 ? (
+                          <Form method="post">
+                            <input type="hidden" name="intent" value="create-reorder-po" />
+                            <input type="hidden" name="variantId" value={v.id} />
+                            <input type="hidden" name="supplierId" value={v.supplierId} />
+                            <input type="hidden" name="window" value={currentWindow} />
+                            <input type="hidden" name="buffer" value={currentBuffer} />
+                            <input type="hidden" name="target" value={currentTarget} />
+                            <button type="submit" disabled={isSubmitting} style={actionBtnStyle}>
+                              Create draft PO
+                            </button>
+                          </Form>
+                        ) : !v.supplierId ? (
+                          <a href="/app/mappings" style={{ ...linkStyle, fontSize: "12px" }}>Map supplier</a>
+                        ) : v.avgDailySales === 0 ? (
+                          <span style={{ ...mutedStyle, fontSize: "12px" }}>No recent sales</span>
+                        ) : (
+                          <span style={{ ...mutedStyle, fontSize: "12px" }}>Stock OK</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -396,7 +774,20 @@ const mutedStyle = { color: "#6d7175", fontSize: "13px", marginTop: "4px" } as c
 const fieldLabelStyle = { display: "grid", gap: "6px", color: "#202223", fontSize: "13px", fontWeight: 600 } as const;
 const inputStyle = { border: "1px solid #c9cccf", borderRadius: "6px", padding: "9px 10px", fontSize: "14px", width: "100%" } as const;
 const linkStyle = { color: "#2c6ecb", textDecoration: "none" } as const;
-const smallBtnStyle = { border: "1px solid #c9cccf", borderRadius: "4px", padding: "4px 10px", background: "#fff", cursor: "pointer", fontSize: "12px", whiteSpace: "nowrap" } as const;
+const smallBtnStyle = { border: "1px solid #c9cccf", borderRadius: "4px", padding: "4px 8px", background: "#fff", cursor: "pointer", fontSize: "12px", whiteSpace: "nowrap" } as const;
+const clearBtnStyle = { border: "none", background: "none", color: "#d72c0d", cursor: "pointer", fontSize: "11px", textDecoration: "underline", padding: "0" } as const;
+const actionBtnStyle = { border: "1px solid #008060", borderRadius: "4px", padding: "6px 12px", background: "#008060", color: "#fff", cursor: "pointer", fontSize: "12px", fontWeight: 600, whiteSpace: "nowrap", textDecoration: "none", display: "inline-block" } as const;
+const secondaryLinkBtnStyle = { border: "1px solid #c9cccf", borderRadius: "4px", padding: "6px 12px", background: "#fff", color: "#202223", cursor: "pointer", fontSize: "12px", fontWeight: 600, whiteSpace: "nowrap", textDecoration: "none", display: "inline-block" } as const;
+const disabledPrimaryBtnStyle = { border: "1px solid #8c9196", borderRadius: "4px", padding: "6px 12px", background: "#8c9196", color: "#fff", cursor: "not-allowed", fontSize: "12px", fontWeight: 600, whiteSpace: "nowrap" } as const;
+const overrideInputStyle = { width: "60px", border: "1px solid #c9cccf", borderRadius: "4px", padding: "4px 6px", fontSize: "12px" } as const;
+const overrideReasonInputStyle = { width: "110px", border: "1px solid #c9cccf", borderRadius: "4px", padding: "4px 6px", fontSize: "12px" } as const;
+const overrideBadgeStyle = { background: "#e4e8ec", color: "#202223", padding: "2px 6px", borderRadius: "4px", fontSize: "10px", fontWeight: 600, whiteSpace: "nowrap" } as const;
+const riskReasonSubtextStyle = { fontSize: "11px", color: "#6d7175", marginTop: "4px", maxWidth: "160px", lineHeight: "1.2" } as const;
+const formulaExplanationStyle = { marginBottom: "12px", padding: "10px 14px", background: "#f4f6f8", border: "1px solid #c9cccf", borderRadius: "6px", color: "#202223", fontSize: "13px", lineHeight: "1.4" } as const;
+const bulkActionBarStyle = { display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", padding: "10px 14px", background: "#eaf5fe", border: "1px solid #2c6ecb", borderRadius: "6px", marginBottom: "12px", fontSize: "13px" } as const;
+const supplierBadgeStyle = { background: "#fff", color: "#1f5199", padding: "2px 8px", borderRadius: "4px", fontSize: "12px", fontWeight: 600, border: "1px solid #2c6ecb" } as const;
+const warningBadgeStyle = { background: "#fff4f4", color: "#d72c0d", padding: "2px 8px", borderRadius: "4px", fontSize: "12px", fontWeight: 600, border: "1px solid #d72c0d" } as const;
+const emptyCardStyle = { padding: "20px", background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: "8px", textAlign: "left" } as const;
 const tableWrapStyle = { overflowX: "auto" } as const;
 const tableStyle = { width: "100%", borderCollapse: "collapse", fontSize: "14px" } as const;
 const thStyle = { textAlign: "left", borderBottom: "1px solid #dfe3e8", padding: "10px 8px", whiteSpace: "nowrap" } as const;

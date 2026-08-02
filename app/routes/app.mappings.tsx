@@ -183,13 +183,21 @@ export default function MappingsPage() {
 
       <s-section heading="Assign SKU to supplier">
         {suppliers.length === 0 ? (
-          <s-paragraph>
-            Add suppliers first on the <a href="/app/suppliers" style={linkStyle}>Suppliers</a> page.
-          </s-paragraph>
+          <div style={{ padding: "18px", background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: "8px" }}>
+            <div style={{ fontWeight: 650, fontSize: "14px", marginBottom: "6px" }}>No suppliers found</div>
+            <p style={{ margin: "0 0 12px", color: "#6d7175", fontSize: "13px" }}>
+              Add a supplier first before mapping products and SKUs.
+            </p>
+            <a href="/app/suppliers" style={buttonStyle}>Add Supplier</a>
+          </div>
         ) : variants.length === 0 ? (
-          <s-paragraph>
-            Sync inventory first on the <a href="/app" style={linkStyle}>Dashboard</a>.
-          </s-paragraph>
+          <div style={{ padding: "18px", background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: "8px" }}>
+            <div style={{ fontWeight: 650, fontSize: "14px", marginBottom: "6px" }}>No Shopify variants synced yet</div>
+            <p style={{ margin: "0 0 12px", color: "#6d7175", fontSize: "13px" }}>
+              Run inventory sync from the dashboard to pull your Shopify variants into PODesk.
+            </p>
+            <a href="/app" style={buttonStyle}>Go to Dashboard to Sync</a>
+          </div>
         ) : (
           <Form method="post">
             <input type="hidden" name="intent" value="create-mapping" />
@@ -232,7 +240,13 @@ export default function MappingsPage() {
 
       <s-section heading={`Current mappings (${mappings.length})`}>
         {mappings.length === 0 ? (
-          <s-paragraph>No mappings yet. Assign SKUs to suppliers above.</s-paragraph>
+          <div style={{ padding: "18px", background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: "8px" }}>
+            <div style={{ fontWeight: 650, fontSize: "14px", marginBottom: "6px" }}>No SKU mappings created yet</div>
+            <p style={{ margin: "0 0 12px", color: "#6d7175", fontSize: "13px" }}>
+              Map your variants using the form above or import existing supplier mappings from Stocky / spreadsheets via CSV.
+            </p>
+            <a href="/app/imports" style={buttonStyle}>Import Mappings via CSV</a>
+          </div>
         ) : (
           <div style={tableWrapStyle}>
             <table style={tableStyle}>

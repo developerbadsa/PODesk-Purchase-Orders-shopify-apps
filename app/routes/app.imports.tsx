@@ -210,8 +210,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   return { ok: false, message: "Unknown action." } satisfies ActionData;
 };
 
-
-
 // Helper format function for action response
 function formatJobForAction(job: {
   id: string;
@@ -285,6 +283,27 @@ export default function ImportsPage() {
         </div>
       </s-section>
 
+      {/* SAMPLE CSV DOWNLOAD BANNER */}
+      <s-section heading="Import Template & Data Safety">
+        <div style={sampleBannerStyle}>
+          <div>
+            <div style={{ fontWeight: 650, fontSize: "14px", marginBottom: "4px" }}>
+              Download Sample CSV Template
+            </div>
+            <div style={{ color: "#5c5f62", fontSize: "13px" }}>
+              Need a starting template? Download our sample CSV file with standard column headers for supplier names, SKUs, unit costs, and lead times. All CSV uploads are previewed safely before creating any records.
+            </div>
+          </div>
+          <a
+            href="/app/imports/sample-csv"
+            download="podesk-supplier-sku-import-sample.csv"
+            style={secondaryBtnStyle}
+          >
+            Download sample CSV
+          </a>
+        </div>
+      </s-section>
+
       {/* STEP 1: UPLOAD / PASTE FORM */}
       <s-section heading="Upload supplier SKU mappings CSV">
         <p style={bodyStyle}>
@@ -355,6 +374,15 @@ export default function ImportsPage() {
             <div><strong>Total rows:</strong> {activeJob.totalRows}</div>
             <div><strong style={{ color: "#0f5132" }}>Valid rows:</strong> {activeJob.validRows}</div>
             <div><strong style={{ color: "#8a1f11" }}>Invalid rows:</strong> {activeJob.invalidRows}</div>
+            {activeJob.invalidRows > 0 && (
+              <a
+                href={`/app/imports/invalid-csv/${activeJob.id}`}
+                download={`invalid-rows-${activeJob.id}.csv`}
+                style={dangerOutlineBtnStyle}
+              >
+                Download invalid rows
+              </a>
+            )}
           </div>
 
           {/* COLUMN MAPPING DETECTION */}
@@ -498,11 +526,22 @@ export default function ImportsPage() {
                     <td style={tdStyle}>{j.importedMappings}</td>
                     <td style={tdStyle}>{formatDate(j.createdAt)}</td>
                     <td style={tdStyle}>
-                      <Form method="post" style={{ display: "inline" }}>
-                        <input type="hidden" name="intent" value="delete-job" />
-                        <input type="hidden" name="jobId" value={j.id} />
-                        <button type="submit" style={smallBtnStyle}>Delete</button>
-                      </Form>
+                      <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                        {j.invalidRows > 0 && (
+                          <a
+                            href={`/app/imports/invalid-csv/${j.id}`}
+                            download={`invalid-rows-${j.id}.csv`}
+                            style={smallDangerLinkStyle}
+                          >
+                            Download invalid rows
+                          </a>
+                        )}
+                        <Form method="post" style={{ display: "inline" }}>
+                          <input type="hidden" name="intent" value="delete-job" />
+                          <input type="hidden" name="jobId" value={j.id} />
+                          <button type="submit" style={smallBtnStyle}>Delete</button>
+                        </Form>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -630,6 +669,18 @@ const buttonStyle = {
   cursor: "pointer",
 } as const;
 
+const secondaryBtnStyle = {
+  border: "1px solid #c9cccf",
+  borderRadius: "6px",
+  padding: "8px 14px",
+  background: "#fff",
+  color: "#202223",
+  fontWeight: 650,
+  fontSize: "13px",
+  textDecoration: "none",
+  display: "inline-block",
+} as const;
+
 const primaryButtonStyle = {
   border: "0",
   borderRadius: "6px",
@@ -649,6 +700,30 @@ const smallBtnStyle = {
   fontSize: "12px",
 } as const;
 
+const smallDangerLinkStyle = {
+  border: "1px solid #e0b3b2",
+  borderRadius: "4px",
+  padding: "4px 8px",
+  background: "#fff4f4",
+  color: "#8a1f11",
+  cursor: "pointer",
+  fontSize: "12px",
+  textDecoration: "none",
+  display: "inline-block",
+} as const;
+
+const dangerOutlineBtnStyle = {
+  border: "1px solid #e0b3b2",
+  borderRadius: "6px",
+  padding: "6px 12px",
+  background: "#fff4f4",
+  color: "#8a1f11",
+  fontWeight: 650,
+  fontSize: "13px",
+  textDecoration: "none",
+  display: "inline-block",
+} as const;
+
 const typeBadgeStyle = {
   display: "inline-block",
   background: "#f4f6f8",
@@ -658,6 +733,18 @@ const typeBadgeStyle = {
   fontSize: "13px",
   color: "#202223",
   marginBottom: "16px",
+} as const;
+
+const sampleBannerStyle = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  gap: "16px",
+  flexWrap: "wrap",
+  padding: "14px 16px",
+  background: "#f4f6f8",
+  border: "1px solid #dfe3e8",
+  borderRadius: "8px",
 } as const;
 
 const previewSummaryStyle = {

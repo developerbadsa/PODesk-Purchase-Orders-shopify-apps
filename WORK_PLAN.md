@@ -54,13 +54,13 @@ Professional sales goal:
 | Purchase orders | Done (verified) | Multi-line PO create, detail, draft reference editing, status state machine, duplicate redirect, delete draft, print view, and activity timestamps. Store scope hardened. |
 | PO Receiving | Done (verified) | PurchaseOrderReceipt & PurchaseOrderReceiptLine models, per-line and PO-level receiving calculations, record-receipt server action, partial/full receive status transitions (PARTIALLY_RECEIVED / RECEIVED), receipt history log, list page progress, dashboard integration, and print view summary. |
 | Settings & Branded Output | Done (verified) | Store-scoped business identity, purchasing defaults, prefix customization, currency formatting, and merchant-branded PO output. |
-| Reorder table | Done (verified) | Dedicated page with 7/14/30/90d window, buffer, target days, risk classification, suggested qty, and create-draft-PO action from mapped suggestions. |
-| Stocky import | Done (verified) | Full CSV supplier and SKU mapping import with file/paste, column detection, manual column override, preview validation, import execution, and job history. PO history import reserved for later. |
+| Reorder table | Done (verified) | Dedicated page with 7/14/30/90d window, buffer, target days, risk classification, exact risk reasons, formula suggested qty, manual reorder overrides (ReorderOverride model), extracted app/reorder.server.ts calculations, multi-row draft PO creation for matching suppliers, and single-row/multi-row PO actions using final suggested qty. |
+| Stocky import | Done (verified) | Full CSV supplier and SKU mapping import with file/paste, column detection, manual column override, preview validation, import execution, job history, downloadable sample CSV (podesk-supplier-sku-import-sample.csv), and store-scoped invalid rows export. |
 | Billing | Scaffold (Postponed) | App is free during beta. BillingSubscription model and plan overview route (/app/billing) exist as non-blocking presentation scaffold. |
-| App Store listing | Not Started | Strategy exists. Assets not built. |
-| Sales materials | Ongoing | Outreach copy exists. Demo/video/case study not done. |
+| App Store listing | Done | App store listing copy, 3-minute demo script, screenshot capture plan, honest outreach templates, and manual test checklist completed in product/assets/. |
+| Sales materials | Done | Professional cold emails, community forum replies, Reddit DMs, partner outreach, and demo call invites built in product/assets/outreach-messages.md. |
 | GitHub repo | Done | Main branch pushed to GitHub remote. |
-| Local verification | Done | 2026-08-02: setup, typecheck, lint, build all passed. Shopify dev install and inventory sync verified. |
+| Local verification | Done | 2026-08-02: setup, prisma migrate, typecheck, lint, build all passed. Shopify dev install and inventory sync verified. |
 | Security audit | Blocked | High React Router vulnerabilities in Shopify app template dependencies. Launch blocker until safe upstream patch is available; do not force-fix blindly. |
 
 ## Phase 0: Foundation And Repo
@@ -238,9 +238,10 @@ Tasks:
 | Lead time in risk formula | Done | Supplier lead time from mapping or supplier default used in risk classification. |
 | Manual buffer days | Done | Adjustable buffer days parameter. |
 | Suggested reorder quantity | Done | Calculated from target days × avg daily sales − current stock. |
-| Create PO from suggestion | Done | Mapped reorder suggestions can create a draft purchase order with suggested quantity and expected arrival based on lead time. |
-| Exclude OOS days | Not Started | Formula does not punish products that were out of stock. |
-| Manual override | Not Started | Merchant can override suggested quantity. |
+| Create PO from suggestion | Done | Mapped reorder suggestions can create a draft purchase order with final suggested quantity (respecting manual overrides) and expected arrival based on lead time. |
+| Reorder calculation helper extraction | Done | Extracted reorder recommendation, risk level, risk reason, and final quantity logic into app/reorder.server.ts. |
+| Manual override | Done | ReorderOverride model, save-override and clear-override server actions, override input, clear action, and "Manual override" badge in reorder table. |
+| Exclude OOS days | Not Started | Logic structure prepared in app/reorder.server.ts. Exclude out-of-stock days when historical stock data becomes available. |
 
 Definition of done:
 

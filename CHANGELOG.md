@@ -45,10 +45,26 @@
   - Updated PO list table (`/app/purchase-orders`) to show compact receiving progress (`X / Y received (Z%)`).
   - Updated Dashboard (`/app`) recent purchase orders table with receiving progress.
   - Added dedicated receiving utility (`app/receiving.server.ts`) with `calculateLineReceiving`, `getPoReceivingSummary`, and `canReceivePo` functions.
-- Built Billing Foundation Scaffold:
-  - Added `BillingSubscription` database model and applied Prisma migration `20260802162807_add_billing_subscription`.
-  - Built `/app/billing` placeholder route (`app/routes/app.billing.tsx`) displaying current plan status, Starter ($39/mo), Pro ($79/mo), Business ($149/mo), and Migration Service ($299-$999) pricing tiers.
-  - Added `<s-link href="/app/billing">Billing</s-link>` link to `<s-app-nav>` navigation.
+- Built Manual Reorder Quantity Overrides & Calculation Module:
+  - Added `ReorderOverride` database model (scoped to storeId + variantId) and executed Prisma migration `20260802172219_add_reorder_override`.
+  - Extracted reorder calculation functions into `app/reorder.server.ts` (`calculateReorderRecommendation`, `getRiskLevel`, `getRiskReason`, `getFinalSuggestedQuantity`) preparing structure for future out-of-stock days exclusion.
+  - Added `save-override` and `clear-override` server actions in `/app/reorder` with integer validation, 300-char note limits, and store-scoped upserts/deletions.
+  - Updated loader on `/app/reorder` to return formula suggested quantity, manual override quantity, final suggested quantity, override badge state, and explicit risk reasons ("Already out of stock", "Stock may run out before supplier lead time + buffer", "Stock is low but not urgent", "Stock OK", "No recent sales").
+  - Updated "Create draft PO" action to use `finalSuggestedQty` and hide action when `finalSuggestedQty <= 0`.
+  - Added multi-row draft PO creation from reorder planning table:
+    - Added checkboxes per row for items with active mapped suppliers and `finalSuggestedQty > 0`.
+    - Built bulk action toolbar displaying selected count, shared supplier badge, and single-supplier validation warning.
+    - Implemented server-side `create-multi-reorder-po` action: validates store scoping, supplier equality, positive quantity boundaries, creates multi-line draft PO with max lead time expected arrival, and redirects directly to `/app/purchase-orders/$id`.
+  - Upgraded merchant risk reason calculations in `app/reorder.server.ts` to show exact strings ("Map supplier first", "Already out of stock", "Stock may run out before supplier lead time + buffer", "Stock is low but not urgent", "Stock OK", "No recent sales").
+  - Built downloadable sample CSV resource route (`app/routes/app.imports.sample-csv.ts`) serving `podesk-supplier-sku-import-sample.csv` with standard headers and sample rows, connected to a "Download sample CSV" button on `/app/imports`.
+  - Built store-scoped invalid import rows export route (`app/routes/app.imports.invalid-csv.$id.ts`) serving `invalid-rows-{jobId}.csv` with original row data plus `error_reason`, connected to "Download invalid rows" buttons on preview and import history cards.
+  - Upgraded contextual user-friendly empty states with clear CTAs across `/app/suppliers`, `/app/mappings`, `/app/purchase-orders`, `/app/reorder`, and `/app/imports`.
+  - Created complete product sales, marketing, and QA asset suite in `product/assets/`:
+    - `app-store-listing.md`: Listing copy, subtitles, key benefits, feature bullets, search keywords, screenshot requirements, support placeholders, and video outline.
+    - `demo-script.md`: 3-minute video walk-through script covering sync, mapping, reorder overrides, multi-row POs, print output, receiving, and CSV imports.
+    - `screenshot-plan.md`: Visual capture plan for 10 key app screens with target data, merchant problem proofs, and captions.
+    - `outreach-messages.md`: Honest outreach copy including cold emails for Stocky users, community replies, Reddit DMs, partner messages, follow-ups, and demo call invites.
+    - `manual-test-checklist.md`: 12-point manual browser testing protocol covering all key merchant workflows.
 - Verified local `npm run typecheck`, `npm run lint`, and `npm run build`.
 
 ## Current MVP Limits
@@ -57,7 +73,7 @@
 - Historical PO import from Stocky/spreadsheets is not built yet (CSV Supplier and SKU mapping import is complete).
 - Direct automated SMTP/provider email sending and PDF download remain future work (manual email sharing, mailto drafts, and printable POs are complete).
 - Production Shopify subscription billing is scaffolded; charges are not enforced in dev build.
-- App Store listing assets are not built yet.
+- App Store listing copy/assets are drafted in `product/assets/`; final screenshots and recorded demo video still need to be produced after browser testing.
 - `npm audit` still reports high-severity dependency advisories that require careful dependency upgrades, not blind force-fix.
 
 # Shopify Template History

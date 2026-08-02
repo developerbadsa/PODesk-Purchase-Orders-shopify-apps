@@ -164,7 +164,12 @@ export default function SuppliersPage() {
 
       <s-section heading={`Active suppliers (${activeSuppliers.length})`}>
         {activeSuppliers.length === 0 ? (
-          <s-paragraph>No suppliers yet. Add one above.</s-paragraph>
+          <div style={{ padding: "18px", background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: "8px", textAlign: "left" }}>
+            <div style={{ fontWeight: 650, fontSize: "14px", marginBottom: "6px" }}>No suppliers added yet</div>
+            <p style={{ margin: "0 0 10px", color: "#6d7175", fontSize: "13px" }}>
+              Add your first supplier using the form above to start mapping SKUs, setting lead times, and creating purchase orders.
+            </p>
+          </div>
         ) : (
           <div style={tableWrapStyle}>
             <table style={tableStyle}>
