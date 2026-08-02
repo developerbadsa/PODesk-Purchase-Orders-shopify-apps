@@ -24,6 +24,7 @@ export default function App() {
         <s-link href="/app/purchase-orders">Purchase orders</s-link>
         <s-link href="/app/reorder">Reorder planning</s-link>
         <s-link href="/app/imports">Stocky import</s-link>
+        <s-link href="/app/settings">Settings</s-link>
       </s-app-nav>
       <Outlet />
     </AppProvider>

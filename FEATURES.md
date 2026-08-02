@@ -409,7 +409,7 @@ Not required before first paying users:
 | Purchase Order Detail | Edit lines, status, cost, arrival. | Done |
 | Create Purchase Order | Build PO from SKUs and supplier. | Done |
 | Stocky Import | Paste/import supplier CSV now; SKU/PO archive import later. | Ongoing |
-| Settings | Reorder defaults, sales window, buffer days. | Not Started |
+| Settings | Company profile, PO defaults, prefix, currency code. | Done |
 | Billing | Trial and plan management. | Not Started |
 
 ## Data Model Requirements

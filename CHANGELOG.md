@@ -19,6 +19,11 @@
   - Added `updatedAt` activity timestamp tracking across PO detail, PO list, and print views.
   - Updated PO duplicate action to create a new draft PO and redirect directly to the new PO detail view.
   - Restricted PO deletion strictly to DRAFT POs.
+- Added persistent `StoreSettings` database model (scoped by store ID) for company profile, purchase order defaults, and localization.
+- Built `/app/settings` route with server-side input validation (`currencyCode`, `contactEmail`, `poNumberPrefix`) and save notice.
+- Connected settings to PO creation with custom reference prefixes and auto-populating default PO notes.
+- Upgraded PO print view (`/app/purchase-orders/:id/print`) into a professional branded PO document with merchant address header, payment terms, currency formatting, and footer.
+- Formatted purchase order totals dynamically on list and detail views using store settings currency.
 - Verified local `npm run typecheck`, `npm run lint`, and `npm run build`.
 
 ## Current MVP Limits

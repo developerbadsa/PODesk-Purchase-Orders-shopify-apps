@@ -3,31 +3,51 @@ import { useLoaderData } from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticate } from "../shopify.server";
 import prisma from "../db.server";
+import { formatCurrency } from "../utils";
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
   const store = await prisma.store.findUnique({ where: { shop: session.shop } });
   if (!store) throw new Response("Store not found", { status: 404 });
 
-  const po = await prisma.purchaseOrder.findFirst({
-    where: { id: params.id, storeId: store.id },
-    include: {
-      supplier: true,
-      lines: {
-        include: {
-          variant: { include: { product: true } },
+  const [settings, po] = await Promise.all([
+    prisma.storeSettings.findUnique({ where: { storeId: store.id } }),
+    prisma.purchaseOrder.findFirst({
+      where: { id: params.id, storeId: store.id },
+      include: {
+        supplier: true,
+        lines: {
+          include: {
+            variant: { include: { product: true } },
+          },
         },
       },
-    },
-  });
+    }),
+  ]);
 
   if (!po) throw new Response("Purchase order not found", { status: 404 });
 
   const totalQuantity = po.lines.reduce((sum, l) => sum + l.quantity, 0);
   const totalCost = po.lines.reduce((sum, l) => sum + (l.unitCost ?? 0) * l.quantity, 0);
+  const currencyCode = settings?.currencyCode || "USD";
+
+  const companyAddressParts = [
+    settings?.addressLine1,
+    settings?.addressLine2,
+    [settings?.city, settings?.region, settings?.postalCode].filter(Boolean).join(", "),
+    settings?.country,
+  ].filter(Boolean);
 
   return {
-    shopDomain: store.name ? `${store.name} (${store.shop})` : store.shop,
+    shopDomain: store.shop,
+    currencyCode,
+    company: {
+      name: settings?.companyName || store.name || store.shop,
+      email: settings?.contactEmail,
+      phone: settings?.phone,
+      addressLines: companyAddressParts,
+      defaultPaymentTerms: settings?.defaultPaymentTerms,
+    },
     po: {
       id: po.id,
       reference: po.reference,
@@ -40,7 +60,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
         name: po.supplier.name,
         email: po.supplier.email,
         phone: po.supplier.phone,
-        paymentTerms: po.supplier.paymentTerms,
+        paymentTerms: po.supplier.paymentTerms || settings?.defaultPaymentTerms || null,
         notes: po.supplier.notes,
       },
       lines: po.lines.map((l) => ({
@@ -59,7 +79,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
 };
 
 export default function PurchaseOrderPrintPage() {
-  const { shopDomain, po } = useLoaderData<typeof loader>();
+  const { currencyCode, company, po } = useLoaderData<typeof loader>();
 
   return (
     <div style={containerStyle}>
@@ -84,9 +104,14 @@ export default function PurchaseOrderPrintPage() {
         {/* Document Header */}
         <header style={headerStyle}>
           <div>
-            <div style={brandStyle}>PODesk Purchase Order</div>
+            <div style={brandStyle}>PURCHASE ORDER</div>
             <h1 style={titleStyle}>{po.reference}</h1>
-            <div style={storeDomainStyle}>{shopDomain}</div>
+            <div style={companyNameStyle}>{company.name}</div>
+            {company.addressLines.map((line, i) => (
+              <div key={i} style={companyMetaStyle}>{line}</div>
+            ))}
+            {company.email && <div style={companyMetaStyle}>Email: {company.email}</div>}
+            {company.phone && <div style={companyMetaStyle}>Phone: {company.phone}</div>}
           </div>
           <div style={headerRightStyle}>
             <span style={statusBadgeStyle(po.status)}>
@@ -183,10 +208,10 @@ export default function PurchaseOrderPrintPage() {
                   <td style={tdStyle}>{line.sku || "-"}</td>
                   <td style={{ ...tdStyle, textAlign: "right" }}>{line.quantity}</td>
                   <td style={{ ...tdStyle, textAlign: "right" }}>
-                    {line.unitCost != null ? `$${line.unitCost.toFixed(2)}` : "-"}
+                    {line.unitCost != null ? formatCurrency(line.unitCost, currencyCode) : "-"}
                   </td>
                   <td style={{ ...tdStyle, textAlign: "right" }}>
-                    {line.subtotal > 0 ? `$${line.subtotal.toFixed(2)}` : "-"}
+                    {line.subtotal > 0 ? formatCurrency(line.subtotal, currencyCode) : "-"}
                   </td>
                 </tr>
               ))}
@@ -201,7 +226,7 @@ export default function PurchaseOrderPrintPage() {
                 </td>
                 <td style={tfStyle}></td>
                 <td style={{ ...tfStyle, textAlign: "right", fontWeight: 700 }}>
-                  {po.totalCost > 0 ? `$${po.totalCost.toFixed(2)}` : "-"}
+                  {po.totalCost > 0 ? formatCurrency(po.totalCost, currencyCode) : "-"}
                 </td>
               </tr>
             </tfoot>
@@ -210,7 +235,7 @@ export default function PurchaseOrderPrintPage() {
 
         {/* Print Document Footer */}
         <footer style={footerStyle}>
-          <div>Generated via PODesk Purchase Orders</div>
+          <div>Generated by PODesk Purchase Orders</div>
           <div>Page 1 of 1</div>
         </footer>
       </div>
@@ -341,9 +366,19 @@ const titleStyle = {
   color: "#1a1a1a",
 } as const;
 
-const storeDomainStyle = {
+
+
+const companyNameStyle = {
+  fontSize: "15px",
+  fontWeight: 600,
+  color: "#1a1a1a",
+  marginBottom: "2px",
+} as const;
+
+const companyMetaStyle = {
   fontSize: "13px",
-  color: "#6d7175",
+  color: "#4b5563",
+  lineHeight: "1.3",
 } as const;
 
 const headerRightStyle = {

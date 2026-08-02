@@ -10,6 +10,7 @@ import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticate } from "../shopify.server";
 import prisma from "../db.server";
 import { createUniquePoReference } from "../po.server";
+import { formatCurrency } from "../utils";
 
 type ActionData = { ok: boolean; message: string };
 
@@ -28,33 +29,36 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   const store = await prisma.store.findUnique({ where: { shop: session.shop } });
   if (!store) throw new Response("Store not found", { status: 404 });
 
-  const po = await prisma.purchaseOrder.findFirst({
-    where: { id: params.id, storeId: store.id },
-    include: {
-      supplier: true,
-      lines: {
-        include: {
-          variant: { include: { product: true } },
+  const [settings, po, variants, mappings] = await Promise.all([
+    prisma.storeSettings.findUnique({ where: { storeId: store.id } }),
+    prisma.purchaseOrder.findFirst({
+      where: { id: params.id, storeId: store.id },
+      include: {
+        supplier: true,
+        lines: {
+          include: {
+            variant: { include: { product: true } },
+          },
         },
       },
-    },
-  });
-
-  if (!po) throw new Response("Purchase order not found", { status: 404 });
-
-  const [variants, mappings] = await Promise.all([
+    }),
     prisma.shopifyVariant.findMany({
       where: { storeId: store.id },
       include: { product: true },
       orderBy: [{ product: { title: "asc" } }, { title: "asc" }],
     }),
     prisma.supplierVariantMapping.findMany({
-      where: { storeId: store.id, supplierId: po.supplierId },
+      where: { storeId: store.id },
       select: { variantId: true, supplierCost: true },
     }),
   ]);
 
+  if (!po) throw new Response("Purchase order not found", { status: 404 });
+
+  const currencyCode = settings?.currencyCode || "USD";
+
   return {
+    currencyCode,
     po: {
       id: po.id,
       reference: po.reference,
@@ -240,7 +244,7 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
 };
 
 export default function PurchaseOrderDetailPage() {
-  const { po, variants, mappings, isDraft } = useLoaderData<typeof loader>();
+  const { currencyCode, po, variants, mappings, isDraft } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";
@@ -270,7 +274,8 @@ export default function PurchaseOrderDetailPage() {
           <div style={metaGridStyle}>
             <div><strong>Supplier:</strong> <a href={`/app/suppliers/${po.supplierId}`} style={linkStyle}>{po.supplierName}</a></div>
             <div><strong>Status:</strong> <span style={statusBadge(po.status)}>{po.status.replaceAll("_", " ")}</span></div>
-            <div><strong>Total cost:</strong> {po.totalCost > 0 ? `$${po.totalCost.toFixed(2)}` : "-"}</div>
+            <div><strong>Total cost:</strong> {po.totalCost > 0 ? formatCurrency(po.totalCost, currencyCode) : "-"}</div>
+            <div><strong>Currency:</strong> {currencyCode}</div>
             <div><strong>Created:</strong> {formatDate(po.createdAt)}</div>
             <div><strong>Last updated:</strong> {formatDate(po.updatedAt)}</div>
           </div>
@@ -327,8 +332,8 @@ export default function PurchaseOrderDetailPage() {
                   </td>
                   <td style={tdStyle}>{line.sku || "-"}</td>
                   <td style={tdStyle}>{line.quantity}</td>
-                  <td style={tdStyle}>{line.unitCost != null ? `$${line.unitCost.toFixed(2)}` : "-"}</td>
-                  <td style={tdStyle}>{line.subtotal > 0 ? `$${line.subtotal.toFixed(2)}` : "-"}</td>
+                  <td style={tdStyle}>{line.unitCost != null ? formatCurrency(line.unitCost, currencyCode) : "-"}</td>
+                  <td style={tdStyle}>{line.subtotal > 0 ? formatCurrency(line.subtotal, currencyCode) : "-"}</td>
                   {isDraft && (
                     <td style={tdStyle}>
                       <Form method="post" style={{ display: "inline" }}>

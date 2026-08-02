@@ -47,6 +47,29 @@ model Store {
   suppliers       Supplier[]
   purchaseOrders  PurchaseOrder[]
   variantMappings SupplierVariantMapping[]
+  settings        StoreSettings?
+}
+
+model StoreSettings {
+  id                  String   @id @default(cuid())
+  storeId             String   @unique
+  companyName         String?
+  contactEmail        String?
+  phone               String?
+  addressLine1        String?
+  addressLine2        String?
+  city                String?
+  region              String?
+  postalCode          String?
+  country             String?
+  currencyCode        String   @default("USD")
+  defaultPaymentTerms String?
+  defaultPoNotes      String?
+  poNumberPrefix      String   @default("PO")
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
 }
 
 model ShopifyProduct {

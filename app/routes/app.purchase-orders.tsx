@@ -9,15 +9,17 @@ import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticate } from "../shopify.server";
 import prisma from "../db.server";
 import { createUniquePoReference } from "../po.server";
+import { formatCurrency } from "../utils";
 
 type ActionData = { ok: boolean; message: string };
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
   const store = await prisma.store.findUnique({ where: { shop: session.shop } });
-  if (!store) return { purchaseOrders: [], suppliers: [], variants: [], mappings: [] };
+  if (!store) return { purchaseOrders: [], suppliers: [], variants: [], mappings: [], currencyCode: "USD" };
 
-  const [purchaseOrders, suppliers, variants, mappings] = await Promise.all([
+  const [settings, purchaseOrders, suppliers, variants, mappings] = await Promise.all([
+    prisma.storeSettings.findUnique({ where: { storeId: store.id } }),
     prisma.purchaseOrder.findMany({
       where: { storeId: store.id },
       include: {
@@ -41,7 +43,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     }),
   ]);
 
+  const currencyCode = settings?.currencyCode || "USD";
+
   return {
+    currencyCode,
     purchaseOrders: purchaseOrders.map((po) => ({
       id: po.id,
       reference: po.reference,
@@ -118,6 +123,15 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       return { ok: false, message: "At least one valid line item is required." } satisfies ActionData;
     }
 
+    const settings = await prisma.storeSettings.findUnique({
+      where: { storeId: store.id },
+    });
+
+    let notes = optionalString(formData.get("notes"));
+    if (!notes && settings?.defaultPoNotes) {
+      notes = settings.defaultPoNotes;
+    }
+
     const reference = await createUniquePoReference(store.id);
     await prisma.purchaseOrder.create({
       data: {
@@ -125,7 +139,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         supplierId: supplier.id,
         reference,
         expectedArrival: dateFromForm(formData.get("expectedArrival")),
-        notes: optionalString(formData.get("notes")),
+        notes,
         lines: {
           create: lines.map((l) => ({
             variantId: l.variantId,
@@ -142,7 +156,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function PurchaseOrdersPage() {
-  const { purchaseOrders, suppliers, variants, mappings } = useLoaderData<typeof loader>();
+  const { currencyCode, purchaseOrders, suppliers, variants, mappings } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";
@@ -300,7 +314,7 @@ export default function PurchaseOrdersPage() {
                       <span style={statusBadge(po.status)}>{po.status.replaceAll("_", " ")}</span>
                     </td>
                     <td style={tdStyle}>{po.lineCount}</td>
-                    <td style={tdStyle}>{po.totalCost > 0 ? `$${po.totalCost.toFixed(2)}` : "-"}</td>
+                    <td style={tdStyle}>{po.totalCost > 0 ? formatCurrency(po.totalCost, currencyCode) : "-"}</td>
                     <td style={tdStyle}>{po.expectedArrival ? formatDate(po.expectedArrival) : "-"}</td>
                     <td style={tdStyle}>{formatDate(po.createdAt)}</td>
                     <td style={tdStyle}>{formatDate(po.updatedAt)}</td>
