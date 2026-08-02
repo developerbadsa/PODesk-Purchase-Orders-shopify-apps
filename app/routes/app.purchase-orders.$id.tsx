@@ -9,6 +9,7 @@ import type { PurchaseOrderStatus } from "@prisma/client";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticate } from "../shopify.server";
 import prisma from "../db.server";
+import { createUniquePoReference } from "../po.server";
 
 type ActionData = { ok: boolean; message: string };
 
@@ -108,10 +109,7 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
     const nextStatus = String(formData.get("status") || "");
     const allowedNext = ALLOWED_STATUS_TRANSITIONS[po.status] || [];
     if (!allowedNext.includes(nextStatus)) {
-      return {
-        ok: false,
-        message: `Status transition from ${po.status.replaceAll("_", " ")} to ${nextStatus.replaceAll("_", " ")} is not allowed.`,
-      } satisfies ActionData;
+      return { ok: false, message: "Invalid status transition." } satisfies ActionData;
     }
     await prisma.purchaseOrder.update({
       where: { id: po.id },
@@ -120,14 +118,14 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
     return { ok: true, message: `Status updated to ${nextStatus.replaceAll("_", " ")}.` } satisfies ActionData;
   }
 
-  if (intent === "update-po") {
+  if (intent === "update-reference" || intent === "update-po") {
     if (po.status !== "DRAFT") {
       return { ok: false, message: "Only draft purchase orders can be edited." } satisfies ActionData;
     }
 
     const newReference = String(formData.get("reference") || "").trim();
     if (!newReference) {
-      return { ok: false, message: "Purchase order reference cannot be empty." } satisfies ActionData;
+      return { ok: false, message: "PO reference is required." } satisfies ActionData;
     }
 
     if (newReference !== po.reference) {
@@ -141,7 +139,7 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
       if (existing) {
         return {
           ok: false,
-          message: `Reference "${newReference}" is already used by another purchase order in your store.`,
+          message: "Another purchase order already uses this reference.",
         } satisfies ActionData;
       }
     }
@@ -154,7 +152,7 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
         notes: optionalString(formData.get("notes")),
       },
     });
-    return { ok: true, message: "Purchase order updated." } satisfies ActionData;
+    return { ok: true, message: intent === "update-reference" ? "PO reference updated." : "Purchase order updated." } satisfies ActionData;
   }
 
   if (intent === "add-line") {
@@ -210,7 +208,7 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
     });
     if (!original) return { ok: false, message: "PO not found." } satisfies ActionData;
 
-    const reference = `PO-${Date.now()}`;
+    const reference = await createUniquePoReference(store.id);
     const newPo = await prisma.purchaseOrder.create({
       data: {
         storeId: store.id,

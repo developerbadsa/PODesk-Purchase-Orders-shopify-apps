@@ -8,6 +8,7 @@ import { Form, useActionData, useLoaderData, useNavigation } from "react-router"
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticate } from "../shopify.server";
 import prisma from "../db.server";
+import { createUniquePoReference } from "../po.server";
 
 type ActionData = { ok: boolean; message: string };
 
@@ -117,7 +118,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       return { ok: false, message: "At least one valid line item is required." } satisfies ActionData;
     }
 
-    const reference = `PO-${Date.now()}`;
+    const reference = await createUniquePoReference(store.id);
     await prisma.purchaseOrder.create({
       data: {
         storeId: store.id,
