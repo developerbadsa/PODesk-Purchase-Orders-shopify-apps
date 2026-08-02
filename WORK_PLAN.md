@@ -140,7 +140,7 @@ PODesk can read Shopify inventory data reliably enough to support purchase order
 
 Known limitations:
 
-- Product pagination is implemented. Variant sync currently reads up to 100 variants per product, which is acceptable for MVP testing but must be replaced with bulk operations or nested variant pagination before supporting very large products.
+- Variant sync now uses top-level `productVariants` cursor pagination instead of nested product variant reads. This avoids the old 100-variants-per-product ceiling and keeps the sync query cost safer for larger catalogs.
 - Location-level inventory quantities are intentionally not synced in the dashboard action. The previous nested inventory-level query exceeded Shopify's single-query cost limit. Build this later with Shopify bulk operations or a dedicated low-cost inventory job.
 
 Tasks:

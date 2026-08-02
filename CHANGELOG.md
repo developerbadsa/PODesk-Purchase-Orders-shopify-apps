@@ -10,6 +10,7 @@
 - Verified Shopify sync with 17 products, 26 variants, and 2 locations.
 - Fixed stale scope handling and documented dev reinstall steps for access-denied errors.
 - Reduced Shopify GraphQL query cost by using smaller product/order pages and disabling nested location-level inventory sync in the dashboard action.
+- Reworked inventory sync to use top-level `productVariants` cursor pagination so large products are not capped at the first 100 variants.
 - Added supplier management: create, list, edit, archive, restore, delete, and detail view.
 - Added SKU-to-supplier mappings with supplier SKU, cost, lead-time override, and primary supplier support.
 - Added purchase order print workflow (`/app/purchase-orders/:id/print`) with business document layout, `@media print` styling, and store-scoped access.

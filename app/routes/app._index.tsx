@@ -17,13 +17,11 @@ type ActionData = {
 
 const STOCKOUT_WINDOW_DAYS = 14;
 const SALES_WINDOW_DAYS = 30;
-const PRODUCTS_PER_PAGE = 25;
-// MVP safety limit: limit nested variants per product to prevent Shopify GraphQL query cost errors
-const PRODUCT_VARIANTS_PER_PRODUCT_LIMIT = 100;
+const VARIANTS_PER_PAGE = 50;
 const ORDERS_PER_PAGE = 25;
 // MVP safety limit: limit nested line items per order to prevent Shopify GraphQL query cost errors
 const ORDER_LINE_ITEMS_PER_ORDER_LIMIT = 25;
-const MAX_PRODUCT_PAGES = 40;
+const MAX_VARIANT_PAGES = 200;
 const MAX_ORDER_PAGES = 10;
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -505,24 +503,24 @@ async function syncShopifyInventory(admin: AdminClient, storeId: string) {
     syncedLocationIds.add(location.id);
   }
 
-  let productCount = 0;
+  const syncedProductIds = new Set<string>();
   let variantCount = 0;
-  let hasNextProductPage = true;
-  let productCursor: string | null = null;
+  let hasNextVariantPage = true;
+  let variantCursor: string | null = null;
   let pageCount = 0;
 
-  while (hasNextProductPage && pageCount < MAX_PRODUCT_PAGES) {
+  while (hasNextVariantPage && pageCount < MAX_VARIANT_PAGES) {
     const variables: Record<string, unknown> = {
-      first: PRODUCTS_PER_PAGE,
-      variantsFirst: PRODUCT_VARIANTS_PER_PRODUCT_LIMIT,
+      first: VARIANTS_PER_PAGE,
     };
-    if (productCursor) variables.after = productCursor;
+    if (variantCursor) variables.after = variantCursor;
 
-    const productData = await shopifyGraphql(admin, PRODUCTS_BASIC_QUERY, variables);
-    const products = productData.products;
-    if (!products) break;
+    const variantData = await shopifyGraphql(admin, PRODUCT_VARIANTS_QUERY, variables);
+    const variants = variantData.productVariants;
+    if (!variants) break;
 
-    for (const product of products.nodes) {
+    for (const variant of variants.nodes as ProductVariantNode[]) {
+      const product = variant.product;
       const productRecord = await prisma.shopifyProduct.upsert({
         where: { storeId_shopifyProductId: { storeId, shopifyProductId: product.id } },
         update: {
@@ -540,83 +538,40 @@ async function syncShopifyInventory(admin: AdminClient, storeId: string) {
           vendor: product.vendor,
         },
       });
-      productCount += 1;
+      syncedProductIds.add(product.id);
 
-      for (const variant of product.variants.nodes) {
-        const locationQuantities =
-          "inventoryLevels" in variant.inventoryItem
-            ? variant.inventoryItem.inventoryLevels.nodes
-            : [];
-        const availableFromLocations = locationQuantities.reduce(
-          (total: number, level: InventoryLevelNode) =>
-            total + availableQuantity(level.quantities),
-          0,
-        );
-        const inventoryQuantity =
-          locationQuantities.length > 0 ? availableFromLocations : variant.inventoryQuantity;
-
-        const variantRecord = await prisma.shopifyVariant.upsert({
-          where: { storeId_shopifyVariantId: { storeId, shopifyVariantId: variant.id } },
-          update: {
-            productId: productRecord.id,
-            shopifyInventoryId: variant.inventoryItem.id,
-            title: variant.title,
-            sku: variant.sku,
-            barcode: variant.barcode,
-            tracked: variant.inventoryItem.tracked,
-            unitCostAmount: optionalFloat(variant.inventoryItem.unitCost?.amount),
-            unitCostCurrency: variant.inventoryItem.unitCost?.currencyCode,
-            inventoryQuantity,
-          },
-          create: {
-            storeId,
-            productId: productRecord.id,
-            shopifyVariantId: variant.id,
-            shopifyInventoryId: variant.inventoryItem.id,
-            title: variant.title,
-            sku: variant.sku,
-            barcode: variant.barcode,
-            tracked: variant.inventoryItem.tracked,
-            unitCostAmount: optionalFloat(variant.inventoryItem.unitCost?.amount),
-            unitCostCurrency: variant.inventoryItem.unitCost?.currencyCode,
-            inventoryQuantity,
-          },
-        });
-        variantCount += 1;
-
-        for (const level of locationQuantities) {
-          const locationRecord = await prisma.inventoryLocation.upsert({
-            where: { storeId_shopifyLocationId: { storeId, shopifyLocationId: level.location.id } },
-            update: { name: level.location.name, isActive: level.location.isActive },
-            create: {
-              storeId,
-              shopifyLocationId: level.location.id,
-              name: level.location.name,
-              isActive: level.location.isActive,
-            },
-          });
-          syncedLocationIds.add(level.location.id);
-
-          await prisma.inventoryLevel.upsert({
-            where: {
-              variantId_locationId: {
-                variantId: variantRecord.id,
-                locationId: locationRecord.id,
-              },
-            },
-            update: { available: availableQuantity(level.quantities) },
-            create: {
-              variantId: variantRecord.id,
-              locationId: locationRecord.id,
-              available: availableQuantity(level.quantities),
-            },
-          });
-        }
-      }
+      await prisma.shopifyVariant.upsert({
+        where: { storeId_shopifyVariantId: { storeId, shopifyVariantId: variant.id } },
+        update: {
+          productId: productRecord.id,
+          shopifyInventoryId: variant.inventoryItem.id,
+          title: variant.title,
+          sku: variant.sku,
+          barcode: variant.barcode,
+          tracked: variant.inventoryItem.tracked,
+          unitCostAmount: optionalFloat(variant.inventoryItem.unitCost?.amount),
+          unitCostCurrency: variant.inventoryItem.unitCost?.currencyCode,
+          inventoryQuantity: variant.inventoryQuantity,
+        },
+        create: {
+          storeId,
+          productId: productRecord.id,
+          shopifyVariantId: variant.id,
+          shopifyInventoryId: variant.inventoryItem.id,
+          title: variant.title,
+          sku: variant.sku,
+          barcode: variant.barcode,
+          tracked: variant.inventoryItem.tracked,
+          unitCostAmount: optionalFloat(variant.inventoryItem.unitCost?.amount),
+          unitCostCurrency: variant.inventoryItem.unitCost?.currencyCode,
+          inventoryQuantity: variant.inventoryQuantity,
+        },
+      });
+      variantCount += 1;
     }
 
-    hasNextProductPage = products.pageInfo.hasNextPage;
-    productCursor = products.pageInfo.endCursor;
+    hasNextVariantPage = variants.pageInfo.hasNextPage;
+    variantCursor = variants.pageInfo.endCursor;
     pageCount += 1;
   }
 
@@ -681,7 +636,7 @@ async function syncShopifyInventory(admin: AdminClient, storeId: string) {
   });
 
   return {
-    products: productCount,
+    products: syncedProductIds.size,
     variants: variantCount,
     locations: syncedLocationIds.size,
     ordersScanned,
@@ -752,10 +707,9 @@ const LOCATIONS_QUERY = `#graphql
     }
   }`;
 
-// TODO: Implement Shopify Bulk Operations (bulkOperationRunQuery) or paginated nested variant queries for large products (100+ variants).
-const PRODUCTS_BASIC_QUERY = `#graphql
-  query PODeskProductsBasic($first: Int!, $after: String, $variantsFirst: Int!) {
-    products(first: $first, after: $after) {
+const PRODUCT_VARIANTS_QUERY = `#graphql
+  query PODeskProductVariants($first: Int!, $after: String) {
+    productVariants(first: $first, after: $after) {
       pageInfo {
         hasNextPage
         endCursor
@@ -763,25 +717,23 @@ const PRODUCTS_BASIC_QUERY = `#graphql
       nodes {
         id
         title
-        handle
-        status
-        vendor
-        variants(first: $variantsFirst) {
-          nodes {
-            id
-            title
-            sku
-            barcode
-            inventoryQuantity
-            inventoryItem {
-              id
-              tracked
-              unitCost {
-                amount
-                currencyCode
-              }
-            }
+        sku
+        barcode
+        inventoryQuantity
+        inventoryItem {
+          id
+          tracked
+          unitCost {
+            amount
+            currencyCode
           }
+        }
+        product {
+          id
+          title
+          handle
+          status
+          vendor
         }
       }
     }
@@ -809,14 +761,25 @@ const ORDERS_QUERY = `#graphql
     }
   }`;
 
-type InventoryLevelNode = {
-  quantities: Array<{ name: string; quantity: number }>;
-  location: { id: string; name: string; isActive: boolean };
+type ProductVariantNode = {
+  id: string;
+  title: string;
+  sku: string | null;
+  barcode: string | null;
+  inventoryQuantity: number;
+  inventoryItem: {
+    id: string;
+    tracked: boolean;
+    unitCost: { amount: string; currencyCode: string } | null;
+  };
+  product: {
+    id: string;
+    title: string;
+    handle: string | null;
+    status: string | null;
+    vendor: string | null;
+  };
 };
-
-function availableQuantity(quantities: Array<{ name: string; quantity: number }>) {
-  return quantities.find((q) => q.name === "available")?.quantity ?? 0;
-}
 
 function optionalFloat(value: string | null | undefined) {
   if (!value) return null;
