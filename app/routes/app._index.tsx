@@ -17,7 +17,10 @@ type ActionData = {
 
 const STOCKOUT_WINDOW_DAYS = 14;
 const SALES_WINDOW_DAYS = 30;
-const MAX_PRODUCT_PAGES = 20;
+const PRODUCTS_PER_PAGE = 25;
+const ORDERS_PER_PAGE = 25;
+const ORDER_LINE_ITEMS_PER_PAGE = 25;
+const MAX_PRODUCT_PAGES = 40;
 const MAX_ORDER_PAGES = 10;
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -118,7 +121,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
     return {
       ok: true,
-      message: `Synced ${synced.products} products, ${synced.variants} variants, ${synced.locations} locations. Orders scanned: ${synced.ordersScanned}.${modeNote}`,
+      message: `Synced ${synced.products} products, ${synced.variants} variants, ${synced.locations} locations. Orders scanned: ${synced.ordersScanned}. Location inventory sync is intentionally disabled in dev until bulk sync is added.${modeNote}`,
     } satisfies ActionData;
   } catch (error) {
     const msg = normalizeShopifyError(error);
@@ -384,14 +387,10 @@ async function syncShopifyInventory(admin: AdminClient, storeId: string) {
   let pageCount = 0;
 
   while (hasNextProductPage && pageCount < MAX_PRODUCT_PAGES) {
-    const variables: Record<string, unknown> = { first: 50 };
+    const variables: Record<string, unknown> = { first: PRODUCTS_PER_PAGE };
     if (productCursor) variables.after = productCursor;
 
-    const productData = await shopifyGraphql(
-      admin,
-      locationAccessDenied ? PRODUCTS_BASIC_QUERY : PRODUCTS_WITH_LEVELS_QUERY,
-      variables,
-    );
+    const productData = await shopifyGraphql(admin, PRODUCTS_BASIC_QUERY, variables);
     const products = productData.products;
     if (!products) break;
 
@@ -494,7 +493,8 @@ async function syncShopifyInventory(admin: AdminClient, storeId: string) {
   }
 
   const ordersResult = await tryShopifyGraphql(admin, ORDERS_QUERY, {
-    first: 100,
+    first: ORDERS_PER_PAGE,
+    lineItemsFirst: ORDER_LINE_ITEMS_PER_PAGE,
     orderQuery: `created_at:>=${thirtyDaysAgoIsoDate()}`,
   });
   const soldByVariant = new Map<string, number>();
@@ -518,7 +518,8 @@ async function syncShopifyInventory(admin: AdminClient, storeId: string) {
 
       if (!hasNextOrderPage || orderPageCount + 1 >= MAX_ORDER_PAGES) break;
       const nextOrderData = await shopifyGraphql(admin, ORDERS_QUERY, {
-        first: 100,
+        first: ORDERS_PER_PAGE,
+        lineItemsFirst: ORDER_LINE_ITEMS_PER_PAGE,
         after: orderCursor,
         orderQuery: `created_at:>=${thirtyDaysAgoIsoDate()}`,
       });
@@ -606,6 +607,9 @@ function normalizeShopifyError(error: unknown) {
   if (message.toLowerCase().includes("access denied")) {
     return "Shopify denied the required Admin API permissions. Uninstall PODesk from this dev store, run npm run dev -- --reset, reinstall from the dev preview, and approve product, inventory, location, and order scopes.";
   }
+  if (message.toLowerCase().includes("query cost")) {
+    return "Shopify rejected the sync because the Admin API query was too large. PODesk has been updated to use smaller product and order pages. Restart the dev server and try sync again.";
+  }
   return `Sync failed: ${message}`;
 }
 
@@ -616,53 +620,6 @@ const LOCATIONS_QUERY = `#graphql
         id
         name
         isActive
-      }
-    }
-  }`;
-
-const PRODUCTS_WITH_LEVELS_QUERY = `#graphql
-  query PODeskProducts($first: Int!, $after: String) {
-    products(first: $first, after: $after) {
-      pageInfo {
-        hasNextPage
-        endCursor
-      }
-      nodes {
-        id
-        title
-        handle
-        status
-        vendor
-        variants(first: 100) {
-          nodes {
-            id
-            title
-            sku
-            barcode
-            inventoryQuantity
-            inventoryItem {
-              id
-              tracked
-              unitCost {
-                amount
-                currencyCode
-              }
-              inventoryLevels(first: 20) {
-                nodes {
-                  quantities(names: ["available"]) {
-                    name
-                    quantity
-                  }
-                  location {
-                    id
-                    name
-                    isActive
-                  }
-                }
-              }
-            }
-          }
-        }
       }
     }
   }`;
@@ -702,7 +659,7 @@ const PRODUCTS_BASIC_QUERY = `#graphql
   }`;
 
 const ORDERS_QUERY = `#graphql
-  query PODeskOrders($first: Int!, $after: String, $orderQuery: String!) {
+  query PODeskOrders($first: Int!, $after: String, $orderQuery: String!, $lineItemsFirst: Int!) {
     orders(first: $first, after: $after, query: $orderQuery, sortKey: CREATED_AT, reverse: true) {
       pageInfo {
         hasNextPage
@@ -710,7 +667,7 @@ const ORDERS_QUERY = `#graphql
       }
       nodes {
         id
-        lineItems(first: 100) {
+        lineItems(first: $lineItemsFirst) {
           nodes {
             quantity
             variant {
