@@ -7,7 +7,7 @@ import { Form, useActionData, useLoaderData, useNavigation } from "react-router"
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticate } from "../shopify.server";
 import prisma from "../db.server";
-import { createImportPreview, executeImportJob } from "../imports.server";
+import { createImportPreview, executeImportJob, remapImportPreview } from "../imports.server";
 import {
   FIELD_DEFINITIONS,
   TARGET_FIELDS,
@@ -170,6 +170,33 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     }
   }
 
+  if (intent === "remap-preview") {
+    const jobId = String(formData.get("jobId") || "").trim();
+    if (!jobId) {
+      return { ok: false, message: "Missing import job ID." } satisfies ActionData;
+    }
+
+    const customMapping = TARGET_FIELDS.reduce(
+      (acc, field) => {
+        acc[field] = String(formData.get(`mapping_${field}`) || "").trim();
+        return acc;
+      },
+      {} as Record<TargetField, string>
+    );
+
+    try {
+      const remappedJob = await remapImportPreview(store.id, jobId, customMapping);
+      return {
+        ok: true,
+        message: `Column mapping updated. Found ${remappedJob.validRows} valid row(s) and ${remappedJob.invalidRows} invalid row(s).`,
+        job: formatJobForAction(remappedJob),
+      } satisfies ActionData;
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      return { ok: false, message: `Column remapping failed: ${msg}` } satisfies ActionData;
+    }
+  }
+
   if (intent === "delete-job") {
     const jobId = String(formData.get("jobId") || "").trim();
     if (jobId) {
@@ -318,27 +345,40 @@ export default function ImportsPage() {
 
           {/* COLUMN MAPPING DETECTION */}
           <div style={{ marginTop: "16px", marginBottom: "16px" }}>
-            <div style={subHeadingStyle}>Detected Column Mapping</div>
-            <div style={mappingGridStyle}>
-              {TARGET_FIELDS.map((field) => {
-                const def = FIELD_DEFINITIONS[field];
-                const detectedHeader = activeJob.detectedMapping[field] || "";
-                return (
-                  <div key={field} style={mappingCardStyle}>
-                    <div style={{ fontWeight: 600, fontSize: "13px" }}>
-                      {def.label} {def.required && <span style={{ color: "#d72c0d" }}>*</span>}
-                    </div>
-                    <div style={mutedStyle}>{def.description}</div>
-                    <div style={{ marginTop: "4px", fontSize: "13px" }}>
-                      Mapped to:{" "}
-                      <code style={codeBadgeStyle}>
-                        {detectedHeader || "Not mapped"}
-                      </code>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            <div style={subHeadingStyle}>Column mapping</div>
+            <Form method="post">
+              <input type="hidden" name="intent" value="remap-preview" />
+              <input type="hidden" name="jobId" value={activeJob.id} />
+              <div style={mappingGridStyle}>
+                {TARGET_FIELDS.map((field) => {
+                  const def = FIELD_DEFINITIONS[field];
+                  const detectedHeader = activeJob.detectedMapping[field] || "";
+                  return (
+                    <label key={field} style={mappingCardStyle}>
+                      <span style={{ fontWeight: 600, fontSize: "13px" }}>
+                        {def.label} {def.required && <span style={{ color: "#d72c0d" }}>*</span>}
+                      </span>
+                      <span style={mutedStyle}>{def.description}</span>
+                      <select
+                        name={`mapping_${field}`}
+                        defaultValue={detectedHeader}
+                        style={selectStyle}
+                      >
+                        <option value="">Not mapped</option>
+                        {activeJob.originalHeaders.map((header) => (
+                          <option key={`${field}-${header}`} value={header}>
+                            {header}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  );
+                })}
+              </div>
+              <button type="submit" disabled={isSubmitting} style={{ ...buttonStyle, marginTop: "12px" }}>
+                {isSubmitting ? "Updating mapping..." : "Update mapping preview"}
+              </button>
+            </Form>
           </div>
 
           {/* CONFIRM IMPORT BUTTON */}
@@ -552,6 +592,16 @@ const textareaStyle = {
   resize: "vertical",
 } as const;
 
+const selectStyle = {
+  border: "1px solid #c9cccf",
+  borderRadius: "6px",
+  padding: "8px 10px",
+  fontSize: "13px",
+  background: "#fff",
+  width: "100%",
+  marginTop: "6px",
+} as const;
+
 const buttonStyle = {
   border: "1px solid #c9cccf",
   borderRadius: "6px",
@@ -622,13 +672,6 @@ const mappingCardStyle = {
   borderRadius: "6px",
   padding: "10px",
   background: "#fff",
-} as const;
-
-const codeBadgeStyle = {
-  background: "#f1f2f3",
-  padding: "2px 6px",
-  borderRadius: "4px",
-  fontFamily: "monospace",
 } as const;
 
 const tableWrapStyle = {

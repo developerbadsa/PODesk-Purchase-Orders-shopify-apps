@@ -82,7 +82,7 @@ Do not optimize early product decisions for:
 | Stocky migration | Stocky import page | Done | P0 | Multi-step CSV import workflow with preview and validation. |
 | Stocky migration | Supplier & SKU mapping CSV import | Done | P0 | Merchant can upload or paste CSV to create/update suppliers and SKU mappings. |
 | Stocky migration | File upload & paste CSV import | Done | P0 | Supports .csv file upload and raw CSV text paste up to 1000 rows. |
-| Stocky migration | Column mapping auto-detection & preview | Done | P0 | Auto-detects headers, preview valid/invalid rows before execution. |
+| Stocky migration | Column mapping auto-detection, override & preview | Done | P0 | Auto-detects headers, allows merchant override, then previews valid/invalid rows before execution. |
 | Stocky migration | PO history import | Later | P2 | Import historical PO records. |
 | Dashboard | Operations snapshot | Done | P0 | Merchant quickly sees synced variants, stock, suppliers, open POs. |
 | Dashboard | Actionable empty states | Done | P0 | New user knows next step after install. |

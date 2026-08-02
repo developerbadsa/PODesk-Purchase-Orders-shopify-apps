@@ -8,7 +8,7 @@ import {
 export { FIELD_DEFINITIONS, TARGET_FIELDS, type TargetField };
 
 export function normalizeHeaderKey(rawHeader: string): string {
-  return rawHeader.trim().toLowerCase().replace(/[\s_-]+/g, "");
+  return rawHeader.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
 export function autoDetectField(rawHeader: string): TargetField | null {
@@ -197,89 +197,20 @@ export async function createImportPreview(
       rawDataRecord[h] = cells[i] ?? "";
     });
 
-    const getValue = (field: TargetField): string => {
-      const headerName = detectedMapping[field];
-      if (!headerName) return "";
-      const headerIdx = headers.indexOf(headerName);
-      if (headerIdx === -1) return "";
-      return (cells[headerIdx] ?? "").trim();
-    };
-
-    const sku = getValue("sku");
-    const supplierName = getValue("supplierName");
-    const supplierSku = getValue("supplierSku") || sku;
-    const costStr = getValue("supplierCost");
-    const leadTimeStr = getValue("leadTimeDays");
-    const paymentTerms = getValue("paymentTerms");
-    const minimumOrderStr = getValue("minimumOrder");
-    const notes = getValue("notes");
-
-    const errors: string[] = [];
-
-    if (!sku) {
-      errors.push("SKU is required.");
-    } else if (!variantBySku.has(sku.toLowerCase())) {
-      errors.push(`Variant with SKU '${sku}' not found in store.`);
-    }
-
-    if (!supplierName) {
-      errors.push("Supplier name is required.");
-    }
-
-    let parsedCost: number | null = null;
-    if (costStr) {
-      const num = Number(costStr);
-      if (!Number.isFinite(num) || num < 0) {
-        errors.push("Supplier cost must be a non-negative number.");
-      } else {
-        parsedCost = num;
-      }
-    }
-
-    let parsedLeadTime: number | null = null;
-    if (leadTimeStr) {
-      const num = parseInt(leadTimeStr, 10);
-      if (!Number.isFinite(num) || num < 0) {
-        errors.push("Lead time must be a non-negative integer.");
-      } else {
-        parsedLeadTime = num;
-      }
-    }
-
-    let parsedMinOrder: number | null = null;
-    if (minimumOrderStr) {
-      const num = parseInt(minimumOrderStr, 10);
-      if (!Number.isFinite(num) || num < 0) {
-        errors.push("Minimum order must be a non-negative integer.");
-      } else {
-        parsedMinOrder = num;
-      }
-    }
-
-    const isValid = errors.length === 0;
+    const normalized = normalizeImportRow(rawDataRecord, detectedMapping, variantBySku);
+    const isValid = normalized.errors.length === 0;
     if (isValid) {
       validCount += 1;
     } else {
       invalidCount += 1;
     }
 
-    const normalizedRecord = {
-      sku,
-      supplierName,
-      supplierSku,
-      supplierCost: parsedCost,
-      leadTimeDays: parsedLeadTime,
-      paymentTerms: paymentTerms || null,
-      minimumOrder: parsedMinOrder,
-      notes: notes || null,
-    };
-
     jobRowsData.push({
       rowNumber,
       rawData: JSON.stringify(rawDataRecord),
-      normalizedData: JSON.stringify(normalizedRecord),
+      normalizedData: JSON.stringify(normalized.data),
       status: isValid ? "VALID" : "INVALID",
-      errorMessage: errors.length > 0 ? errors.join(" ") : null,
+      errorMessage: normalized.errors.length > 0 ? normalized.errors.join(" ") : null,
     });
   });
 
@@ -308,6 +239,161 @@ export async function createImportPreview(
   });
 
   return importJob;
+}
+
+export async function remapImportPreview(
+  storeId: string,
+  importJobId: string,
+  customMapping: Record<TargetField, string>
+) {
+  const job = await prisma.importJob.findFirst({
+    where: { id: importJobId, storeId },
+    include: {
+      rows: { orderBy: { rowNumber: "asc" } },
+    },
+  });
+
+  if (!job) {
+    throw new Error("Import job not found.");
+  }
+
+  if (job.status !== "PREVIEW") {
+    throw new Error("Only preview imports can be remapped.");
+  }
+
+  const headers = job.originalHeaders ? (JSON.parse(job.originalHeaders) as string[]) : [];
+  const headerSet = new Set(headers);
+  const cleanedMapping = TARGET_FIELDS.reduce(
+    (acc, field) => {
+      const header = customMapping[field] || "";
+      acc[field] = header && headerSet.has(header) ? header : "";
+      return acc;
+    },
+    {} as Record<TargetField, string>
+  );
+
+  const storeVariants = await prisma.shopifyVariant.findMany({
+    where: { storeId },
+    select: { id: true, sku: true },
+  });
+  const variantBySku = new Map<string, string>();
+  storeVariants.forEach((v) => {
+    if (v.sku) {
+      variantBySku.set(v.sku.trim().toLowerCase(), v.id);
+    }
+  });
+
+  let validCount = 0;
+  let invalidCount = 0;
+
+  for (const row of job.rows) {
+    const rawDataRecord = row.rawData ? (JSON.parse(row.rawData) as Record<string, string>) : {};
+    const normalized = normalizeImportRow(rawDataRecord, cleanedMapping, variantBySku);
+
+    if (normalized.errors.length === 0) {
+      validCount += 1;
+    } else {
+      invalidCount += 1;
+    }
+
+    await prisma.importJobRow.update({
+      where: { id: row.id },
+      data: {
+        status: normalized.errors.length === 0 ? "VALID" : "INVALID",
+        errorMessage: normalized.errors.length > 0 ? normalized.errors.join(" ") : null,
+        normalizedData: JSON.stringify(normalized.data),
+      },
+    });
+  }
+
+  return prisma.importJob.update({
+    where: { id: job.id },
+    data: {
+      detectedMapping: JSON.stringify(cleanedMapping),
+      validRows: validCount,
+      invalidRows: invalidCount,
+      importedSuppliers: 0,
+      importedMappings: 0,
+    },
+    include: {
+      rows: { orderBy: { rowNumber: "asc" } },
+    },
+  });
+}
+
+function normalizeImportRow(
+  rawDataRecord: Record<string, string>,
+  mapping: Record<TargetField, string>,
+  variantBySku: Map<string, string>
+) {
+  const getValue = (field: TargetField): string => {
+    const headerName = mapping[field];
+    if (!headerName) return "";
+    return (rawDataRecord[headerName] ?? "").trim();
+  };
+
+  const sku = getValue("sku");
+  const supplierName = getValue("supplierName");
+  const supplierSku = getValue("supplierSku") || sku;
+  const costStr = getValue("supplierCost");
+  const leadTimeStr = getValue("leadTimeDays");
+  const paymentTerms = getValue("paymentTerms");
+  const minimumOrderStr = getValue("minimumOrder");
+  const notes = getValue("notes");
+
+  const errors: string[] = [];
+
+  if (!sku) {
+    errors.push("SKU is required.");
+  } else if (!variantBySku.has(sku.toLowerCase())) {
+    errors.push(`Variant with SKU '${sku}' not found in store.`);
+  }
+
+  if (!supplierName) {
+    errors.push("Supplier name is required.");
+  }
+
+  let parsedCost: number | null = null;
+  if (costStr) {
+    const num = Number(costStr);
+    if (!Number.isFinite(num) || num < 0) {
+      errors.push("Supplier cost must be a non-negative number.");
+    } else {
+      parsedCost = num;
+    }
+  }
+
+  let parsedLeadTime: number | null = null;
+  if (leadTimeStr) {
+    if (!/^\d+$/.test(leadTimeStr.trim())) {
+      errors.push("Lead time must be a non-negative integer.");
+    } else {
+      parsedLeadTime = parseInt(leadTimeStr, 10);
+    }
+  }
+
+  let parsedMinOrder: number | null = null;
+  if (minimumOrderStr) {
+    if (!/^\d+$/.test(minimumOrderStr.trim())) {
+      errors.push("Minimum order must be a non-negative integer.");
+    } else {
+      parsedMinOrder = parseInt(minimumOrderStr, 10);
+    }
+  }
+
+  return {
+    errors,
+    data: {
+      sku,
+      supplierName,
+      supplierSku,
+      supplierCost: parsedCost,
+      leadTimeDays: parsedLeadTime,
+      paymentTerms: paymentTerms || null,
+      minimumOrder: parsedMinOrder,
+      notes: notes || null,
+    },
+  };
 }
 
 export async function executeImportJob(storeId: string, importJobId: string) {

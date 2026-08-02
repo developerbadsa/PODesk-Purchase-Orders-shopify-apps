@@ -26,7 +26,7 @@
 - Formatted purchase order totals dynamically on list and detail views using store settings currency.
 - Added `ImportJob` and `ImportJobRow` database models for store-scoped CSV import tracking.
 - Built RFC-4180 compliant CSV parser (`app/imports.server.ts`) supporting quoted fields, escaped quotes, CRLF/LF line endings, auto-header detection, 1 MB max file size, and 1,000 max row limit.
-- Rebuilt `/app/imports` route into a full multi-step CSV import tool supporting file upload (`.csv`) or text paste, column mapping auto-detection/override, row validation preview, row-isolated import execution, and job history.
+- Rebuilt `/app/imports` route into a full multi-step CSV import tool supporting file upload (`.csv`) or text paste, column mapping auto-detection, merchant override, row validation preview, row-isolated import execution, and job history.
 - Integrated CSV supplier mapping import status into dashboard setup progress.
 - Built professional Purchase Order export and supplier email workflow:
   - Extended `PurchaseOrder` database schema with `lastSentAt`, `supplierEmailSnapshot`, and `sentCount` fields and applied Prisma migration `20260802094034_add_po_supplier_sharing_fields`.
