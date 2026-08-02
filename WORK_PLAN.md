@@ -56,11 +56,18 @@ Professional sales goal:
 | Settings & Branded Output | Done (verified) | Store-scoped business identity, purchasing defaults, prefix customization, currency formatting, and merchant-branded PO output. |
 | Reorder table | Done (verified) | Dedicated page with 7/14/30/90d window, buffer, target days, risk classification, exact risk reasons, formula suggested qty, manual reorder overrides (ReorderOverride model), extracted app/reorder.server.ts calculations, multi-row draft PO creation for matching suppliers, and single-row/multi-row PO actions using final suggested qty. |
 | Stocky import | Done (verified) | Full CSV supplier and SKU mapping import with file/paste, column detection, manual column override, preview validation, import execution, job history, downloadable sample CSV (podesk-supplier-sku-import-sample.csv), and store-scoped invalid rows export. |
-| Billing | Scaffold (Postponed) | App is free during beta. BillingSubscription model and plan overview route (/app/billing) exist as non-blocking presentation scaffold. |
-| App Store listing | Done | App store listing copy, 3-minute demo script, screenshot capture plan, honest outreach templates, and manual test checklist completed in product/assets/. |
-| Sales materials | Done | Professional cold emails, community forum replies, Reddit DMs, partner outreach, and demo call invites built in product/assets/outreach-messages.md. |
+| Legal Pages (Drafts) | Done | Public Privacy Policy, Terms of Service, and Data Deletion Policy drafts completed in `product/launch/`. |
+| App Store Listing Draft | Done | Final copy, scope justifications, review notes, and submission checklist completed in `product/launch/`. |
+| Production Readiness Spec | Done | Production hosting, env vars, database, backup, rate limit, and rollback spec written in `product/launch/PRODUCTION_READINESS.md`. |
+| Merchant Support Docs | Done | FAQ, Getting Started guide, and Troubleshooting guide written in `product/support/`. |
+| Screenshot/Video Plans | Done | 6-screenshot capture spec and 3-minute video shot list designed in `product/launch/`. |
+| Actual Screenshots | Not Started | Needs manual QA capture on populated test store. |
+| Actual Demo Video | Not Started | Needs manual video recording on test store. |
+| Production Hosting | Not Started | Hosting deployment and live HTTPS domain configuration pending. |
+| Billing | Postponed (Free Beta) | App is free during launch beta. BillingSubscription model and plan overview route (`/app/billing`) exist as non-blocking presentation scaffold. |
+| Sales materials | Done | Professional cold emails, community forum replies, Reddit DMs, partner outreach, and demo call invites built in `product/assets/outreach-messages.md`. |
 | GitHub repo | Done | Main branch pushed to GitHub remote. |
-| Local verification | Done | 2026-08-02: setup, prisma migrate, typecheck, lint, build all passed. Shopify dev install and inventory sync verified. |
+| Local verification | Done | Setup, prisma migrate, typecheck, lint, build all passed. |
 | Security audit | Blocked | High React Router vulnerabilities in Shopify app template dependencies. Launch blocker until safe upstream patch is available; do not force-fix blindly. |
 
 ## Phase 0: Foundation And Repo
@@ -311,47 +318,39 @@ Target:
 
 Objective:
 
-Turn beta usage into paid subscription revenue.
+Prepare production infrastructure, legal compliance, and rollout path.
 
 Tasks:
 
 | Task | Status | Acceptance Criteria |
 |---|---|---|
-| Shopify billing integration | Not Started | Merchant can approve monthly charge. |
-| Trial flow | Not Started | Trial state and expiry are clear. |
-| Plan gating | Not Started | Starter/Pro/Business limits enforced simply. |
-| Privacy policy | Not Started | Public policy page exists. |
-| Terms of service | Not Started | Public terms page exists. |
-| Data deletion workflow | Not Started | Merchant uninstall/data request can be handled. |
-| Error monitoring | Not Started | Production errors are captured. |
-| Background job queue | Not Started | Sync/import can run without request timeout. |
-
-Definition of done:
-
-- Merchant can install, activate, start trial, approve billing, and continue using the app without founder intervention.
+| Privacy policy draft | Done | Public draft created in `product/launch/privacy-policy.md`. |
+| Terms of service draft | Done | Public draft created in `product/launch/terms-of-service.md`. |
+| Data deletion policy draft | Done | Public draft created in `product/launch/data-deletion-policy.md`. |
+| Production readiness checklist | Done | Spec for hosting, env vars, database, webhooks in `product/launch/PRODUCTION_READINESS.md`. |
+| Production hosting deployment | Not Started | Deploy container to cloud host with HTTPS domain. |
+| Shopify billing enforcement | Postponed | App is 100% free during launch beta; billing scaffold preserved at `/app/billing`. |
 
 ## Phase 9: App Store Listing
 
 Objective:
 
-Make Shopify App Store listing clear enough to convert high-intent merchant searches.
+Complete launch readiness assets and submit to Shopify App Store.
 
 Tasks:
 
 | Task | Status | Acceptance Criteria |
 |---|---|---|
-| App title | Done | `PODesk: Purchase Orders`. |
-| Subtitle | Done | `Inventory reorder alerts`. |
-| Short description | Not Started | Uses purchase order, supplier, reorder, Stocky migration language. |
-| Long description | Not Started | Explains problems, features, onboarding, pricing clearly. |
-| Screenshots | Not Started | Show actual product screens, not abstract graphics. |
-| Demo video | Not Started | Shows real workflow in under 3 minutes. |
-| Category/tags | Not Started | App classified under accurate inventory/order management tags. |
-| Review request flow | Not Started | Ask activated happy users after successful PO creation/import. |
-
-Definition of done:
-
-- Listing is ready for review and does not overpromise unsupported features.
+| App Store submission checklist | Done | Master checklist created in `product/launch/SHOPIFY_APP_STORE_SUBMISSION_CHECKLIST.md`. |
+| App Store final listing copy | Done | Completed in `product/launch/app-store-listing-final.md`. |
+| Scope justification & review notes | Done | Scope justifications for read-only inventory access completed in `product/launch/app-store-listing-final.md`. |
+| Screenshot capture pack | Done | 6-screenshot specification written in `product/launch/screenshot-capture-pack.md`. |
+| Demo video shot list & script | Done | 3-minute script written in `product/launch/demo-video-shot-list.md`. |
+| Merchant FAQ | Done | Written in `product/support/faq.md`. |
+| Getting Started guide | Done | Written in `product/support/getting-started.md`. |
+| Troubleshooting guide | Done | Written in `product/support/troubleshooting.md`. |
+| Actual screenshots capture | Not Started | Capture retina PNG visuals from test store. |
+| Actual demo video recording | Not Started | Record MP4 demo video with voiceover. |
 
 ## Phase 10: Growth To $10k MRR
 

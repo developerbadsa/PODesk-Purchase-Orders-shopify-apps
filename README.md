@@ -14,42 +14,58 @@ Launch campaign:
 
 This repo now contains the official Shopify React Router app scaffold plus a working PODesk MVP.
 
-## Planning Docs
+## Planning & Launch Documentation
 
 - [FEATURES.md](FEATURES.md) - professional feature specification, MVP boundary, screens, data model, and App Store positioning.
 - [WORK_PLAN.md](WORK_PLAN.md) - execution tracker with Done, Ongoing, Not Started, phase plan, and next tasks.
 - [PROJECT_STATUS.html](PROJECT_STATUS.html) - browser-friendly visual status dashboard for quick review.
 - [APP_PLAN.md](APP_PLAN.md) - long-form product strategy and roadmap archive.
-- [docs/APP_NAME_DECISION.md](docs/APP_NAME_DECISION.md) - final naming decision and rationale.
+
+### Launch Readiness Docs (`product/launch/`)
+- [SHOPIFY_APP_STORE_SUBMISSION_CHECKLIST.md](product/launch/SHOPIFY_APP_STORE_SUBMISSION_CHECKLIST.md) - master submission readiness tracker.
+- [app-store-listing-final.md](product/launch/app-store-listing-final.md) - final App Store listing copy, scope justifications, and review notes.
+- [privacy-policy.md](product/launch/privacy-policy.md) - draft privacy policy.
+- [terms-of-service.md](product/launch/terms-of-service.md) - draft terms of service.
+- [data-deletion-policy.md](product/launch/data-deletion-policy.md) - draft data deletion and retention policy.
+- [screenshot-capture-pack.md](product/launch/screenshot-capture-pack.md) - screenshot production specification for 6 App Store visuals.
+- [demo-video-shot-list.md](product/launch/demo-video-shot-list.md) - 2-3 minute demo video script and timeline.
+- [PRODUCTION_READINESS.md](product/launch/PRODUCTION_READINESS.md) - infrastructure, hosting, database, env vars, and rollback spec.
+
+### Merchant Support Docs (`product/support/`)
+- [faq.md](product/support/faq.md) - merchant FAQ answering 11 common questions.
+- [getting-started.md](product/support/getting-started.md) - 7-step onboarding guide from install to PO receipt.
+- [troubleshooting.md](product/support/troubleshooting.md) - technical troubleshooting guide.
+
+### Product & Outreach Assets (`product/assets/`)
+- [outreach-messages.md](product/assets/outreach-messages.md) - cold email templates, forum replies, and demo invites.
+- [podesk-supplier-sku-import-sample.csv](product/assets/podesk-supplier-sku-import-sample.csv) - sample CSV import template.
 
 Implemented:
 
 - Shopify React Router embedded app scaffold
-- Prisma session storage
-- Prisma models for stores, synced products/variants, inventory locations, suppliers, supplier SKU mappings, purchase orders, PO lines, receipts, settings, import jobs, and billing scaffold
-- Dashboard route
-- Shopify product, variant, inventory, location, and recent order sync action
-- Reorder planning with configurable sales window, buffer days, target days, supplier filters, and draft PO creation
-- Supplier create/list/edit/archive/restore/detail workflow
-- SKU-to-supplier mapping with supplier SKU, cost, lead time, and primary supplier support
-- Purchase-order create/list/detail/status/duplicate/print workflow
-- Purchase-order receiving workflow with partial/full receipts, receipt history, and receiving progress
-- Manual supplier sharing workflow with copy buttons, mailto draft, printable PO, and Mark as Sent tracking
-- Billing scaffold with non-blocking plan overview route
-- Settings page for company profile, PO defaults, prefix, and currency
-- Stocky/spreadsheet supplier CSV import with file/paste, column detection, manual override, preview validation, row-level errors, import execution, and history
-- Product, strategy, and sales planning docs
+- Prisma session storage & database models
+- Dashboard route with metrics and Quick Actions
+- Shopify product, variant, inventory, location, and recent order sync
+- Reorder planning with 7/14/30/90-day velocity, buffer days, target days, risk reasons, manual reorder overrides, and multi-row PO creation
+- Supplier CRUD (create, list, edit, detail, archive, restore, soft delete)
+- SKU-to-supplier mapping with supplier SKU, unit cost, lead time, and primary supplier enforcement
+- Purchase-order workflow (create, list, detail, status state machine, duplicate, print view)
+- Purchase-order receiving workflow (partial/full receipts, progress bar, receipt history log)
+- Supplier manual email & sharing workflow (pre-formatted templates, mailto launcher, printable PO, Mark as Sent tracking)
+- Stocky/spreadsheet CSV import (file upload/paste, auto-detected headers, column mapping overrides, validation preview, invalid rows export)
+- Settings route (business identity, purchasing defaults, prefix, currency)
+- App Store submission assets, legal drafts, screenshot/video specs, production readiness guide, and support docs
 
-Not implemented yet:
+Launch Status & Next Manual Actions:
 
-- Historical Stocky PO archive import
-- Automated supplier email delivery
-- PO PDF download
-- production Shopify billing enforcement
-- app-store submission setup
-- automatic Shopify inventory write-back
-- alerts
-- production deployment and monitoring
+- Public Legal Drafts: **Done** (Drafts ready in `product/launch/`)
+- App Store Listing Copy & Scope Justification: **Done** (Final draft in `product/launch/`)
+- Screenshot & Video Production Plans: **Done** (Specs ready in `product/launch/`)
+- Actual Screenshots: **Not Started** (Requires manual QA capture on populated test store)
+- Actual Demo Video: **Not Started** (Requires manual recording from test store)
+- Production Hosting & Deployment: **Not Started** (Requires hosting platform & HTTPS domain)
+- Billing Enforcement: **Postponed / Free Beta** (App is listed as 100% free during initial launch)
+- Security Audit Advisory: **Blocked** (Blocked until safe React Router / Shopify app template dependency patch)
 
 ## Local Setup
 

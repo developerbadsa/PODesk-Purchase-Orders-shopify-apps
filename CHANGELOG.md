@@ -1,5 +1,20 @@
 # PODesk Changelog
 
+## 2026-08-02 (Launch Readiness & Documentation Release)
+
+- Prepared complete Shopify App Store launch documentation pack:
+  - Added Master App Store Submission Checklist (`product/launch/SHOPIFY_APP_STORE_SUBMISSION_CHECKLIST.md`).
+  - Added Public Legal Copies Drafts: Privacy Policy (`product/launch/privacy-policy.md`), Terms of Service (`product/launch/terms-of-service.md`), and Data Deletion & Retention Policy (`product/launch/data-deletion-policy.md`).
+  - Added Final App Store Listing Copy (`product/launch/app-store-listing-final.md`) with short/long descriptions, feature bullets, search keywords, merchant benefits, review instructions, and read-only scope justifications for `read_products,read_inventory,read_locations,read_orders`.
+  - Added Screenshot Capture Production Pack (`product/launch/screenshot-capture-pack.md`) covering 6 key App Store visuals with target URLs, sample data, and captions.
+  - Added Demo Video Shot List & Script (`product/launch/demo-video-shot-list.md`) specifying a 2–3 minute video script and scene timeline.
+  - Added Production Readiness Checklist (`product/launch/PRODUCTION_READINESS.md`) specifying cloud hosting, managed PostgreSQL, environment variables, webhooks, rate limits, error logging, backups, and rollback plan.
+- Prepared Merchant Support Documentation:
+  - Added Merchant FAQ (`product/support/faq.md`) answering 11 common store questions.
+  - Added 7-step Getting Started Guide (`product/support/getting-started.md`).
+  - Added Technical Troubleshooting & Error Resolution Guide (`product/support/troubleshooting.md`).
+- Updated core project documentation (`README.md`, `WORK_PLAN.md`, `FEATURES.md`, `PROJECT_STATUS.html`) linking all launch and support assets with accurate status tracking.
+
 ## 2026-08-02
 
 - Locked public app name as `PODesk: Purchase Orders`.

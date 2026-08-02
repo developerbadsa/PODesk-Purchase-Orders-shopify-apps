@@ -252,6 +252,10 @@
         <a href="README.md">README</a>
         <a href="FEATURES.md">Features MD</a>
         <a href="WORK_PLAN.md">Work Plan MD</a>
+        <a href="product/launch/SHOPIFY_APP_STORE_SUBMISSION_CHECKLIST.md">Submission Checklist</a>
+        <a href="product/launch/app-store-listing-final.md">App Store Listing</a>
+        <a href="product/launch/PRODUCTION_READINESS.md">Production Spec</a>
+        <a href="product/support/faq.md">Support FAQ</a>
         <a href="CHANGELOG.md">Changelog MD</a>
       </nav>
     </header>
@@ -466,56 +470,55 @@
               <td>Supplier management</td>
               <td><span class="badge done">Done</span></td>
               <td>Create, list, edit, archive, restore, detail page, mapped SKUs, PO history.</td>
-            </tr>
-            <tr>
-              <td>SKU mappings</td>
-              <td><span class="badge done">Done</span></td>
-              <td>Supplier SKU, cost, lead-time override, primary supplier handling.</td>
-            </tr>
-            <tr>
-              <td>Purchase orders</td>
-              <td><span class="badge done">Done</span></td>
-              <td>Create, list, detail, edit draft, duplicate, state machine, print view.</td>
-            </tr>
-            <tr>
-              <td>Supplier sharing</td>
-              <td><span class="badge done">Done</span></td>
-              <td>Copy email, copy subject/message, mailto draft, printable PO, mark as sent.</td>
-            </tr>
-            <tr>
-              <td>Settings</td>
-              <td><span class="badge done">Done</span></td>
-              <td>Company profile, PO prefix, default notes, payment terms, currency formatting.</td>
-            </tr>
-            <tr>
-              <td>Reorder planning</td>
-              <td><span class="badge done">Done</span></td>
-              <td>7/14/30/90-day windows, buffer days, target stock days, draft PO creation.</td>
-            </tr>
-            <tr>
-              <td>Stocky/CSV import</td>
-              <td><span class="badge done">Done</span></td>
-              <td>CSV upload/paste, auto-detect, manual column override, preview, row errors, import history.</td>
-            </tr>
-            <tr>
+               <tr>
               <td>Receiving workflow</td>
               <td><span class="badge done">Done</span></td>
               <td>Record receipts, partial receiving, receipt history log, status updates (PARTIALLY_RECEIVED / RECEIVED).</td>
             </tr>
             <tr>
-              <td>Billing</td>
-              <td><span class="badge ongoing">Scaffold (Free Beta)</span></td>
-              <td>Billing is postponed for free beta. BillingSubscription model & plan overview route (/app/billing) exist as non-blocking scaffold.</td>
+              <td>Legal Copy (Drafts)</td>
+              <td><span class="badge done">Done</span></td>
+              <td>Public Privacy Policy, Terms of Service, and Data Deletion Policy drafts in product/launch/.</td>
             </tr>
             <tr>
-              <td>App Store readiness & Sales assets</td>
+              <td>App Store Listing & Review Notes</td>
               <td><span class="badge done">Done</span></td>
-              <td>Listing copy, 3-minute demo script, screenshot capture plan, honest outreach templates, and manual test checklist built in product/assets/.</td>
+              <td>Final listing copy, scope justifications, submission checklist, and review notes in product/launch/.</td>
+            </tr>
+            <tr>
+              <td>Production Readiness Spec</td>
+              <td><span class="badge done">Done</span></td>
+              <td>Infrastructure, hosting, database, env vars, backup, rate limit, and rollback spec in product/launch/PRODUCTION_READINESS.md.</td>
+            </tr>
+            <tr>
+              <td>Merchant Support Docs</td>
+              <td><span class="badge done">Done</span></td>
+              <td>FAQ, Getting Started, and Troubleshooting guides in product/support/.</td>
+            </tr>
+            <tr>
+              <td>Screenshot & Video Production Pack</td>
+              <td><span class="badge done">Done</span></td>
+              <td>6-screenshot capture spec and 3-minute video shot list in product/launch/.</td>
+            </tr>
+            <tr>
+              <td>Actual Screenshots & Demo Video</td>
+              <td><span class="badge not-started">Not Started</span></td>
+              <td>Requires manual QA capture and video recording on populated test store.</td>
+            </tr>
+            <tr>
+              <td>Production Hosting</td>
+              <td><span class="badge not-started">Not Started</span></td>
+              <td>Production cloud container hosting and HTTPS domain configuration pending.</td>
+            </tr>
+            <tr>
+              <td>Billing</td>
+              <td><span class="badge ongoing">Postponed (Free Beta)</span></td>
+              <td>App is 100% free for initial launch. BillingSubscription model & plan overview route (/app/billing) exist as non-blocking scaffold.</td>
             </tr>
             <tr>
               <td>Security audit</td>
               <td><span class="badge blocked">Blocked</span></td>
-              <td>React Router advisory requires a safe compatible dependency update, not force downgrade.</td>
+              <td>React Router advisory requires a safe compatible upstream patch from Shopify / React Router scaffold.</td>
             </tr>
           </tbody>
         </table>
@@ -531,25 +534,25 @@
             <li>Merchant can create, send, print, receive, and track purchase orders.</li>
             <li>Reorder planning with manual overrides and multi-row draft PO creation.</li>
             <li>Merchant can import supplier mappings from CSV, download sample template, and export invalid rows.</li>
-            <li>App Store listing copy, demo script, screenshot plan, outreach copy, and test checklist built.</li>
+            <li>Public legal drafts, App Store listing copy, submission checklist, screenshot/video specs, production readiness guide, and support docs completed in product/launch/ and product/support/.</li>
           </ul>
         </section>
 
         <section class="card">
           <h2>What Is Still Missing</h2>
           <ul class="list">
-            <li>Real Shopify billing charge approval and paid trial enforcement.</li>
-            <li>Production deployment database and cloud hosting.</li>
-            <li>Privacy policy and terms URLs hosted.</li>
+            <li>Production cloud container deployment & database hosting.</li>
+            <li>Actual retina screenshots and 3-minute video recording from test store.</li>
+            <li>Live HTTPS hosting for Privacy Policy and Terms URLs.</li>
+            <li>Real Shopify billing charges enforcement (postponed for free launch beta).</li>
             <li>Automated SMTP supplier email delivery and PDF generation.</li>
-            <li>Historical Stocky PO archive import.</li>
           </ul>
         </section>
 
         <section class="card">
           <h2>Next Priority</h2>
-          <p>Free Beta experience polish complete. Next step for launch: Production Deployment (PostgreSQL + Cloud Hosting), Privacy/Terms pages, and App Store Listing Assets.</p>
-          <div class="footer">Recommended order: cloud hosting, GDPR webhooks, privacy policy & terms, App Store screenshots & listing.</div>
+          <p>Launch documentation and support guides completed. Next steps for store listing: Manual Browser QA, Screenshot/Video recording on test store, and Production Deployment setup.</p>
+          <div class="footer">Recommended order: cloud hosting, GDPR webhooks, live legal URLs, App Store screenshots & video submission.</div>
         </section>
       </aside>
     </section>

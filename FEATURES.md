@@ -91,9 +91,11 @@ Do not optimize early product decisions for:
 | Stocky migration | PO history import | Later | P2 | Import historical PO records. |
 | Dashboard | Operations snapshot | Done | P0 | Merchant quickly sees synced variants, stock, suppliers, open POs. |
 | Dashboard | Actionable empty states | Done | P0 | Contextual empty states across Suppliers, Mappings, POs, Reorder, and Import routes. |
-| Billing | Shopify billing | Scaffold | P1 | Convert trial users into paying users. Presentation tier with plan options; non-blocking in dev. |
-| Onboarding | First-run setup checklist | Done | P0 | Move merchant from install to first PO fast. |
-| App Store | Listing copy, demo script & asset plans | Done | P0 | Product sales copy, 3-minute demo script, screenshot plan, outreach templates, and manual test checklist built in product/assets/. |
+| App Store | Submission checklist & final listing copy | Done | P0 | Final copy, scope justifications, submission checklist, and review notes in `product/launch/app-store-listing-final.md` and `SHOPIFY_APP_STORE_SUBMISSION_CHECKLIST.md`. |
+| App Store | Legal drafts & production spec | Done | P0 | Draft Privacy Policy, Terms of Service, Data Deletion Policy, and Production Readiness spec in `product/launch/`. |
+| App Store | Screenshot capture pack & demo shot list | Done | P0 | 6-screenshot capture specification and 3-minute video shot list built in `product/launch/`. |
+| App Store | Support & troubleshooting docs | Done | P0 | FAQ, Getting Started, and Troubleshooting guides built in `product/support/`. |
+| App Store | Actual screenshots & demo video | Not Started | P0 | Visual asset capture pending on populated test store. |
 | Reporting | Weekly reorder summary | Not Started | P2 | Bring merchant back to app every week. |
 | Automation | Low-stock email alerts | Not Started | P2 | Notify merchant before stockout. |
 | Receiving | Receive PO into PODesk | Done | P0 | Track received quantities, partial receiving, history log, and close purchase orders. |
