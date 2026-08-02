@@ -49,7 +49,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     }),
     prisma.supplierVariantMapping.findMany({
       where: { storeId: store.id },
-      select: { variantId: true, supplierCost: true },
+      select: { supplierId: true, variantId: true, supplierCost: true },
     }),
   ]);
 
@@ -89,6 +89,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
       unitCostAmount: v.unitCostAmount,
     })),
     mappings: mappings.map((m) => ({
+      supplierId: m.supplierId,
       variantId: m.variantId,
       supplierCost: m.supplierCost,
     })),
@@ -252,7 +253,7 @@ export default function PurchaseOrderDetailPage() {
 
   function handleVariantChange(variantId: string) {
     if (!variantId) return;
-    const mapping = mappings.find((m) => m.variantId === variantId);
+    const mapping = mappings.find((m) => m.supplierId === po.supplierId && m.variantId === variantId);
     const variant = variants.find((v) => v.id === variantId);
     const cost = mapping?.supplierCost ?? variant?.unitCostAmount ?? null;
     if (cost != null) {
@@ -363,11 +364,11 @@ export default function PurchaseOrderDetailPage() {
                 >
                   <option value="">Select variant</option>
                   {variants.map((v) => {
-                    const isMapped = mappings.some((m) => m.variantId === v.id);
+                    const isMapped = mappings.some((m) => m.supplierId === po.supplierId && m.variantId === v.id);
                     return (
                       <option key={v.id} value={v.id}>
                         {v.productTitle} - {v.variantTitle} {v.sku ? `(${v.sku})` : ""}
-                        {isMapped ? " ★ mapped" : ""}
+                        {isMapped ? " [mapped]" : ""}
                       </option>
                     );
                   })}

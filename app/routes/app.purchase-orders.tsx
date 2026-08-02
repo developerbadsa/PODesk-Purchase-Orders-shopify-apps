@@ -253,7 +253,7 @@ export default function PurchaseOrdersPage() {
                       return (
                         <option key={v.id} value={v.id}>
                           {v.productTitle} - {v.variantTitle} {v.sku ? `(${v.sku})` : ""}
-                          {isMapped ? " ★ mapped" : ""}
+                          {isMapped ? " [mapped]" : ""}
                         </option>
                       );
                     })}
@@ -270,7 +270,7 @@ export default function PurchaseOrdersPage() {
                   />
                 </div>
               ))}
-              <div style={mutedStyle}>Fill at least one line. Mapped SKUs show ★ and prefill unit cost automatically.</div>
+              <div style={mutedStyle}>Fill at least one line. Mapped SKUs show [mapped] and prefill unit cost automatically.</div>
             </div>
 
             <label style={fieldLabelStyle}>
