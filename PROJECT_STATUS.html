@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="en">
+<html lang="bn">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>PODesk Project Status</title>
+  <title>PODesk Project Status & Bangla Product Guide</title>
   <style>
     :root {
       color-scheme: light;
@@ -103,6 +103,10 @@
       margin-bottom: 18px;
     }
 
+    .three-col {
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    }
+
     .two-col {
       grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
     }
@@ -198,6 +202,32 @@
       font-size: 12px;
     }
 
+    .section {
+      margin-bottom: 18px;
+    }
+
+    .callout {
+      border-left: 4px solid var(--green);
+      background: var(--green-soft);
+      padding: 14px 16px;
+      border-radius: 8px;
+      color: #0f5132;
+    }
+
+    .callout strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .plain {
+      color: var(--text);
+    }
+
+    .mini {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
     @media (max-width: 820px) {
       .topbar,
       .two-col {
@@ -216,7 +246,7 @@
     <header class="topbar">
       <div>
         <h1>PODesk Project Status</h1>
-        <p>Browser-friendly snapshot for PODesk: Purchase Orders. Last updated: 2026-08-02.</p>
+        <p>PODesk: Purchase Orders - Bangla product guide, feature list, use case, user profile, and project status. Last updated: 2026-08-02.</p>
       </div>
       <nav class="doc-links" aria-label="Project documents">
         <a href="README.md">README</a>
@@ -233,15 +263,154 @@
       </div>
       <div class="card metric">
         <strong>Done</strong>
-        <span>Core merchant workflow is demo-able inside Shopify admin.</span>
+        <span>Core merchant workflow Shopify admin-er vitore demo-able.</span>
       </div>
       <div class="card metric">
         <strong>Blocked</strong>
-        <span>Production launch blocked by upstream React Router audit advisory.</span>
+        <span>Production launch-er age React Router audit advisory solve korte hobe.</span>
       </div>
       <div class="card metric">
         <strong>Next</strong>
         <span>Receiving workflow, then billing and production hardening.</span>
+      </div>
+    </section>
+
+    <section class="grid section">
+      <div class="card">
+        <h2>App Ta Ki?</h2>
+        <p class="plain">
+          PODesk holo Shopify merchant-der jonno inventory buying workspace. Eita Shopify product/SKU sync kore,
+          supplier manage kore, supplier SKU mapping kore, purchase order create/print/share kore, reorder planning
+          dekhay, and Stocky/spreadsheet CSV theke supplier mapping import korte help kore.
+        </p>
+        <div class="callout" style="margin-top: 14px;">
+          <strong>Main promise</strong>
+          Merchant jeno spreadsheet chara Shopify SKU theke supplier-wise purchase order banate pare, reorder risk dekhte pare,
+          and Stocky/spreadsheet workflow theke PODesk-e move korte pare.
+        </div>
+      </div>
+    </section>
+
+    <section class="grid three-col section">
+      <div class="card">
+        <h2>Keno Ei App Use Korbe?</h2>
+        <ul class="list">
+          <li>Supplier, SKU, cost, lead time alada spreadsheet-e manage korte hoy.</li>
+          <li>Shopify default admin purchase order workflow deep operational buying-er jonno enough na.</li>
+          <li>Stockout hoy karon kon SKU kobe reorder korte hobe eta clear thake na.</li>
+          <li>Purchase order supplier-ke pathano, print kora, status track kora manual hoy.</li>
+          <li>Stocky/spreadsheet data migrate korte practical workflow dorkar.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h2>Kara Use Korbe?</h2>
+        <ul class="list">
+          <li>Shopify / Shopify POS merchant.</li>
+          <li>Retail, apparel, beauty, food, home goods, accessories, parts, hardware store.</li>
+          <li>Jader 50+ SKU and recurring supplier order ache.</li>
+          <li>Operations manager, purchasing manager, store owner, inventory manager.</li>
+          <li>Stocky user, spreadsheet user, or manual PO user.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h2>Kara Fit Na?</h2>
+        <ul class="list">
+          <li>Dropshipping-only store.</li>
+          <li>Print-on-demand-only store.</li>
+          <li>Jader supplier/reorder workflow nai.</li>
+          <li>Enterprise ERP already use kore and custom workflow locked.</li>
+          <li>Free-only merchant jara operational tool-er jonno pay korte chay na.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="card section">
+      <h2>Merchant Ki Ki Kaj Korte Parbe?</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Workflow</th>
+            <th>Kaj</th>
+            <th>Merchant-er Benefit</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Inventory sync</td>
+            <td>Shopify products, variants, SKUs, locations, inventory, recent sales sync.</td>
+            <td>PODesk real Shopify data diye kaj kore, fake spreadsheet data na.</td>
+          </tr>
+          <tr>
+            <td>Supplier management</td>
+            <td>Supplier create, edit, archive, restore, lead time, terms, notes.</td>
+            <td>Supplier info organized thake and buying decision faster hoy.</td>
+          </tr>
+          <tr>
+            <td>SKU mapping</td>
+            <td>Shopify SKU ke supplier, supplier SKU, cost, lead time-er sathe connect.</td>
+            <td>Kon product kon supplier theke kinte hobe eta clear hoy.</td>
+          </tr>
+          <tr>
+            <td>Purchase orders</td>
+            <td>Multi-line PO create, draft edit, duplicate, status update, print.</td>
+            <td>Spreadsheet PO replace kore cleaner operational PO workflow.</td>
+          </tr>
+          <tr>
+            <td>Supplier sharing</td>
+            <td>Email subject/message copy, mailto draft, printable PO, Mark as Sent.</td>
+            <td>Supplier-ke PO pathano easy, sent history trackable.</td>
+          </tr>
+          <tr>
+            <td>Reorder planning</td>
+            <td>7/14/30/90 day sales window, buffer, target stock, suggested quantity.</td>
+            <td>Low-stock and reorder decision guesswork komay.</td>
+          </tr>
+          <tr>
+            <td>Stocky/CSV import</td>
+            <td>CSV upload/paste, column auto-detect, override, preview, row errors, import.</td>
+            <td>Stocky/spreadsheet supplier mapping data PODesk-e migrate kora jay.</td>
+          </tr>
+          <tr>
+            <td>Settings</td>
+            <td>Company profile, PO prefix, default notes, payment terms, currency.</td>
+            <td>Printable PO professional and merchant-branded hoy.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="grid three-col section">
+      <div class="card">
+        <h2>Sales Angle</h2>
+        <p class="plain">Primary pitch: <strong>Stocky Rescue by PODesk</strong>.</p>
+        <ul class="list" style="margin-top: 10px;">
+          <li>Stocky/spreadsheet supplier data migrate korun.</li>
+          <li>Shopify SKU diye supplier PO create korun.</li>
+          <li>Reorder risk and supplier buying ek jaygay dekhun.</li>
+          <li>Manual spreadsheet PO workflow koman.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h2>Pricing Direction</h2>
+        <ul class="list">
+          <li>Starter: small PO workflow.</li>
+          <li>Pro: reorder + supplier mapping + PO sharing.</li>
+          <li>Business: import, reporting, priority support.</li>
+          <li>Migration service: one-time Stocky/spreadsheet setup fee.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h2>Trust Rules</h2>
+        <ul class="list">
+          <li>Early MVP Shopify inventory read-only.</li>
+          <li>No automatic inventory write-back yet.</li>
+          <li>Invalid CSV rows skipped with exact errors.</li>
+          <li>Store-scoped data access enforced in routes/actions.</li>
+        </ul>
       </div>
     </section>
 
@@ -356,6 +525,286 @@
           <div class="footer">Recommended order: Receiving workflow, billing, production hardening, App Store assets.</div>
         </section>
       </aside>
+    </section>
+
+    <section class="card section" style="margin-top: 18px;">
+      <h2>Full Feature Details Bangla</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th>Details</th>
+            <th>Business Value</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Shopify Embedded App</td>
+            <td>App Shopify admin-er vitore load hoy. Merchant-ke alada login portal use korte hoy na.</td>
+            <td>Install-er por merchant familiar Shopify admin environment-e kaj korte pare.</td>
+            <td><span class="badge done">Done</span></td>
+          </tr>
+          <tr>
+            <td>OAuth & Session</td>
+            <td>Shopify authentication, protected app routes, Prisma session storage.</td>
+            <td>Store secure bhabe connect hoy, session refresh-er por app kaj kore.</td>
+            <td><span class="badge done">Done</span></td>
+          </tr>
+          <tr>
+            <td>Inventory Sync</td>
+            <td>Products, variants, SKUs, barcodes, vendor, inventory item ID, locations, aggregate inventory, recent order quantity sync.</td>
+            <td>Buying workflow Shopify catalog-er sathe connected thake. Manual SKU entry kom lage.</td>
+            <td><span class="badge done">Done</span></td>
+          </tr>
+          <tr>
+            <td>Dashboard</td>
+            <td>Connected store, last sync, setup progress, operation metrics, reorder attention, recent POs.</td>
+            <td>Merchant app open korlei bujhe current buying operation-er obostha ki.</td>
+            <td><span class="badge done">Done</span></td>
+          </tr>
+          <tr>
+            <td>Supplier CRUD</td>
+            <td>Supplier add, edit, archive, restore, delete-if-safe, detail page, contacts, lead time, payment terms, notes.</td>
+            <td>Supplier info spreadsheet theke app-er vitore organized hoy.</td>
+            <td><span class="badge done">Done</span></td>
+          </tr>
+          <tr>
+            <td>SKU Supplier Mapping</td>
+            <td>Variant-to-supplier mapping, supplier SKU, supplier cost, supplier lead time override, primary supplier.</td>
+            <td>PO creation and reorder planning supplier-aware hoy. Eta product-er core value.</td>
+            <td><span class="badge done">Done</span></td>
+          </tr>
+          <tr>
+            <td>Purchase Order List</td>
+            <td>All POs, supplier, status, lines, total, expected arrival, created/updated, last sent info.</td>
+            <td>Merchant active buying pipeline ek table-e dekhte pare.</td>
+            <td><span class="badge done">Done</span></td>
+          </tr>
+          <tr>
+            <td>Purchase Order Detail</td>
+            <td>PO reference, supplier, status state machine, line items, unit cost, subtotal, notes, expected arrival.</td>
+            <td>Each PO spreadsheet row na hoye proper operational record hoy.</td>
+            <td><span class="badge done">Done</span></td>
+          </tr>
+          <tr>
+            <td>Draft PO Editing</td>
+            <td>DRAFT status-e line add/remove, reference edit, notes edit, arrival edit. Non-draft locked.</td>
+            <td>Supplier-ke send korar age mistake fix kora jay; sent-er por accidental edit komay.</td>
+            <td><span class="badge done">Done</span></td>
+          </tr>
+          <tr>
+            <td>PO Status Lifecycle</td>
+            <td>DRAFT, SENT, CONFIRMED, PARTIALLY_RECEIVED, RECEIVED, DELAYED, CANCELLED with allowed transitions.</td>
+            <td>PO pipeline structured hoy. Wrong status jump server-side block kora hoy.</td>
+            <td><span class="badge done">Done</span></td>
+          </tr>
+          <tr>
+            <td>PO Print View</td>
+            <td>Company header, supplier info, PO reference, dates, payment terms, line table, totals, notes, print button.</td>
+            <td>Supplier-ke professional PO document deya jay without external template.</td>
+            <td><span class="badge done">Done</span></td>
+          </tr>
+          <tr>
+            <td>Supplier Sharing</td>
+            <td>Supplier email field, subject/message template, copy buttons, mailto draft, printable PO link, Mark as Sent.</td>
+            <td>Email provider integration chara immediate manual workflow usable hoy.</td>
+            <td><span class="badge done">Done</span></td>
+          </tr>
+          <tr>
+            <td>Settings</td>
+            <td>Company name, contact, address, currency, PO prefix, default payment terms, default PO notes.</td>
+            <td>PO output merchant-branded and professional hoy.</td>
+            <td><span class="badge done">Done</span></td>
+          </tr>
+          <tr>
+            <td>Reorder Planning</td>
+            <td>Sales window, average daily sales, days until stockout, supplier lead time, buffer days, target stock days, suggested quantity.</td>
+            <td>Merchant kon SKU reorder korte hobe and roughly koto quantity lagbe bujhte pare.</td>
+            <td><span class="badge done">Done</span></td>
+          </tr>
+          <tr>
+            <td>Create PO From Reorder</td>
+            <td>Mapped reorder suggestion theke draft PO create kora jay.</td>
+            <td>Insight theke action-e jawa fast hoy.</td>
+            <td><span class="badge done">Done</span></td>
+          </tr>
+          <tr>
+            <td>CSV Import</td>
+            <td>File upload or paste CSV, quoted field support, 1 MB limit, 1000 row limit, header auto-detection.</td>
+            <td>Stocky/spreadsheet user fast supplier mapping migrate korte pare.</td>
+            <td><span class="badge done">Done</span></td>
+          </tr>
+          <tr>
+            <td>Column Mapping Override</td>
+            <td>Auto-detected header wrong hole merchant manually SKU, supplier, cost, lead time columns select korte pare.</td>
+            <td>Messy real-world CSV handle korte pare. Import fake/tool-only lage na.</td>
+            <td><span class="badge done">Done</span></td>
+          </tr>
+          <tr>
+            <td>Import Validation</td>
+            <td>Missing SKU, missing supplier, bad SKU match, invalid cost, invalid lead time, invalid minimum order row-level error.</td>
+            <td>Wrong import silently database-e dhuke na. Merchant bujhte pare kon row fix korte hobe.</td>
+            <td><span class="badge done">Done</span></td>
+          </tr>
+          <tr>
+            <td>Import Execution</td>
+            <td>Valid rows import kore, supplier create/reuse kore, SupplierVariantMapping create/update kore, invalid rows skip kore.</td>
+            <td>Merchant usable data migrate korte pare without support call.</td>
+            <td><span class="badge done">Done</span></td>
+          </tr>
+          <tr>
+            <td>Import History</td>
+            <td>Filename, status, total rows, valid/invalid, imported mappings, created date.</td>
+            <td>Merchant and founder debug korte pare kon import kobe holo.</td>
+            <td><span class="badge done">Done</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="grid three-col section">
+      <div class="card">
+        <h2>Typical Merchant Journey</h2>
+        <ol class="list">
+          <li>App install kore Shopify admin-e open kore.</li>
+          <li>Dashboard theke Shopify inventory sync kore.</li>
+          <li>Supplier add kore or CSV import kore supplier create kore.</li>
+          <li>SKU mapping kore supplier SKU/cost/lead time set kore.</li>
+          <li>Reorder planning dekhe kon SKU risk-e ache bujhe.</li>
+          <li>Supplier-wise purchase order create kore.</li>
+          <li>PO print/share kore supplier-ke send kore.</li>
+          <li>PO status update kore order pipeline track kore.</li>
+        </ol>
+      </div>
+
+      <div class="card">
+        <h2>Real Problems Solved</h2>
+        <ul class="list">
+          <li>Supplier data scattered spreadsheet-e thaka.</li>
+          <li>SKU supplier mapping missing thaka.</li>
+          <li>Manual PO formatting and supplier email copy-paste.</li>
+          <li>Stockout risk late bujha.</li>
+          <li>Stocky/spreadsheet migration-e messy CSV problem.</li>
+          <li>Owner/ops manager-er buying workflow Shopify-er baire thaka.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h2>Why Merchant Pay Korbe?</h2>
+        <ul class="list">
+          <li>Stockout komle lost sales kombe.</li>
+          <li>Wrong supplier order kombe.</li>
+          <li>Spreadsheet maintenance time kombe.</li>
+          <li>Buying workflow staff-er jonno repeatable hobe.</li>
+          <li>Stocky transition pain-er practical solution pabe.</li>
+          <li>Monthly fee operations mistake-er cost-er cheye kom hole value clear.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="card section">
+      <h2>Remaining Roadmap Details</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Priority</th>
+            <th>Feature</th>
+            <th>Keno Lage</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>P0 Next</td>
+            <td>Receiving workflow</td>
+            <td>Merchant received quantity, partial receive, received date, closed PO track korte parbe. Eita PO lifecycle complete korbe.</td>
+            <td><span class="badge not-started">Not Started</span></td>
+          </tr>
+          <tr>
+            <td>P0 Next</td>
+            <td>Billing</td>
+            <td>Shopify subscription, trial, plan guard chara SaaS revenue start hobe na.</td>
+            <td><span class="badge not-started">Not Started</span></td>
+          </tr>
+          <tr>
+            <td>P0 Launch</td>
+            <td>Production deployment</td>
+            <td>Real merchant use korte stable hosting, DB, env, monitoring dorkar.</td>
+            <td><span class="badge not-started">Not Started</span></td>
+          </tr>
+          <tr>
+            <td>P0 Launch</td>
+            <td>Security advisory fix</td>
+            <td>React Router audit issue production launch-er age safe package update diye solve korte hobe.</td>
+            <td><span class="badge blocked">Blocked</span></td>
+          </tr>
+          <tr>
+            <td>P1</td>
+            <td>Privacy, terms, app listing</td>
+            <td>Shopify App Store review-er jonno legal pages, screenshots, demo video, listing copy dorkar.</td>
+            <td><span class="badge not-started">Not Started</span></td>
+          </tr>
+          <tr>
+            <td>P1</td>
+            <td>Better reorder accuracy</td>
+            <td>Exclude out-of-stock days, manual quantity override, seasonality controls add korte hobe.</td>
+            <td><span class="badge not-started">Not Started</span></td>
+          </tr>
+          <tr>
+            <td>P2</td>
+            <td>Automated supplier email</td>
+            <td>Manual sharing done, but direct provider email future automation.</td>
+            <td><span class="badge later">Later</span></td>
+          </tr>
+          <tr>
+            <td>P2</td>
+            <td>PDF download</td>
+            <td>Print view ache, but direct PDF export future polish.</td>
+            <td><span class="badge later">Later</span></td>
+          </tr>
+          <tr>
+            <td>P2</td>
+            <td>Historical PO import</td>
+            <td>Stocky old PO archive import valuable, but messy and not first importer scope.</td>
+            <td><span class="badge later">Later</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="grid three-col section">
+      <div class="card">
+        <h2>App Store Positioning</h2>
+        <ul class="list">
+          <li>Title: PODesk: Purchase Orders</li>
+          <li>Subtitle: Inventory reorder alerts</li>
+          <li>Keywords: purchase orders, supplier management, reorder alerts, Stocky migration.</li>
+          <li>Core message: Shopify buying workflow without ERP complexity.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h2>Best First Customers</h2>
+        <ul class="list">
+          <li>Shopify POS retailers with suppliers.</li>
+          <li>Stocky users looking for migration path.</li>
+          <li>Stores using spreadsheet purchase orders.</li>
+          <li>Stores with frequent low-stock pain.</li>
+          <li>Owners who personally manage buying.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h2>Founder Sales Focus</h2>
+        <ul class="list">
+          <li>Demo real Shopify store workflow.</li>
+          <li>Offer assisted CSV migration.</li>
+          <li>Ask for setup fee or paid beta after demo.</li>
+          <li>Collect feature gaps from actual merchants.</li>
+          <li>Do not overbuild ERP features before sales signal.</li>
+        </ul>
+      </div>
     </section>
   </main>
 </body>
