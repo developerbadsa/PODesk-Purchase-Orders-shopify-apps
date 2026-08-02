@@ -11,9 +11,9 @@ export default function TroubleshootingPage() {
   return (
     <div style={containerStyle}>
       <header style={headerStyle}>
-        <h1 style={{ margin: "0 0 8px 0", fontSize: "28px" }}>Troubleshooting &amp; Error Resolution</h1>
+        <h1 style={{ margin: "0 0 8px 0", fontSize: "28px" }}>Troubleshooting PODesk</h1>
         <p style={{ margin: 0, color: "#616161", fontSize: "14px" }}>
-          <strong>PODesk: Purchase Orders</strong> &bull; Technical Troubleshooting Guide
+          <strong>PODesk: Purchase Orders</strong> &bull; Merchant &amp; Developer Troubleshooting Guide
         </p>
         <nav style={{ marginTop: "16px", display: "flex", gap: "12px" }}>
           <a href="/support" style={navBadgeStyle}>FAQ</a>
@@ -25,80 +25,87 @@ export default function TroubleshootingPage() {
       <main style={contentStyle}>
         <section style={sectionStyle}>
           <p style={{ fontSize: "16px" }}>
-            This guide provides step-by-step resolution steps for common issues encountered during development, installation, inventory sync, purchase orders, and CSV data imports.
+            Ran into a hiccup or an unexpected message while using PODesk? Here are direct solutions to the most common issues merchants and developers run into.
           </p>
 
           <div style={issueCardStyle}>
-            <h3>1. App Shows Blank Page or Loading Spinner Indefinitely</h3>
-            <p><strong>Symptoms:</strong> Opening PODesk inside Shopify Admin displays a blank white screen or continuous loading spinner.</p>
-            <p><strong>Root Cause:</strong> Browser session token has expired or cross-site tracking protections block iframe cookies.</p>
-            <p><strong>Resolution:</strong></p>
+            <h3>1. App shows a blank white screen or won&apos;t finish loading</h3>
+            <p><strong>Why it happens:</strong> Your browser session token expired or your browser&apos;s privacy settings are blocking cookies inside Shopify&apos;s admin frame.</p>
+            <p><strong>How to fix it:</strong></p>
             <ol>
-              <li>Hard refresh your browser frame (<code>Ctrl + Shift + R</code> or <code>Cmd + Shift + R</code>).</li>
-              <li>Ensure third-party cookies or cross-site tracking protections are allowed for Shopify Admin (<code>admin.shopify.com</code>).</li>
-              <li>Try opening Shopify Admin in an Incognito/Private window.</li>
+              <li>Try a hard refresh (<code>Ctrl + Shift + R</code> on Windows/Linux or <code>Cmd + Shift + R</code> on Mac).</li>
+              <li>Make sure third-party cookies or cross-site tracking protections aren&apos;t blocking <code>admin.shopify.com</code>.</li>
+              <li>Try opening Shopify Admin in an Incognito / Private window.</li>
             </ol>
           </div>
 
           <div style={issueCardStyle}>
-            <h3>2. &quot;Access Denied&quot; Scope Errors During Inventory Sync</h3>
-            <p><strong>Symptoms:</strong> Sync fails with error notification such as <em>&quot;Access denied for products field&quot;</em> or <em>&quot;Access denied for locations field&quot;</em>.</p>
-            <p><strong>Root Cause:</strong> Store holds an outdated access token generated before required scopes (<code>read_products,read_inventory,read_locations,read_orders</code>) were set in <code>shopify.app.toml</code>.</p>
-            <p><strong>Resolution:</strong></p>
+            <h3>2. &quot;Access Denied&quot; scope errors when running inventory sync</h3>
+            <p><strong>Why it happens:</strong> Your store has an older login token saved from before we updated access scopes in <code>shopify.app.toml</code>.</p>
+            <p><strong>How to fix it:</strong></p>
             <ol>
-              <li>Open Shopify Admin, go to <strong>Settings &gt; Apps and sales channels</strong>.</li>
-              <li>Locate <strong>PODesk: Purchase Orders</strong> and click <strong>Uninstall</strong>.</li>
-              <li>If running CLI development, stop server (<code>q</code>), then restart with reset: <code>npm run dev -- --reset</code>.</li>
-              <li>Re-install PODesk on your development store and accept the updated permission prompts.</li>
-              <li>Re-open PODesk and click <strong>Sync Shopify inventory</strong> again.</li>
+              <li>In Shopify Admin, go to <strong>Settings &gt; Apps and sales channels</strong>.</li>
+              <li>Find <strong>PODesk: Purchase Orders</strong> and click <strong>Uninstall</strong>.</li>
+              <li>If running local CLI dev, press <code>q</code> to stop your server, then restart with: <code>npm run dev -- --reset</code>.</li>
+              <li>Re-install PODesk on your test store and accept the updated permission prompt.</li>
+              <li>Open PODesk and click <strong>Sync Shopify inventory</strong> again.</li>
             </ol>
           </div>
 
           <div style={issueCardStyle}>
-            <h3>3. Inventory Sync Query Fails or Cost Exceeded</h3>
-            <p><strong>Symptoms:</strong> Sync fails with GraphQL query cost limit errors or timeout messages.</p>
-            <p><strong>Root Cause:</strong> Catalog or order volume exceeds single-query cost limits.</p>
-            <p><strong>Resolution:</strong> PODesk limits products to 1,000 items (40 pages &times; 25 items) and orders to 1,000 items (10 pages &times; 25 items) per single sync action. If your catalog exceeds 5,000 SKUs, wait 60 seconds for Shopify GraphQL rate limits to replenish, then re-trigger sync.</p>
+            <h3>3. Inventory sync fails or hits query cost limits</h3>
+            <p><strong>Why it happens:</strong> Your catalog or order volume is large, hitting Shopify GraphQL API rate limits.</p>
+            <p><strong>How to fix it:</strong> PODesk syncs up to 1,000 products and 1,000 orders per single sync pass. If your catalog has over 5,000 SKUs, wait about 60 seconds for Shopify&apos;s API limit bucket to refill, then run the sync again.</p>
           </div>
 
           <div style={issueCardStyle}>
-            <h3>4. No Products Displayed After Sync</h3>
-            <p><strong>Symptoms:</strong> Sync reports success, but products or variants do not appear in SKU Mappings or Reorder table.</p>
-            <p><strong>Resolution:</strong> Verify that your products in Shopify Admin have <strong>SKUs</strong> defined. PODesk filters and maps variants using Shopify SKUs. Ensure products are set to <strong>Active</strong> status and variants have <strong>Track quantity</strong> enabled.</p>
-          </div>
-
-          <div style={issueCardStyle}>
-            <h3>5. Reorder Table Shows No Suggestions or &quot;Map Supplier First&quot;</h3>
-            <p><strong>Symptoms:</strong> Reorder Planning table shows SKUs with zero suggested quantity or <em>&quot;Map supplier first&quot;</em> status reason.</p>
-            <p><strong>Resolution:</strong></p>
+            <h3>4. No products showing up after sync completes</h3>
+            <p><strong>Why it happens:</strong> Your Shopify items might be missing SKUs, set to Draft, or untracked.</p>
+            <p><strong>How to fix it:</strong></p>
             <ol>
-              <li><strong>Assign Supplier Mapping:</strong> Go to <code>/app/mappings</code> and map the SKU to a supplier.</li>
-              <li><strong>Sales Velocity Check:</strong> If a product had zero sales in the selected window (e.g., past 30 days), daily sales velocity is zero. Select a broader sales window (e.g., 90 days).</li>
-              <li><strong>Manual Override:</strong> Enter a custom number in the <strong>Reorder Override</strong> field on <code>/app/reorder</code>.</li>
+              <li>Make sure your product variants in Shopify Admin have <strong>SKUs</strong> filled in. PODesk relies on SKUs to map items.</li>
+              <li>Confirm products are set to <strong>Active</strong> (Draft or Archived items are skipped).</li>
+              <li>Check that variants have <strong>Track quantity</strong> enabled in Shopify.</li>
             </ol>
           </div>
 
           <div style={issueCardStyle}>
-            <h3>6. CSV Import Reports Invalid Rows</h3>
-            <p><strong>Symptoms:</strong> Uploading or pasting a CSV file on <code>/app/imports</code> results in skipped rows or invalid row warnings.</p>
-            <p><strong>Resolution:</strong> Ensure column headers match expected names or use column override dropdowns. Required columns: <code>handle</code> or <code>sku</code>, and <code>supplier_name</code>. Click <strong>Export Invalid Rows</strong> to download a CSV containing failed rows and specific error reasons.</p>
+            <h3>5. Reorder table shows no suggestions or &quot;Map supplier first&quot;</h3>
+            <p><strong>Why it happens:</strong> Either the item isn&apos;t linked to a vendor, or there were zero sales in your chosen window.</p>
+            <p><strong>How to fix it:</strong></p>
+            <ol>
+              <li><strong>Link a Supplier:</strong> Go to <code>/app/mappings</code> and map the SKU to a supplier. We need lead times to estimate risk.</li>
+              <li><strong>Expand Sales Window:</strong> If an item didn&apos;t sell in 30 days, try selecting a 90-day window.</li>
+              <li><strong>Use Manual Override:</strong> Enter your own number in the <strong>Reorder Override</strong> field on <code>/app/reorder</code>.</li>
+            </ol>
           </div>
 
           <div style={issueCardStyle}>
-            <h3>7. Purchase Order Cannot Be Received</h3>
-            <p><strong>Symptoms:</strong> Clicking <strong>Record receipt</strong> or saving line item receipts on a PO page yields an error.</p>
-            <p><strong>Resolution:</strong> Verify PO status is <code>SENT</code>, <code>CONFIRMED</code>, or <code>PARTIALLY_RECEIVED</code>. POs in <code>DRAFT</code> status must be marked as sent before receiving items. Received quantity inputs cannot be negative or exceed remaining balance.</p>
+            <h3>6. CSV import skipping rows or throwing errors</h3>
+            <p><strong>Why it happens:</strong> Column names don&apos;t match, or SKUs in your file don&apos;t exist in Shopify.</p>
+            <p><strong>How to fix it:</strong></p>
+            <ol>
+              <li>Make sure your headers match or use the column dropdowns on the preview page. Required columns: <code>handle</code> or <code>sku</code>, and <code>supplier_name</code>.</li>
+              <li>Check that the SKUs in your spreadsheet match your Shopify SKUs character-for-character.</li>
+              <li>Click <strong>Export Invalid Rows</strong> on the import page to get a CSV listing only the failed rows with exact reasons.</li>
+            </ol>
           </div>
 
           <div style={issueCardStyle}>
-            <h3>8. Mixed Supplier Selection Blocked During PO Creation</h3>
-            <p><strong>Symptoms:</strong> When selecting multiple rows on Reorder table, <strong>Create Draft PO</strong> button is disabled or displays a validation warning.</p>
-            <p><strong>Resolution:</strong> Multi-row draft PO creation requires <strong>all selected SKUs to belong to the same supplier</strong>. Filter the Reorder table by a single supplier using the Supplier Filter dropdown before selecting rows.</p>
+            <h3>7. Purchase order won&apos;t record item receiving</h3>
+            <p><strong>Why it happens:</strong> The PO is still in Draft state or entered numbers exceed what&apos;s left.</p>
+            <p><strong>How to fix it:</strong> Make sure the PO status is <code>SENT</code>, <code>CONFIRMED</code>, or <code>PARTIALLY_RECEIVED</code>. Click <strong>Mark as Sent</strong> first if it&apos;s still a Draft, and ensure received quantities don&apos;t exceed the remaining balance.</p>
           </div>
 
           <div style={issueCardStyle}>
-            <h3>9. Partner Development Store Reinstall Note</h3>
-            <p>Development store session tokens expire periodically. If GraphQL authorization errors occur after non-use, uninstall the app from Shopify Admin settings and launch <code>npm run dev</code> to re-issue clean OAuth credentials.</p>
+            <h3>8. Can&apos;t select items from different suppliers for one PO</h3>
+            <p><strong>Why it happens:</strong> A single purchase order can only be sent to one vendor at a time.</p>
+            <p><strong>How to fix it:</strong> Use the <strong>Supplier Filter</strong> dropdown at the top of the Reorder table to filter by a single vendor before selecting checkboxes.</p>
+          </div>
+
+          <div style={issueCardStyle}>
+            <h3>9. Session token expired on dev store</h3>
+            <p>If you&apos;re testing on a Partner Development store, tokens expire after non-use. Simply uninstall the app from Shopify Admin settings and restart <code>npm run dev</code> to generate a fresh token.</p>
           </div>
         </section>
 

@@ -1,94 +1,87 @@
-# Getting Started Guide for PODesk
+# Getting Started with PODesk
 
-Product: **PODesk: Purchase Orders**  
-Target Audience: Shopify Merchants & Warehouse Managers  
-Goal: From Install to First Purchase Order in 10 Minutes  
+Welcome! If you're looking to get your purchasing and inventory reordering set up quickly inside Shopify, you're in the right place. Here is a simple, 7-step walkthrough to take you from installing PODesk to sending your first purchase order and logging receipts.
 
 ---
 
-Welcome to **PODesk: Purchase Orders**! This guide walks you step-by-step through setting up your store, mapping your products, analyzing reorder suggestions, and issuing purchase orders.
+## Step 1: Sync your Shopify products & sales data
+
+1. Open **PODesk** inside your Shopify Admin.
+2. Head to the **Dashboard** (`/app`) and click **Sync Shopify inventory** at the top.
+3. PODesk will grab your products, active stocking locations, current counts, and recent sales.
+4. When it finishes, you'll see your total synced counts right on the dashboard.
+
+*Pro tip: Whenever you add new items in Shopify or want updated sales figures, just click Sync Shopify inventory again.*
 
 ---
 
-## Step 1: Sync Your Shopify Inventory & Sales Velocity
+## Step 2: Add your suppliers
 
-1. Open **PODesk** inside your Shopify Admin frame.
-2. On the **Operations Dashboard** (`/app`), click the **Sync Shopify inventory** button in the top banner.
-3. PODesk will pull your Shopify products, variants, active locations, and recent sales velocity.
-4. Once completed, review your synced catalog counts (e.g. `26 variants synced across 2 locations`).
-
-> **Tip**: Run **Sync Shopify inventory** whenever you add new products or want to refresh sales velocity calculations.
-
----
-
-## Step 2: Add Your Suppliers
-
-1. Navigate to **Suppliers** (`/app/suppliers`) from the app menu.
-2. Click **Add Supplier** in the top right header.
-3. Fill out your supplier's profile:
-   - **Supplier Name** *(Required, e.g. Apex Apparel Ltd)*
-   - **Contact Name & Email** *(e.g. orders@apexapparel.com)*
-   - **Phone & Business Address**
-   - **Default Lead Time (Days)** *(e.g. 14 days)*
-   - **Payment Terms** *(e.g. Net 30)*
-4. Click **Save Supplier**.
+1. Click **Suppliers** (`/app/suppliers`) in the left navigation menu.
+2. Click **Add Supplier** in the top header.
+3. Fill out the vendor details:
+   - **Supplier Name** (e.g. Apex Apparel Ltd)
+   - **Contact Name & Email** (e.g. orders@apexapparel.com)
+   - **Phone & Address**
+   - **Default Lead Time** (how many days they take to deliver, e.g. 14 days)
+   - **Payment Terms** (e.g. Net 30)
+4. Hit **Save Supplier**.
 
 ---
 
-## Step 3: Map SKUs to Suppliers
+## Step 3: Map your SKUs to suppliers
 
-To enable velocity reordering and PO creation, map your Shopify variants to their respective suppliers:
+To let PODesk calculate recommendations and build POs, map your Shopify items to the vendors you buy them from:
 
-1. Navigate to **SKU Mappings** (`/app/mappings`).
-2. Click **Add Mapping** (or filter by unmapped SKUs).
-3. Select the **Shopify Product Variant** and choose the **Supplier**.
-4. Enter supplier-specific details:
-   - **Supplier SKU** *(e.g. APX-JKT-BLK-M)*
-   - **Unit Cost Price** *(e.g. $35.00)*
-   - **Lead Time Override** *(Optional override if different from supplier default)*
-   - **Primary Supplier** *(Check if this is your main supplier for this SKU)*
+1. Head over to **SKU Mappings** (`/app/mappings`).
+2. Click **Add Mapping** (or filter down to unmapped variants).
+3. Select your **Shopify Variant** and choose the matching **Supplier**.
+4. Fill in the vendor specifics:
+   - **Supplier SKU** (their item number, e.g. APX-JKT-BLK-M)
+   - **Unit Cost Price** (your wholesale cost per unit)
+   - **Lead Time Override** (only if this item takes longer or shorter than the supplier's default)
+   - **Primary Supplier** (check this if they're your main source for this item)
 5. Click **Save Mapping**.
 
 ---
 
-## Step 4: Use Reorder Planning & Set Overrides
+## Step 4: Check reorder suggestions & tweak overrides
 
-1. Navigate to **Reorder Planning** (`/app/reorder`).
-2. Select your desired **Sales Window** (7, 14, 30, or 90 days) and **Buffer Days** (safety stock).
-3. Review SKUs flagged as **Critical** (out of stock) or **Lead Time Risk**.
-4. *(Optional)* If you know demand will spike or need to meet supplier Minimum Order Quantities (MOQs), type a custom number in the **Reorder Override** field for any SKU.
-5. Select the checkboxes next to the SKUs you want to reorder for a specific supplier.
-6. Click **Create Draft PO** at the top of the table.
-
----
-
-## Step 5: Format, Print & Share Purchase Orders
-
-1. PODesk automatically generates a multi-line draft purchase order and opens the **PO Detail Page** (`/app/purchase-orders/:id`).
-2. Review line items, quantities, unit costs, and subtotal. Add internal notes or expected arrival dates if needed.
-3. Click **Share / Copy Email** to generate a pre-formatted email draft for your supplier.
-4. Click **Print PO** to generate a clean, merchant-branded printable PO document or PDF export.
-5. Click **Mark as Sent** to update the PO status to `SENT`.
+1. Click **Reorder Planning** (`/app/reorder`).
+2. Choose your **Sales Window** (7, 14, 30, or 90 days) and set your **Buffer Days** (safety stock).
+3. Look for items marked **Critical** (out of stock) or **Lead Time Risk** (running low soon).
+4. If you know you have an upcoming sale or need to hit a supplier MOQ, type your custom quantity into the **Reorder Override** box.
+5. Select the checkboxes next to items for a single supplier, then click **Create Draft PO**.
 
 ---
 
-## Step 6: Receive Purchase Orders & Track Inventory
+## Step 5: Review, print & send your purchase order
 
-1. When shipment arrives from your supplier, open the purchase order in PODesk.
+1. PODesk creates a draft PO and opens the **PO Detail Page** (`/app/purchase-orders/:id`).
+2. Double-check your line items, costs, and expected arrival date.
+3. Click **Share / Copy Email** to get a formatted email draft ready for your supplier.
+4. Click **Print PO** if you want a clean printable sheet or PDF export.
+5. Click **Mark as Sent** when you've placed the order with your vendor.
+
+---
+
+## Step 6: Log item receipts when shipments arrive
+
+1. When your delivery arrives, open the PO in PODesk.
 2. Click **Record receipt**.
-3. Enter the received quantities for each line item (supports partial receiving if items arrive in multiple shipments).
-4. Enter optional receiving notes or delivery tracking references.
-5. Click **Save Receipt**. PODesk updates receiving progress bars, transitions PO status to `PARTIALLY_RECEIVED` or `RECEIVED`, and logs receipt history.
+3. Type in how many units arrived for each line item (if it arrived in partial shipments, just enter what came in).
+4. Add any tracking or delivery notes.
+5. Click **Save Receipt**. PODesk updates your receiving progress bar, updates the PO status, and records a clear receipt history log.
 
 ---
 
-## Step 7: Import Data via CSV (Stocky Migration)
+## Step 7: Importing data from Stocky or Excel
 
-If you are migrating from Stocky or spreadsheets:
+If you're moving over from Stocky or spreadsheets:
 
-1. Navigate to **Stocky Import** (`/app/imports`).
-2. Click **Download sample CSV** to review the expected file layout.
-3. Upload your `.csv` file or paste raw CSV text.
-4. Review the auto-detected column headers (Handle, Supplier, Supplier SKU, Cost Price, Lead Time).
-5. Click **Preview Validation** to review valid vs. invalid rows.
-6. Click **Import Valid Rows** to complete your catalog migration in seconds.
+1. Click **Stocky Import** (`/app/imports`).
+2. Grab our sample template by clicking **Download sample CSV**.
+3. Upload your `.csv` file or paste in raw text.
+4. Check the auto-matched columns (Handle, Supplier, Supplier SKU, Cost Price, Lead Time).
+5. Click **Preview Validation** to double-check rows.
+6. Click **Import Valid Rows** to import your suppliers and mappings instantly.

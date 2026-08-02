@@ -11,7 +11,7 @@ export default function SupportIndexPage() {
   return (
     <div style={containerStyle}>
       <header style={headerStyle}>
-        <h1 style={{ margin: "0 0 8px 0", fontSize: "28px" }}>Merchant Help Center &amp; FAQ</h1>
+        <h1 style={{ margin: "0 0 8px 0", fontSize: "28px" }}>PODesk FAQ &amp; Help Guide</h1>
         <p style={{ margin: 0, color: "#616161", fontSize: "14px" }}>
           <strong>PODesk: Purchase Orders</strong> &bull; Merchant Support &amp; Knowledge Base
         </p>
@@ -27,63 +27,63 @@ export default function SupportIndexPage() {
           <h2>Frequently Asked Questions</h2>
 
           <div style={faqCardStyle}>
-            <h3>Q1: Is PODesk free?</h3>
-            <p><strong>Yes.</strong> PODesk is 100% free to install and use during our public launch beta. All current features—including inventory sync, supplier management, SKU mapping, reorder planning, purchase order receiving, and CSV import—are available without subscription fees or credit card requirements.</p>
+            <h3>Q1: Is PODesk actually free?</h3>
+            <p><strong>Yes, completely.</strong> During our public beta, every single feature in PODesk is free. That includes catalog sync, supplier management, SKU mapping, reorder math, PO receiving, and CSV imports. We don&apos;t ask for a credit card, and there are no hidden limits during the beta.</p>
           </div>
 
           <div style={faqCardStyle}>
-            <h3>Q2: Does PODesk change Shopify inventory?</h3>
-            <p><strong>No.</strong> In the current release, PODesk operates on a strictly <strong>read-only</strong> basis regarding your Shopify store inventory. It syncs product details, inventory levels, and historical sales velocity to calculate reorder recommendations and manage purchase orders within PODesk. Receiving items or updating purchase orders within PODesk does <strong>not</strong> write stock counts back to your Shopify catalog, protecting your store from accidental inventory changes.</p>
+            <h3>Q2: Will PODesk change or mess up my Shopify stock levels?</h3>
+            <p><strong>No, never.</strong> PODesk works on a strictly <strong>read-only</strong> connection to your Shopify inventory. We read your products, current stock counts, and recent sales to calculate reorders and help you build purchase orders inside PODesk. When you receive items or update a purchase order in PODesk, we do <strong>not</strong> write those stock numbers back into Shopify automatically.</p>
           </div>
 
           <div style={faqCardStyle}>
-            <h3>Q3: What data is synced from my Shopify store?</h3>
-            <p>PODesk syncs four main data categories:</p>
+            <h3>Q3: What store data does PODesk pull from Shopify?</h3>
+            <p>We only pull what is necessary to handle inventory planning:</p>
             <ul>
-              <li><strong>Products &amp; Variants:</strong> Product titles, variant titles, SKUs, barcodes, product handles, and variant IDs.</li>
-              <li><strong>Locations:</strong> Active inventory stocking locations configured in your Shopify admin.</li>
-              <li><strong>Inventory Items:</strong> Aggregate stock quantities across your active locations.</li>
-              <li><strong>Recent Orders:</strong> Order line items and sales timestamps over historical windows (7, 14, 30, and 90 days) to compute daily sales velocity.</li>
+              <li><strong>Products &amp; Variants:</strong> Product titles, SKU codes, barcodes, variant names, handles, and supplier vendor names.</li>
+              <li><strong>Locations:</strong> Active stocking locations configured in your Shopify Admin.</li>
+              <li><strong>Inventory Items:</strong> Aggregate stock quantities across your locations.</li>
+              <li><strong>Recent Orders:</strong> Order line items and sale dates over historical windows (7, 14, 30, or 90 days) so we can figure out your daily sales velocity.</li>
             </ul>
           </div>
 
           <div style={faqCardStyle}>
             <h3>Q4: What is a supplier mapping?</h3>
-            <p>A supplier mapping connects a Shopify product variant SKU to a specific supplier record in PODesk. It allows you to specify supplier SKUs, wholesale cost prices, supplier lead times in days, and primary supplier status.</p>
+            <p>Think of mapping as linking a Shopify product to the exact vendor you buy it from. In PODesk, a mapping connects your variant SKU to a supplier along with supplier SKUs, wholesale unit costs, supplier lead times, and primary supplier flags.</p>
           </div>
 
           <div style={faqCardStyle}>
-            <h3>Q5: How does reorder quantity work?</h3>
-            <p>PODesk calculates suggested reorder quantities using historical sales velocity and supplier lead times:</p>
+            <h3>Q5: How does PODesk figure out reorder recommendations?</h3>
+            <p>We use a clean, transparent formula based on how fast you sell items and how long suppliers take to deliver:</p>
             <div style={{ background: "#f5f5f5", padding: "12px", borderRadius: "4px", fontFamily: "monospace", margin: "8px 0" }}>
-              Suggested Reorder Qty = (Target Days &times; Daily Sales Velocity) &minus; Current Stock + Safety Buffer
+              Suggested Reorder Qty = (Target Days of Stock &times; Daily Sales Velocity) &minus; Current Stock + Safety Buffer
             </div>
-            <p>SKUs are categorized into risk levels: <strong>Critical</strong> (out of stock), <strong>Lead Time Risk</strong> (stock running out before lead time delivery), <strong>Low Stock</strong>, and <strong>Stock OK</strong>.</p>
+            <p>Items are flagged with clear status tags: <strong>Critical</strong> (already out of stock), <strong>Lead Time Risk</strong> (stock will run out before a new shipment arrives), <strong>Low Stock</strong>, or <strong>Stock OK</strong>.</p>
           </div>
 
           <div style={faqCardStyle}>
-            <h3>Q6: Can I override the suggested reorder quantity?</h3>
-            <p><strong>Yes.</strong> On the Reorder Planning page (<code>/app/reorder</code>), you can type a custom quantity directly into the <strong>Reorder Override</strong> field for any SKU. Your override is saved automatically per store and takes precedence over the formula calculation when generating draft purchase orders.</p>
+            <h3>Q6: Can I change or override the recommended reorder amount?</h3>
+            <p><strong>Yes.</strong> On the Reorder page (<code>/app/reorder</code>), you can type your own number into the <strong>Reorder Override</strong> box for any item. Your override is saved automatically and used whenever you generate a draft PO.</p>
           </div>
 
           <div style={faqCardStyle}>
-            <h3>Q7: Can I import Stocky data or spreadsheet CSV files?</h3>
-            <p><strong>Yes.</strong> PODesk features a dedicated CSV Import tool (<code>/app/imports</code>). You can upload a <code>.csv</code> file or paste raw CSV text containing your suppliers and SKU mappings. PODesk auto-detects column headers, allows manual mapping overrides, validates rows before importing, and displays error reports for invalid rows.</p>
+            <h3>Q7: Can I bring over data from Stocky or my own spreadsheets?</h3>
+            <p><strong>Yes.</strong> We built a CSV Import tool (<code>/app/imports</code>) specifically for merchants moving off Stocky or Excel. You can upload a <code>.csv</code> file or paste raw text. PODesk auto-matches your column headers, lets you tweak the mapping, previews the data before importing, and gives you an error report if rows need fixing.</p>
           </div>
 
           <div style={faqCardStyle}>
-            <h3>Q8: Can I receive purchase orders in PODesk?</h3>
-            <p><strong>Yes.</strong> On any purchase order detail page, click <strong>Record receipt</strong> to enter received quantities line-by-line. PODesk supports both partial and full receipts, tracks line-level receiving progress, updates PO statuses automatically (<code>PARTIALLY_RECEIVED</code> or <code>RECEIVED</code>), and records timestamped receipt history logs.</p>
+            <h3>Q8: Can I track item receiving on purchase orders?</h3>
+            <p><strong>Yes.</strong> Open any purchase order (<code>/app/purchase-orders/:id</code>) and click <strong>Record receipt</strong>. You can enter incoming item counts line-by-line. If shipment arrives in parts, PODesk tracks partial receipts, updates the PO status (<code>PARTIALLY_RECEIVED</code> or <code>RECEIVED</code>), and keeps a timestamped receipt log.</p>
           </div>
 
           <div style={faqCardStyle}>
-            <h3>Q9: Can I email purchase orders to suppliers?</h3>
-            <p><strong>Yes.</strong> PODesk includes a manual supplier email sharing workflow. From any PO detail page, click <strong>Share / Copy Email</strong> to generate a pre-formatted email message, copy text with one click, launch a native mailto draft, print clean PO copies, and click <strong>Mark as Sent</strong> to log communication timestamps.</p>
+            <h3>Q9: Can I email purchase orders straight to suppliers?</h3>
+            <p><strong>Yes.</strong> On any PO page, click <strong>Share / Copy Email</strong>. PODesk formats a pre-filled email draft with supplier contact details, PO reference, line items, and totals. You can copy text with one click, launch your default email app, print clean copies, and click <strong>Mark as Sent</strong>.</p>
           </div>
 
           <div style={faqCardStyle}>
-            <h3>Q10: How do I uninstall PODesk or request data deletion?</h3>
-            <p>You can uninstall PODesk at any time via <strong>Shopify Admin &gt; Settings &gt; Apps and sales channels &gt; Uninstall</strong>. All OAuth session tokens are revoked and store data is scheduled for complete deletion within 30 days per our <a href="/data-deletion" style={linkStyle}>Data Deletion Policy</a>. For immediate data removal, email support at <code>support@podesk.app</code>.</p>
+            <h3>Q10: How do I uninstall or get my data removed?</h3>
+            <p>Uninstalling is standard: go to <strong>Shopify Admin &gt; Settings &gt; Apps and sales channels &gt; Uninstall</strong>. Once uninstalled, all session tokens are revoked and store data is scheduled for complete deletion within 30 days per our <a href="/data-deletion" style={linkStyle}>Data Deletion Policy</a>. For immediate data removal, drop us a line at <code>support@podesk.app</code>.</p>
           </div>
         </section>
 
