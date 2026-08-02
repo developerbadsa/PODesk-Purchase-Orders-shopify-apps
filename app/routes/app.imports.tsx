@@ -291,6 +291,20 @@ export default function ImportsPage() {
           Upload or paste a CSV export from Stocky, spreadsheets, or supplier lists to create suppliers and SKU mappings automatically.
         </p>
 
+        <div style={{ marginBottom: "16px", padding: "12px", background: "#f4f6f8", borderRadius: "6px", border: "1px solid #dfe3e8" }}>
+          <div style={{ fontWeight: 650, fontSize: "13px", marginBottom: "6px" }}>Supported CSV Columns</div>
+          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", fontSize: "12px", color: "#5c5f62" }}>
+            <div><strong>sku*</strong> (Shopify SKU)</div>
+            <div><strong>supplierName*</strong> (Company name)</div>
+            <div><strong>supplierSku</strong> (Part #)</div>
+            <div><strong>supplierCost</strong> (Unit cost)</div>
+            <div><strong>leadTimeDays</strong> (Lead time)</div>
+            <div><strong>paymentTerms</strong> (Terms)</div>
+            <div><strong>minimumOrder</strong> (Min Qty)</div>
+            <div><strong>notes</strong> (Internal notes)</div>
+          </div>
+        </div>
+
         <Form method="post" encType="multipart/form-data">
           <input type="hidden" name="intent" value="preview-csv" />
 
@@ -382,7 +396,7 @@ export default function ImportsPage() {
           </div>
 
           {/* CONFIRM IMPORT BUTTON */}
-          {activeJob.status === "PREVIEW" && activeJob.validRows > 0 && (
+          {activeJob.status === "PREVIEW" && activeJob.validRows > 0 ? (
             <div style={{ marginTop: "20px", marginBottom: "20px" }}>
               <Form method="post">
                 <input type="hidden" name="intent" value="confirm-import" />
@@ -392,7 +406,11 @@ export default function ImportsPage() {
                 </button>
               </Form>
             </div>
-          )}
+          ) : activeJob.status === "PREVIEW" && activeJob.validRows === 0 ? (
+            <div style={{ marginTop: "16px", marginBottom: "16px", padding: "12px", background: "#fff4f4", border: "1px solid #e0b3b2", borderRadius: "6px", color: "#8a1f11", fontSize: "13px" }}>
+              No valid rows available to import. Please verify column mappings above or correct invalid SKU / supplier fields.
+            </div>
+          ) : null}
 
           {/* ROW PREVIEW TABLE */}
           <div style={{ marginTop: "16px" }}>

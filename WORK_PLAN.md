@@ -56,7 +56,7 @@ Professional sales goal:
 | Settings & Branded Output | Done (verified) | Store-scoped business identity, purchasing defaults, prefix customization, currency formatting, and merchant-branded PO output. |
 | Reorder table | Done (verified) | Dedicated page with 7/14/30/90d window, buffer, target days, risk classification, suggested qty, and create-draft-PO action from mapped suggestions. |
 | Stocky import | Done (verified) | Full CSV supplier and SKU mapping import with file/paste, column detection, manual column override, preview validation, import execution, and job history. PO history import reserved for later. |
-| Billing | Scaffold | BillingSubscription model, pricing plans overview route (/app/billing), and s-app-nav link added. Non-blocking in dev build. |
+| Billing | Scaffold (Postponed) | App is free during beta. BillingSubscription model and plan overview route (/app/billing) exist as non-blocking presentation scaffold. |
 | App Store listing | Not Started | Strategy exists. Assets not built. |
 | Sales materials | Ongoing | Outreach copy exists. Demo/video/case study not done. |
 | GitHub repo | Done | Main branch pushed to GitHub remote. |

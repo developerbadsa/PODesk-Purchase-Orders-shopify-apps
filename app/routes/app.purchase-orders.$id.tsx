@@ -707,6 +707,91 @@ export default function PurchaseOrderDetailPage() {
         )}
       </s-section>
 
+      <s-section heading={`Line items (${po.lines.length})`}>
+        <div style={tableWrapStyle}>
+          <table style={tableStyle}>
+            <thead>
+              <tr>
+                <th style={thStyle}>Product</th>
+                <th style={thStyle}>SKU</th>
+                <th style={thStyle}>Ordered</th>
+                <th style={thStyle}>Received</th>
+                <th style={thStyle}>Remaining</th>
+                <th style={thStyle}>Unit cost</th>
+                <th style={thStyle}>Subtotal</th>
+                {isDraft && <th style={thStyle}>Actions</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {po.lines.map((line) => (
+                <tr key={line.id}>
+                  <td style={tdStyle}>
+                    {line.productTitle}
+                    <div style={mutedStyle}>{line.variantTitle}</div>
+                  </td>
+                  <td style={tdStyle}>{line.sku || "-"}</td>
+                  <td style={tdStyle}>{line.orderedQuantity}</td>
+                  <td style={tdStyle}>{line.receivedQuantity}</td>
+                  <td style={tdStyle}>{line.remainingQuantity}</td>
+                  <td style={tdStyle}>{line.unitCost != null ? formatCurrency(line.unitCost, currencyCode) : "-"}</td>
+                  <td style={tdStyle}>{line.subtotal > 0 ? formatCurrency(line.subtotal, currencyCode) : "-"}</td>
+                  {isDraft && (
+                    <td style={tdStyle}>
+                      <Form method="post" style={{ display: "inline" }}>
+                        <input type="hidden" name="intent" value="remove-line" />
+                        <input type="hidden" name="lineId" value={line.id} />
+                        <button type="submit" style={smallBtnStyle}>Remove</button>
+                      </Form>
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {isDraft && (
+          <div style={{ marginTop: "12px", padding: "12px", border: "1px solid #dfe3e8", borderRadius: "8px" }}>
+            <div style={{ fontWeight: 600, fontSize: "13px", marginBottom: "8px" }}>Add line item</div>
+            <Form method="post">
+              <input type="hidden" name="intent" value="add-line" />
+              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: "8px" }}>
+                <select
+                  name="variantId"
+                  required
+                  style={inputStyle}
+                  onChange={(e) => handleVariantChange(e.target.value)}
+                >
+                  <option value="">Select variant</option>
+                  {variants.map((v) => {
+                    const isMapped = mappings.some((m) => m.supplierId === po.supplierId && m.variantId === v.id);
+                    return (
+                      <option key={v.id} value={v.id}>
+                        {v.productTitle} - {v.variantTitle} {v.sku ? `(${v.sku})` : ""}
+                        {isMapped ? " [mapped]" : ""}
+                      </option>
+                    );
+                  })}
+                </select>
+                <input name="quantity" type="number" placeholder="Qty" min="1" required style={inputStyle} />
+                <input
+                  name="unitCost"
+                  type="number"
+                  step="0.01"
+                  placeholder="Cost"
+                  style={inputStyle}
+                  value={unitCost}
+                  onChange={(e) => setUnitCost(e.target.value)}
+                />
+              </div>
+              <button type="submit" disabled={isSubmitting} style={{ ...buttonStyle, marginTop: "8px" }}>
+                Add line
+              </button>
+            </Form>
+          </div>
+        )}
+      </s-section>
+
       <s-section heading="Supplier sharing">
         {copyNotice ? (
           <div style={noticeStyle(true)}>{copyNotice}</div>
@@ -842,90 +927,7 @@ export default function PurchaseOrderDetailPage() {
         )}
       </s-section>
 
-      <s-section heading={`Line items (${po.lines.length})`}>
-        <div style={tableWrapStyle}>
-          <table style={tableStyle}>
-            <thead>
-              <tr>
-                <th style={thStyle}>Product</th>
-                <th style={thStyle}>SKU</th>
-                <th style={thStyle}>Ordered</th>
-                <th style={thStyle}>Received</th>
-                <th style={thStyle}>Remaining</th>
-                <th style={thStyle}>Unit cost</th>
-                <th style={thStyle}>Subtotal</th>
-                {isDraft && <th style={thStyle}>Actions</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {po.lines.map((line) => (
-                <tr key={line.id}>
-                  <td style={tdStyle}>
-                    {line.productTitle}
-                    <div style={mutedStyle}>{line.variantTitle}</div>
-                  </td>
-                  <td style={tdStyle}>{line.sku || "-"}</td>
-                  <td style={tdStyle}>{line.orderedQuantity}</td>
-                  <td style={tdStyle}>{line.receivedQuantity}</td>
-                  <td style={tdStyle}>{line.remainingQuantity}</td>
-                  <td style={tdStyle}>{line.unitCost != null ? formatCurrency(line.unitCost, currencyCode) : "-"}</td>
-                  <td style={tdStyle}>{line.subtotal > 0 ? formatCurrency(line.subtotal, currencyCode) : "-"}</td>
-                  {isDraft && (
-                    <td style={tdStyle}>
-                      <Form method="post" style={{ display: "inline" }}>
-                        <input type="hidden" name="intent" value="remove-line" />
-                        <input type="hidden" name="lineId" value={line.id} />
-                        <button type="submit" style={smallBtnStyle}>Remove</button>
-                      </Form>
-                    </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
 
-        {isDraft && (
-          <div style={{ marginTop: "12px", padding: "12px", border: "1px solid #dfe3e8", borderRadius: "8px" }}>
-            <div style={{ fontWeight: 600, fontSize: "13px", marginBottom: "8px" }}>Add line item</div>
-            <Form method="post">
-              <input type="hidden" name="intent" value="add-line" />
-              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: "8px" }}>
-                <select
-                  name="variantId"
-                  required
-                  style={inputStyle}
-                  onChange={(e) => handleVariantChange(e.target.value)}
-                >
-                  <option value="">Select variant</option>
-                  {variants.map((v) => {
-                    const isMapped = mappings.some((m) => m.supplierId === po.supplierId && m.variantId === v.id);
-                    return (
-                      <option key={v.id} value={v.id}>
-                        {v.productTitle} - {v.variantTitle} {v.sku ? `(${v.sku})` : ""}
-                        {isMapped ? " [mapped]" : ""}
-                      </option>
-                    );
-                  })}
-                </select>
-                <input name="quantity" type="number" placeholder="Qty" min="1" required style={inputStyle} />
-                <input
-                  name="unitCost"
-                  type="number"
-                  step="0.01"
-                  placeholder="Cost"
-                  style={inputStyle}
-                  value={unitCost}
-                  onChange={(e) => setUnitCost(e.target.value)}
-                />
-              </div>
-              <button type="submit" disabled={isSubmitting} style={{ ...buttonStyle, marginTop: "8px" }}>
-                Add line
-              </button>
-            </Form>
-          </div>
-        )}
-      </s-section>
 
       {isDraft && (
         <s-section heading="Edit">

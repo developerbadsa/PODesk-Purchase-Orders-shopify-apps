@@ -284,7 +284,11 @@ export default function ReorderPage() {
             </select>
           </label>
         </div>
-        <div style={{ ...mutedStyle, marginTop: "8px" }}>
+        <div style={{ marginBottom: "12px", padding: "10px 14px", background: "#effaf5", border: "1px solid #95c9b4", borderRadius: "6px", color: "#0f5132", fontSize: "13px" }}>
+          <strong>Read-only safety note:</strong> PODesk recommendations are read-only and do not change Shopify inventory.
+        </div>
+
+        <div style={{ ...mutedStyle, marginTop: "8px", marginBottom: "16px" }}>
           Showing {data.filteredCount} of {data.totalCount} tracked variants. Sales figures for 7, 14, and 90 days are estimated from your synced 30-day sales velocity model.
         </div>
       </s-section>
@@ -347,6 +351,8 @@ export default function ReorderPage() {
                         </Form>
                       ) : !v.supplierId ? (
                         <a href="/app/mappings" style={{ ...linkStyle, fontSize: "12px" }}>Map supplier</a>
+                      ) : v.avgDailySales === 0 ? (
+                        <span style={{ ...mutedStyle, fontSize: "12px" }}>No recent sales</span>
                       ) : (
                         <span style={{ ...mutedStyle, fontSize: "12px" }}>Stock OK</span>
                       )}

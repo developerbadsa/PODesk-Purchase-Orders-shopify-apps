@@ -36,6 +36,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     mappedSkuCount,
     openPurchaseOrderCount,
     partiallyReceivedPoCount,
+    receiptCount,
     importJobCount,
     atRiskVariants,
     recentPurchaseOrders,
@@ -56,6 +57,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         status: "PARTIALLY_RECEIVED",
       },
     }),
+    prisma.purchaseOrderReceipt.count({ where: { storeId: store.id } }),
     prisma.importJob.count({ where: { storeId: store.id } }),
     prisma.shopifyVariant.findMany({
       where: {
@@ -91,6 +93,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       mappedSkuCount,
       openPurchaseOrderCount,
       partiallyReceivedPoCount,
+      receiptCount,
       importJobCount,
       totalInventory: inventoryUnits._sum.inventoryQuantity ?? 0,
       unitsSold30Days: inventoryUnits._sum.unitsSold30Days ?? 0,
@@ -144,7 +147,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
     return {
       ok: true,
-      message: `Basic MVP sync complete: synced ${synced.products} products, ${synced.variants} variants, ${synced.locations} locations. Orders scanned: ${synced.ordersScanned}. Note: Nested limits applied (${PRODUCT_VARIANTS_PER_PRODUCT_LIMIT} variants/product, ${ORDER_LINE_ITEMS_PER_ORDER_LIMIT} lines/order). Location inventory sync is intentionally disabled in dev until bulk sync is added.${modeNote}`,
+      message: `Basic MVP sync complete: synced ${synced.products} products, ${synced.variants} variants, ${synced.locations} locations. Orders scanned: ${synced.ordersScanned}.${modeNote}`,
     } satisfies ActionData;
   } catch (error) {
     const msg = normalizeShopifyError(error);
@@ -163,9 +166,65 @@ export default function Index() {
   const hasMapping = data.metrics.mappedSkuCount > 0;
   const hasImport = data.metrics.importJobCount > 0;
   const hasPo = data.metrics.openPurchaseOrderCount > 0 || data.recentPurchaseOrders.length > 0;
+  const hasReceived = data.metrics.receiptCount > 0;
+
+  // Determine dynamic Next Best Action
+  let nextAction = {
+    title: "Sync Shopify inventory",
+    text: "Pull variants, inventory quantities, and recent sales velocity to activate PODesk.",
+    href: "/app",
+    btnText: "Sync inventory now",
+    isSync: true,
+  };
+
+  if (hasInventory && !hasSupplier) {
+    nextAction = {
+      title: "Add your first supplier",
+      text: "Store supplier lead times, terms, notes, and contact details.",
+      href: "/app/suppliers",
+      btnText: "Add supplier",
+      isSync: false,
+    };
+  } else if (hasInventory && hasSupplier && !hasMapping) {
+    nextAction = {
+      title: "Map SKUs to suppliers",
+      text: "Connect Shopify SKUs to suppliers and set unit costs for automated purchase orders.",
+      href: "/app/mappings",
+      btnText: "Map SKUs",
+      isSync: false,
+    };
+  } else if (hasInventory && hasSupplier && hasMapping && !hasPo) {
+    nextAction = {
+      title: "Create your first purchase order",
+      text: "Build a multi-line purchase order from your mapped SKUs.",
+      href: "/app/purchase-orders",
+      btnText: "Create purchase order",
+      isSync: false,
+    };
+  } else if (hasPo && !hasReceived) {
+    nextAction = {
+      title: "Record PO receiving",
+      text: "Track partial or full receipt of ordered items as shipments arrive.",
+      href: "/app/purchase-orders",
+      btnText: "View purchase orders",
+      isSync: false,
+    };
+  } else if (hasPo && hasReceived) {
+    nextAction = {
+      title: "Review reorder planning",
+      text: "Check stockout risk predictions and suggested replenishment quantities.",
+      href: "/app/reorder",
+      btnText: "Open reorder planning",
+      isSync: false,
+    };
+  }
 
   return (
     <s-page heading="PODesk">
+      <div style={betaBannerStyle}>
+        <strong>Free Beta:</strong> All features are unlocked in this development build. No subscription required.
+      </div>
+
       <s-section heading="Inventory buying workspace">
         <div style={heroGridStyle}>
           <div>
@@ -188,7 +247,7 @@ export default function Index() {
               {data.lastSyncAt ? formatDateTime(data.lastSyncAt) : "Never synced"}
             </div>
             <div style={mutedStyle}>
-              Read-only sync. PODesk does not change Shopify inventory in this MVP.
+              Read-only sync. PODesk recommendations do not modify Shopify inventory.
             </div>
           </div>
         </div>
@@ -197,36 +256,67 @@ export default function Index() {
         ) : null}
       </s-section>
 
+      {/* Dynamic Next Best Action Card */}
+      <s-section heading="Recommended next action">
+        <div style={nextActionCardStyle}>
+          <div>
+            <div style={nextActionLabelStyle}>Next best action</div>
+            <div style={nextActionTitleStyle}>{nextAction.title}</div>
+            <div style={mutedStyle}>{nextAction.text}</div>
+          </div>
+          <div>
+            {nextAction.isSync ? (
+              <Form method="post">
+                <input type="hidden" name="intent" value="sync" />
+                <button type="submit" disabled={isSyncing} style={primaryButtonStyle}>
+                  {isSyncing ? "Syncing..." : nextAction.btnText}
+                </button>
+              </Form>
+            ) : (
+              <a href={nextAction.href} style={primaryBtnLinkStyle}>
+                {nextAction.btnText}
+              </a>
+            )}
+          </div>
+        </div>
+      </s-section>
+
       <s-section heading="Setup progress">
         <div style={stepGridStyle}>
           <SetupStep
             done={hasInventory}
-            title="Sync products"
-            text="Pull Shopify variants, inventory counts, and recent sales."
+            title="1. Sync inventory"
+            text="Pull Shopify variants, stock counts, and sales velocity."
             href="/app"
           />
           <SetupStep
             done={hasSupplier}
-            title="Add suppliers"
-            text="Store supplier lead times, terms, notes, and contact details."
+            title="2. Add suppliers"
+            text="Store supplier lead times, terms, notes, and contacts."
             href="/app/suppliers"
           />
           <SetupStep
             done={hasMapping}
-            title="Map SKUs"
-            text="Connect each Shopify SKU to the correct supplier and cost."
+            title="3. Map SKUs"
+            text="Connect Shopify SKUs to suppliers and unit costs."
             href="/app/mappings"
           />
           <SetupStep
+            done={hasPo}
+            title="4. Create PO"
+            text="Build purchase orders from mapped SKUs."
+            href="/app/purchase-orders"
+          />
+          <SetupStep
             done={hasImport}
-            title="Stocky CSV import"
+            title="5. Import CSV"
             text="Import suppliers and SKU mappings from CSV."
             href="/app/imports"
           />
           <SetupStep
-            done={hasPo}
-            title="Create a PO"
-            text="Build a purchase order from real synced variants."
+            done={hasReceived}
+            title="6. Receive PO"
+            text="Record received quantities and close purchase orders."
             href="/app/purchase-orders"
           />
         </div>
@@ -248,7 +338,7 @@ export default function Index() {
         {data.atRiskVariants.length === 0 ? (
           <EmptyState
             title="No reorder risks yet"
-            text="Sync inventory first. After products and recent sales are available, PODesk will show SKUs that may need supplier action."
+            text="Sync inventory and sales velocity to identify SKUs at risk of stockout based on supplier lead times and daily demand."
             actionHref="/app/reorder"
             actionText="Open reorder planning"
           />
@@ -752,6 +842,56 @@ function formatDate(value: string) {
     new Date(value),
   );
 }
+
+const betaBannerStyle = {
+  border: "1px solid #95c9b4",
+  background: "#effaf5",
+  color: "#0f5132",
+  borderRadius: "8px",
+  padding: "10px 14px",
+  marginBottom: "16px",
+  fontSize: "13px",
+} as const;
+
+const nextActionCardStyle = {
+  border: "1px solid #b3d4ff",
+  borderRadius: "8px",
+  padding: "16px",
+  background: "#f4f8ff",
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  flexWrap: "wrap",
+  gap: "16px",
+} as const;
+
+const nextActionLabelStyle = {
+  color: "#1f5199",
+  fontSize: "11px",
+  fontWeight: 700,
+  textTransform: "uppercase",
+  letterSpacing: "0.5px",
+  marginBottom: "4px",
+} as const;
+
+const nextActionTitleStyle = {
+  fontSize: "16px",
+  fontWeight: 700,
+  color: "#1a1a1a",
+  marginBottom: "4px",
+} as const;
+
+const primaryBtnLinkStyle = {
+  display: "inline-block",
+  border: "0",
+  borderRadius: "6px",
+  padding: "10px 18px",
+  background: "#008060",
+  color: "#fff",
+  fontWeight: 650,
+  textDecoration: "none",
+  fontSize: "14px",
+} as const;
 
 const heroGridStyle = {
   display: "grid",

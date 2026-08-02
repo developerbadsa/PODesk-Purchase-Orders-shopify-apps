@@ -26,14 +26,17 @@ export default function BillingPage() {
         <div style={statusCardStyle}>
           <div style={statusLabelStyle}>Store: {shop}</div>
           <div style={planTitleStyle}>
-            Current Plan: {subscription?.planName || "Development / Not configured"}
+            Current Plan: Free Beta ({subscription?.planName || "Development Build"})
           </div>
           <div style={statusBadgeStyle}>
-            {subscription?.status || "ACTIVE"}
+            FREE BETA ACCESS
           </div>
           <p style={mutedNoticeStyle}>
-            Billing is not enforced in this development build. All core features remain unlocked for testing.
+            PODesk is free during beta. Billing is not enforced in this development build. All features (Inventory Sync, Suppliers, Mappings, Purchase Orders, Receiving, Reorder Planning, and CSV Import) are fully unlocked and free to use.
           </p>
+          <div style={{ marginTop: "8px", fontSize: "12px", color: "#6d7175" }}>
+            Note: The subscription tiers below represent planned post-launch pricing and are currently inactive.
+          </div>
         </div>
       </s-section>
 
