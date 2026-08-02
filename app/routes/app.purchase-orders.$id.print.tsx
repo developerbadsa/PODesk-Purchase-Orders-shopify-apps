@@ -22,6 +22,20 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
             receiptLines: true,
           },
         },
+        receipts: {
+          include: {
+            lines: {
+              include: {
+                purchaseOrderLine: {
+                  include: {
+                    variant: { include: { product: true } },
+                  },
+                },
+              },
+            },
+          },
+          orderBy: { receivedAt: "desc" },
+        },
       },
     }),
   ]);
@@ -34,6 +48,8 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     0
   );
   const totalRemaining = Math.max(0, totalQuantity - totalReceived);
+  const receiveProgressPercent =
+    totalQuantity > 0 ? Math.min(100, Math.round((totalReceived / totalQuantity) * 100)) : 0;
   const totalCost = po.lines.reduce((sum, l) => sum + (l.unitCost ?? 0) * l.quantity, 0);
   const currencyCode = settings?.currencyCode || "USD";
 
@@ -43,6 +59,20 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     [settings?.city, settings?.region, settings?.postalCode].filter(Boolean).join(", "),
     settings?.country,
   ].filter(Boolean);
+
+  const receiptHistory = po.receipts.map((r) => ({
+    id: r.id,
+    receivedAt: r.receivedAt.toISOString(),
+    notes: r.notes,
+    totalQuantity: r.lines.reduce((sum, rl) => sum + rl.quantityReceived, 0),
+    lines: r.lines.map((rl) => ({
+      id: rl.id,
+      sku: rl.purchaseOrderLine.variant.sku || "-",
+      productTitle: rl.purchaseOrderLine.variant.product.title,
+      variantTitle: rl.purchaseOrderLine.variant.title,
+      quantityReceived: rl.quantityReceived,
+    })),
+  }));
 
   return {
     shopDomain: store.shop,
@@ -88,13 +118,15 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
       totalQuantity,
       totalReceived,
       totalRemaining,
+      receiveProgressPercent,
       totalCost,
     },
+    receiptHistory,
   };
 };
 
 export default function PurchaseOrderPrintPage() {
-  const { currencyCode, company, po } = useLoaderData<typeof loader>();
+  const { currencyCode, company, po, receiptHistory } = useLoaderData<typeof loader>();
 
   return (
     <div style={containerStyle}>
@@ -208,9 +240,10 @@ export default function PurchaseOrderPrintPage() {
             <div style={{ fontSize: "13px", color: "#6b7280" }}>No items received yet.</div>
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: "12px", fontSize: "13px" }}>
-              <div><strong>Ordered quantity:</strong> {po.totalQuantity}</div>
-              <div><strong>Received quantity:</strong> {po.totalReceived}</div>
-              <div><strong>Remaining quantity:</strong> {po.totalRemaining}</div>
+              <div><strong>Ordered:</strong> {po.totalQuantity}</div>
+              <div><strong>Received:</strong> {po.totalReceived}</div>
+              <div><strong>Remaining:</strong> {po.totalRemaining}</div>
+              <div><strong>Progress:</strong> {po.receiveProgressPercent}%</div>
               <div><strong>Status:</strong> {po.status.replaceAll("_", " ")}</div>
             </div>
           )}
@@ -225,7 +258,9 @@ export default function PurchaseOrderPrintPage() {
                 <th style={thStyle}>#</th>
                 <th style={thStyle}>Product & Variant</th>
                 <th style={thStyle}>SKU</th>
-                <th style={{ ...thStyle, textAlign: "right" }}>Qty</th>
+                <th style={{ ...thStyle, textAlign: "right" }}>Ordered</th>
+                <th style={{ ...thStyle, textAlign: "right" }}>Received</th>
+                <th style={{ ...thStyle, textAlign: "right" }}>Remaining</th>
                 <th style={{ ...thStyle, textAlign: "right" }}>Unit Cost</th>
                 <th style={{ ...thStyle, textAlign: "right" }}>Subtotal</th>
               </tr>
@@ -242,6 +277,8 @@ export default function PurchaseOrderPrintPage() {
                   </td>
                   <td style={tdStyle}>{line.sku || "-"}</td>
                   <td style={{ ...tdStyle, textAlign: "right" }}>{line.quantity}</td>
+                  <td style={{ ...tdStyle, textAlign: "right" }}>{line.receivedQuantity}</td>
+                  <td style={{ ...tdStyle, textAlign: "right" }}>{line.remainingQuantity}</td>
                   <td style={{ ...tdStyle, textAlign: "right" }}>
                     {line.unitCost != null ? formatCurrency(line.unitCost, currencyCode) : "-"}
                   </td>
@@ -259,6 +296,12 @@ export default function PurchaseOrderPrintPage() {
                 <td style={{ ...tfStyle, textAlign: "right", fontWeight: 700 }}>
                   {po.totalQuantity}
                 </td>
+                <td style={{ ...tfStyle, textAlign: "right", fontWeight: 700 }}>
+                  {po.totalReceived}
+                </td>
+                <td style={{ ...tfStyle, textAlign: "right", fontWeight: 700 }}>
+                  {po.totalRemaining}
+                </td>
                 <td style={tfStyle}></td>
                 <td style={{ ...tfStyle, textAlign: "right", fontWeight: 700 }}>
                   {po.totalCost > 0 ? formatCurrency(po.totalCost, currencyCode) : "-"}
@@ -267,6 +310,41 @@ export default function PurchaseOrderPrintPage() {
             </tfoot>
           </table>
         </div>
+
+        {/* Receipt History Log */}
+        {receiptHistory.length > 0 ? (
+          <div style={{ ...tableSectionStyle, marginTop: "24px" }}>
+            <h3 style={sectionHeadingStyle}>Receipt History ({receiptHistory.length})</h3>
+            <table style={tableStyle}>
+              <thead>
+                <tr>
+                  <th style={thStyle}>Date</th>
+                  <th style={thStyle}>Items Received</th>
+                  <th style={{ ...thStyle, textAlign: "right" }}>Total Qty</th>
+                  <th style={thStyle}>Notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {receiptHistory.map((receipt) => (
+                  <tr key={receipt.id}>
+                    <td style={tdStyle}>{formatDate(receipt.receivedAt)}</td>
+                    <td style={tdStyle}>
+                      {receipt.lines.map((rl) => (
+                        <div key={rl.id} style={{ fontSize: "12px" }}>
+                          {rl.productTitle} - {rl.variantTitle} {rl.sku !== "-" ? `(${rl.sku})` : ""}: <strong>+{rl.quantityReceived}</strong>
+                        </div>
+                      ))}
+                    </td>
+                    <td style={{ ...tdStyle, textAlign: "right", fontWeight: 700 }}>
+                      +{receipt.totalQuantity}
+                    </td>
+                    <td style={tdStyle}>{receipt.notes || "-"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
 
         {/* Print Document Footer */}
         <footer style={footerStyle}>

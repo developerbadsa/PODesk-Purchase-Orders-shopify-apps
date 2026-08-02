@@ -43,7 +43,11 @@
   - Added Receipt History log table on PO detail view displaying receipt date, SKU breakdown with received quantities, total quantity, and notes.
   - Updated PO list table (`/app/purchase-orders`) to show compact receiving progress (`X / Y received (Z%)`).
   - Updated Dashboard (`/app`) recent purchase orders table with receiving progress.
-  - Updated PO print view (`/app/purchase-orders/$id/print`) with a Receiving Summary section (or "No items received yet.").
+  - Added dedicated receiving utility (`app/receiving.server.ts`) with `calculateLineReceiving`, `getPoReceivingSummary`, and `canReceivePo` functions.
+- Built Billing Foundation Scaffold:
+  - Added `BillingSubscription` database model and applied Prisma migration `20260802162807_add_billing_subscription`.
+  - Built `/app/billing` placeholder route (`app/routes/app.billing.tsx`) displaying current plan status, Starter ($39/mo), Pro ($79/mo), Business ($149/mo), and Migration Service ($299-$999) pricing tiers.
+  - Added `<s-link href="/app/billing">Billing</s-link>` link to `<s-app-nav>` navigation.
 - Verified local `npm run typecheck`, `npm run lint`, and `npm run build`.
 
 ## Current MVP Limits
@@ -51,7 +55,7 @@
 - Location-level inventory quantities are not synced in the dashboard action. Build this later with Shopify bulk operations or a dedicated low-cost inventory job.
 - Historical PO import from Stocky/spreadsheets is not built yet (CSV Supplier and SKU mapping import is complete).
 - Direct automated SMTP/provider email sending and PDF download remain future work (manual email sharing, mailto drafts, and printable POs are complete).
-- Shopify billing is not built yet.
+- Production Shopify subscription billing is scaffolded; charges are not enforced in dev build.
 - App Store listing assets are not built yet.
 - `npm audit` still reports high-severity dependency advisories that require careful dependency upgrades, not blind force-fix.
 

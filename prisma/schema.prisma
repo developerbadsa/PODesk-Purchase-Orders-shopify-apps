@@ -50,6 +50,7 @@ model Store {
   variantMappings SupplierVariantMapping[]
   settings        StoreSettings?
   importJobs      ImportJob[]
+  billingSubscription BillingSubscription?
 }
 
 model StoreSettings {
@@ -311,5 +312,19 @@ model ImportJobRow {
   importJob ImportJob @relation(fields: [importJobId], references: [id], onDelete: Cascade)
 
   @@index([importJobId])
+}
+
+model BillingSubscription {
+  id               String    @id @default(cuid())
+  storeId          String    @unique
+  planName         String    @default("DEVELOPMENT")
+  status           String    @default("ACTIVE")
+  trialEndsAt      DateTime?
+  currentPeriodEnd DateTime?
+  shopifyChargeId String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
 }
 

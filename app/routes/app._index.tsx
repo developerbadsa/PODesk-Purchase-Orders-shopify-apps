@@ -35,6 +35,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     supplierCount,
     mappedSkuCount,
     openPurchaseOrderCount,
+    partiallyReceivedPoCount,
     importJobCount,
     atRiskVariants,
     recentPurchaseOrders,
@@ -47,6 +48,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       where: {
         storeId: store.id,
         status: { in: ["DRAFT", "SENT", "CONFIRMED", "PARTIALLY_RECEIVED", "DELAYED"] },
+      },
+    }),
+    prisma.purchaseOrder.count({
+      where: {
+        storeId: store.id,
+        status: "PARTIALLY_RECEIVED",
       },
     }),
     prisma.importJob.count({ where: { storeId: store.id } }),
@@ -83,6 +90,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       supplierCount,
       mappedSkuCount,
       openPurchaseOrderCount,
+      partiallyReceivedPoCount,
       importJobCount,
       totalInventory: inventoryUnits._sum.inventoryQuantity ?? 0,
       unitsSold30Days: inventoryUnits._sum.unitsSold30Days ?? 0,
@@ -232,6 +240,7 @@ export default function Index() {
           <Metric label="Suppliers" value={data.metrics.supplierCount} />
           <Metric label="Mapped SKUs" value={data.metrics.mappedSkuCount} />
           <Metric label="Open POs" value={data.metrics.openPurchaseOrderCount} />
+          <Metric label="Partially received" value={data.metrics.partiallyReceivedPoCount} />
         </div>
       </s-section>
 

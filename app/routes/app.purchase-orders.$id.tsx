@@ -11,6 +11,7 @@ import { authenticate } from "../shopify.server";
 import prisma from "../db.server";
 import { createUniquePoReference } from "../po.server";
 import { formatCurrency } from "../utils";
+import { calculateLineReceiving, getPoReceivingSummary } from "../receiving.server";
 
 type ActionData = { ok: boolean; message: string };
 
@@ -81,15 +82,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
 
   // Line receiving calculations
   const processedLines = po.lines.map((l) => {
-    const orderedQuantity = l.quantity;
-    const receivedQuantity = l.receiptLines.reduce((sum, rl) => sum + rl.quantityReceived, 0);
-    const remainingQuantity = Math.max(0, orderedQuantity - receivedQuantity);
-    const receivingStatus =
-      receivedQuantity === 0
-        ? "NOT_RECEIVED"
-        : receivedQuantity >= orderedQuantity
-        ? "RECEIVED"
-        : "PARTIAL";
+    const calc = calculateLineReceiving(l);
 
     return {
       id: l.id,
@@ -100,22 +93,19 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
       quantity: l.quantity,
       unitCost: l.unitCost,
       subtotal: (l.unitCost ?? 0) * l.quantity,
-      orderedQuantity,
-      receivedQuantity,
-      remainingQuantity,
-      receivingStatus,
+      orderedQuantity: calc.orderedQuantity,
+      receivedQuantity: calc.receivedQuantity,
+      remainingQuantity: calc.remainingQuantity,
+      receivingStatus: calc.receivingStatus,
     };
   });
 
-  const totalOrderedQuantity = processedLines.reduce((sum, l) => sum + l.orderedQuantity, 0);
-  const totalReceivedQuantity = processedLines.reduce((sum, l) => sum + l.receivedQuantity, 0);
-  const totalRemainingQuantity = processedLines.reduce((sum, l) => sum + l.remainingQuantity, 0);
-  const receiveProgressPercent =
-    totalOrderedQuantity > 0
-      ? Math.min(100, Math.round((totalReceivedQuantity / totalOrderedQuantity) * 100))
-      : 0;
-
-  const canReceive = ["SENT", "CONFIRMED", "PARTIALLY_RECEIVED", "DELAYED"].includes(po.status);
+  const summary = getPoReceivingSummary(po.lines, po.status);
+  const totalOrderedQuantity = summary.totalOrderedQuantity;
+  const totalReceivedQuantity = summary.totalReceivedQuantity;
+  const totalRemainingQuantity = summary.totalRemainingQuantity;
+  const receiveProgressPercent = summary.receiveProgressPercent;
+  const canReceive = summary.canReceive;
 
   // Format receipts history
   const receiptHistory = po.receipts.map((r) => ({
@@ -264,7 +254,7 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
       return { ok: false, message: "At least one line item must have a receive quantity greater than zero." } satisfies ActionData;
     }
 
-    await prisma.$transaction(async (tx) => {
+    const isFullyReceived = await prisma.$transaction(async (tx) => {
       await tx.purchaseOrderReceipt.create({
         data: {
           storeId: store.id,
@@ -287,7 +277,8 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
         totalReceived += previousReceived + newlyReceived;
       }
 
-      const nextStatus = totalReceived >= totalOrdered ? "RECEIVED" : "PARTIALLY_RECEIVED";
+      const fullyReceived = totalReceived >= totalOrdered;
+      const nextStatus = fullyReceived ? "RECEIVED" : "PARTIALLY_RECEIVED";
 
       await tx.purchaseOrder.update({
         where: { id: po.id },
@@ -296,9 +287,16 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
           updatedAt: new Date(),
         },
       });
+
+      return fullyReceived;
     });
 
-    return { ok: true, message: `Receipt of ${newReceiptTotalQty} unit(s) recorded successfully.` } satisfies ActionData;
+    return {
+      ok: true,
+      message: isFullyReceived
+        ? "Receipt recorded. PO fully received."
+        : "Receipt recorded. PO moved to PARTIALLY RECEIVED.",
+    } satisfies ActionData;
   }
 
   if (intent === "mark-sent") {

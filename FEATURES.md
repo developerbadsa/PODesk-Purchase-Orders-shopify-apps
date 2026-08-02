@@ -86,7 +86,7 @@ Do not optimize early product decisions for:
 | Stocky migration | PO history import | Later | P2 | Import historical PO records. |
 | Dashboard | Operations snapshot | Done | P0 | Merchant quickly sees synced variants, stock, suppliers, open POs. |
 | Dashboard | Actionable empty states | Done | P0 | New user knows next step after install. |
-| Billing | Shopify billing | Not Started | P1 | Convert trial users into paying users. |
+| Billing | Shopify billing | Scaffold | P1 | Convert trial users into paying users. Presentation tier with plan options; non-blocking in dev. |
 | Onboarding | First-run setup checklist | Done | P0 | Move merchant from install to first PO fast. |
 | App Store | Listing copy and screenshots | Not Started | P1 | Improve install conversion after submission. |
 | Reporting | Weekly reorder summary | Not Started | P2 | Bring merchant back to app every week. |
@@ -410,7 +410,7 @@ Not required before first paying users:
 | Create Purchase Order | Build PO from SKUs and supplier. | Done |
 | Stocky Import | Upload/paste supplier CSV, override column mapping, preview rows, import valid supplier SKU mappings, and review import history. PO archive import later. | Done |
 | Settings | Company profile, PO defaults, prefix, currency code. | Done |
-| Billing | Trial and plan management. | Not Started |
+| Billing | Trial and plan management. | Scaffold |
 
 ## Data Model Requirements
 
