@@ -1,0 +1,189 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Note that some adapters may set a maximum length for the String type by default, please ensure your strings are long
+// enough when changing adapters.
+// See https://www.prisma.io/docs/orm/reference/prisma-schema-reference#string for more information
+datasource db {
+  provider = "sqlite"
+  url      = "file:dev.sqlite"
+}
+
+model Session {
+  id            String    @id
+  shop          String
+  state         String
+  isOnline      Boolean   @default(false)
+  scope         String?
+  expires       DateTime?
+  accessToken   String
+  userId        BigInt?
+  firstName     String?
+  lastName      String?
+  email         String?
+  accountOwner  Boolean   @default(false)
+  locale        String?
+  collaborator  Boolean?  @default(false)
+  emailVerified Boolean?  @default(false)
+  refreshToken        String?
+  refreshTokenExpires DateTime?
+}
+
+model Store {
+  id         String   @id @default(cuid())
+  shop       String   @unique
+  name       String?
+  lastSyncAt DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  products       ShopifyProduct[]
+  variants       ShopifyVariant[]
+  locations      InventoryLocation[]
+  suppliers      Supplier[]
+  purchaseOrders PurchaseOrder[]
+}
+
+model ShopifyProduct {
+  id               String   @id @default(cuid())
+  storeId          String
+  shopifyProductId String
+  title            String
+  handle           String?
+  status           String?
+  vendor           String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  store    Store            @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  variants ShopifyVariant[]
+
+  @@unique([storeId, shopifyProductId])
+  @@index([storeId])
+}
+
+model ShopifyVariant {
+  id                  String   @id @default(cuid())
+  storeId             String
+  productId           String
+  shopifyVariantId    String
+  shopifyInventoryId  String?
+  title               String
+  sku                 String?
+  barcode             String?
+  tracked             Boolean  @default(true)
+  unitCostAmount      Float?
+  unitCostCurrency    String?
+  inventoryQuantity   Int      @default(0)
+  unitsSold30Days     Int      @default(0)
+  averageDailySales   Float    @default(0)
+  daysUntilStockout   Float?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  store           Store            @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  product         ShopifyProduct   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  inventoryLevels InventoryLevel[]
+  poLines         PurchaseOrderLine[]
+
+  @@unique([storeId, shopifyVariantId])
+  @@index([storeId])
+  @@index([sku])
+}
+
+model InventoryLocation {
+  id                String   @id @default(cuid())
+  storeId           String
+  shopifyLocationId String
+  name              String
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  store           Store            @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  inventoryLevels InventoryLevel[]
+
+  @@unique([storeId, shopifyLocationId])
+  @@index([storeId])
+}
+
+model InventoryLevel {
+  id         String   @id @default(cuid())
+  variantId String
+  locationId String
+  available Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  variant  ShopifyVariant   @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  location InventoryLocation @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@unique([variantId, locationId])
+  @@index([locationId])
+}
+
+model Supplier {
+  id           String   @id @default(cuid())
+  storeId      String
+  name         String
+  email        String?
+  phone        String?
+  leadTimeDays Int      @default(14)
+  minimumOrder Int?
+  paymentTerms String?
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  store          Store           @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  purchaseOrders PurchaseOrder[]
+
+  @@index([storeId])
+}
+
+model PurchaseOrder {
+  id              String              @id @default(cuid())
+  storeId         String
+  supplierId      String
+  reference       String
+  status          PurchaseOrderStatus @default(DRAFT)
+  expectedArrival DateTime?
+  notes           String?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  store    Store               @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  supplier Supplier            @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  lines    PurchaseOrderLine[]
+
+  @@index([storeId])
+  @@index([supplierId])
+}
+
+model PurchaseOrderLine {
+  id              String @id @default(cuid())
+  purchaseOrderId String
+  variantId       String
+  quantity        Int
+  unitCost        Float?
+  createdAt       DateTime @default(now())
+
+  purchaseOrder PurchaseOrder  @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  variant       ShopifyVariant @relation(fields: [variantId], references: [id], onDelete: Restrict)
+
+  @@index([purchaseOrderId])
+  @@index([variantId])
+}
+
+enum PurchaseOrderStatus {
+  DRAFT
+  SENT
+  CONFIRMED
+  PARTIALLY_RECEIVED
+  RECEIVED
+  DELAYED
+  CANCELLED
+}
