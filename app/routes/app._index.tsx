@@ -127,9 +127,18 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     } catch (error) {
       const msg = error instanceof Error ? error.message : "Unknown sync error";
       console.error("[PODesk] Sync error:", msg);
+      const isAccessDenied =
+        msg.toLowerCase().includes("access denied") ||
+        msg.toLowerCase().includes("permission") ||
+        msg.toLowerCase().includes("scopes");
+
+      const userMessage = isAccessDenied
+        ? "Shopify denied inventory permissions. Reinstall the app from the dev preview and approve product, inventory, location, and order scopes."
+        : `Sync failed: ${msg}`;
+
       return {
         ok: false,
-        message: `Sync failed: ${msg}`,
+        message: userMessage,
       } satisfies ActionData;
     }
   }

@@ -66,6 +66,22 @@ npm run dev
 
 Shopify Partner login and a development store are required for `npm run dev`.
 
+### Dev Troubleshooting: Scope / Permission Errors
+
+If sync fails with `"Access denied for products field"` or `"Access denied for locations field"`:
+
+1. Press `q` in the terminal to stop the dev server.
+2. Open Shopify Admin on your development store, go to **Settings > Apps and sales channels**, and **uninstall PODesk**.
+3. Reset CLI dev configuration:
+   ```bash
+   npm run dev -- --reset
+   ```
+4. Select your Partner organization and development store.
+5. Accept the updated permission prompt when opening the app preview.
+6. Open the app and click **Sync Shopify inventory** again on the dashboard.
+
+This permission error occurs when a development store holds a stale token generated before required scopes (`read_products,read_inventory,read_locations,read_orders`) were set in `shopify.app.toml`.
+
 ## Product Guardrails
 
 Do not turn this into a full ERP in the first version.
