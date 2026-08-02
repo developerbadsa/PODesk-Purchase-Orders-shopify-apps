@@ -57,6 +57,10 @@ Professional sales goal:
 | Reorder table | Done (verified) | Dedicated page with 7/14/30/90d window, buffer, target days, risk classification, exact risk reasons, formula suggested qty, manual reorder overrides (ReorderOverride model), extracted app/reorder.server.ts calculations, multi-row draft PO creation for matching suppliers, and single-row/multi-row PO actions using final suggested qty. |
 | Stocky import | Done (verified) | Full CSV supplier and SKU mapping import with file/paste, column detection, manual column override, preview validation, import execution, job history, downloadable sample CSV (podesk-supplier-sku-import-sample.csv), and store-scoped invalid rows export. |
 | Legal Pages (Drafts) | Done | Public Privacy Policy, Terms of Service, and Data Deletion Policy drafts completed in `product/launch/`. |
+| Public Legal & Support App Routes | Done | Created public routes `/privacy`, `/terms`, `/data-deletion`, `/support`, `/support/getting-started`, `/support/troubleshooting`. |
+| GDPR Privacy Webhooks | Done | Implemented `customers/data_request`, `customers/redact`, and `shop/redact` in `app/routes/webhooks.privacy.*` & subscribed in `shopify.app.toml`. |
+| Support Email Placeholder | Assigned | `support@podesk.app` assigned across docs and public routes; needs active mailbox setup prior to launch. |
+| Public Legal URL Hosting | Needs Production Domain | Public app routes implemented; requires production HTTPS deployment. |
 | App Store Listing Draft | Done | Final copy, scope justifications, review notes, and submission checklist completed in `product/launch/`. |
 | Production Readiness Spec | Done | Production hosting, env vars, database, backup, rate limit, and rollback spec written in `product/launch/PRODUCTION_READINESS.md`. |
 | Merchant Support Docs | Done | FAQ, Getting Started guide, and Troubleshooting guide written in `product/support/`. |

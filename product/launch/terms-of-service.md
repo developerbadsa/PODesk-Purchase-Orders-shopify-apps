@@ -94,5 +94,5 @@ These Terms shall be governed by and construed in accordance with the laws of [Y
 
 For inquiries regarding these Terms of Service, please contact:
 
-**Support Email**: `support@example.com` *(Replace with live support email)*  
+**Support Email**: `support@podesk.app` *(Note: Replace with active support mailbox before public launch)*
 **Company Placeholder**: `[Your Business / Developer Name]`

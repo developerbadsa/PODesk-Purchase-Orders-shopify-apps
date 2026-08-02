@@ -88,6 +88,6 @@ If your store operates within the European Economic Area (EEA), United Kingdom, 
 
 If you have questions regarding this Privacy Policy or wish to exercise your data rights, please contact us at:
 
-**Support Email**: `support@example.com` *(Replace with live support email, e.g., support@podesk.app)*  
+**Support Email**: `support@podesk.app` *(Note: Replace with active support mailbox before public launch)*
 **App Operator**: `[Your Company Name / Operator Placeholder]`  
 **Address**: `[Your Physical Business Address Placeholder]`

@@ -20,8 +20,9 @@ This checklist tracks all submission requirements mandated by Shopify for listin
 | User & Support Documentation | Done | FAQ, Getting Started, and Troubleshooting guides written in `product/support/`. |
 | Actual Screenshots | Needs Work | Screenshots must be captured from a populated test store with realistic data. |
 | Actual Demo Video | Needs Work | 2–3 minute video recording and voiceover required. |
-| GDPR Webhooks Implementation | Needs Work | Webhook handlers for `customers/data_request`, `customers/redact`, and `shop/redact` need HTTP endpoints in production app router. |
-| Production Webhost & HTTPS Setup | Needs Work | Production server (Render/Fly.io/AWS), SSL domain, and live database must be provisioned. |
+| GDPR Webhooks Implementation | Done | Webhook handlers for `customers/data_request`, `customers/redact`, and `shop/redact` implemented in `app/routes/webhooks.privacy.*` and subscribed in `shopify.app.toml`. |
+| Public Legal & Support App Routes | Done | `/privacy`, `/terms`, `/data-deletion`, `/support`, `/support/getting-started`, and `/support/troubleshooting` routes created. |
+| Production Webhost & HTTPS Setup | Needs Work | Production server (Render/Fly.io/AWS), SSL domain, and live database must be provisioned for public URLs. |
 | Manual QA Pass | Needs Work | Browser QA across desktop/mobile viewport scenarios must be executed prior to review. |
 | Security & Dependency Audit | Blocked | `npm audit` reports high React Router vulnerability from Shopify app template dependencies. Launch blocked until upstream safe patch. |
 | Production Billing Enforcement | Later | App is 100% free during initial launch beta. Billing scaffold exists but is intentionally unenforced. |
@@ -66,7 +67,7 @@ This checklist tracks all submission requirements mandated by Shopify for listin
 
 ## 6. Support Contact & Credentials
 
-- [x] **Support Contact Email**: Placeholder (`support@example.com` / merchant developer support address) assigned. (Status: **Done**)
+- [x] **Support Contact Email**: Placeholder (`support@podesk.app` — *Replace with active support mailbox before public launch*) assigned. (Status: **Done**)
 - [ ] **Test Store Credentials**: Dedicated Shopify Partner development test store prepared with sample products and orders for Shopify reviewers. (Status: **Needs Work**)
 
 ---
@@ -88,10 +89,10 @@ This checklist tracks all submission requirements mandated by Shopify for listin
 
 - [x] `app/uninstalled` configured in `shopify.app.toml`. (Status: **Done**)
 - [x] `app/scopes_update` configured in `shopify.app.toml`. (Status: **Done**)
-- [ ] GDPR mandatory webhook handlers:
-  - `customers/data_request` (Returns empty payload as PODesk stores no end-customer PII). (Status: **Needs Work**)
-  - `customers/redact` (No-op handler acknowledging request). (Status: **Needs Work**)
-  - `shop/redact` (Triggers store data purge 30 days after uninstall). (Status: **Needs Work**)
+- [x] GDPR mandatory webhook handlers configured in `shopify.app.toml` & `app/routes/webhooks.privacy.*`:
+  - `customers/data_request` (Returns 200 acknowledgment; PODesk stores no customer PII). (Status: **Done**)
+  - `customers/redact` (Returns 200 acknowledgment; PODesk stores no customer PII). (Status: **Done**)
+  - `shop/redact` (Deletes shop session and cascades store data deletion). (Status: **Done**)
 
 ---
 

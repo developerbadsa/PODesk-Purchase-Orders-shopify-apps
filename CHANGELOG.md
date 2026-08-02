@@ -1,5 +1,22 @@
 # PODesk Changelog
 
+## 2026-08-02 (GDPR Privacy Webhooks & Public Launch Pages Release)
+
+- Added mandatory Shopify GDPR Privacy Webhook handlers:
+  - Added `app/routes/webhooks.privacy.customers.data_request.tsx` (returns 200 acknowledgment; PODesk stores no customer PII).
+  - Added `app/routes/webhooks.privacy.customers.redact.tsx` (returns 200 acknowledgment; PODesk stores no customer PII).
+  - Added `app/routes/webhooks.privacy.shop.redact.tsx` (purges shop sessions and cascades `Store` entity deletion).
+- Updated `shopify.app.toml` to register `customers/data_request`, `customers/redact`, and `shop/redact` webhook subscriptions.
+- Created standalone public App Routes accessible without Shopify admin authentication:
+  - Added `/privacy` (`app/routes/privacy.tsx`) rendering public Privacy Policy.
+  - Added `/terms` (`app/routes/terms.tsx`) rendering public Terms of Service.
+  - Added `/data-deletion` (`app/routes/data-deletion.tsx`) rendering public Data Deletion & Retention Policy.
+  - Added `/support` (`app/routes/support._index.tsx`) rendering public Merchant Help Center & FAQ.
+  - Added `/support/getting-started` (`app/routes/support.getting-started.tsx`) rendering public 7-step onboarding guide.
+  - Added `/support/troubleshooting` (`app/routes/support.troubleshooting.tsx`) rendering public troubleshooting guide.
+- Standardized support email placeholder across documentation and public routes to `support@podesk.app`, marking clearly that live mailbox activation is required before public launch.
+- Updated project documentation (`README.md`, `WORK_PLAN.md`, `FEATURES.md`, `PROJECT_STATUS.html`, `SHOPIFY_APP_STORE_SUBMISSION_CHECKLIST.md`, `PRODUCTION_READINESS.md`).
+
 ## 2026-08-02 (Launch Readiness & Documentation Release)
 
 - Prepared complete Shopify App Store launch documentation pack:

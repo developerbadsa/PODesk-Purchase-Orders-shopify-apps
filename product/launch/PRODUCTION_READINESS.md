@@ -53,10 +53,10 @@ SENTRY_DSN="https://your_sentry_dsn_here"
 
 - [x] `app/uninstalled` endpoint configured to invalidate sessions and schedule store data purge. (Status: **Configured**)
 - [x] `app/scopes_update` endpoint configured to track scope permissions. (Status: **Configured**)
-- [ ] Mandatory GDPR Privacy Webhooks:
-  - `POST /webhooks/privacy/customers/data_request` (Returns empty payload as PODesk stores no customer PII).
-  - `POST /webhooks/privacy/customers/redact` (Acknowledges customer redact notification).
-  - `POST /webhooks/privacy/shop/redact` (Triggers automatic shop data deletion 30 days after uninstall).
+- [x] Mandatory GDPR Privacy Webhook Handlers:
+  - `POST /webhooks/privacy/customers/data_request` (Returns 200 acknowledgment; PODesk stores no customer PII). (Status: **Configured**)
+  - `POST /webhooks/privacy/customers/redact` (Returns 200 acknowledgment; PODesk stores no customer PII). (Status: **Configured**)
+  - `POST /webhooks/privacy/shop/redact` (Triggers shop session deletion and cascades store entity purge). (Status: **Configured**)
 
 ---
 

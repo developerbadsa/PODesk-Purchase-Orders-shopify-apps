@@ -21,7 +21,13 @@ This repo now contains the official Shopify React Router app scaffold plus a wor
 - [PROJECT_STATUS.html](PROJECT_STATUS.html) - browser-friendly visual status dashboard for quick review.
 - [APP_PLAN.md](APP_PLAN.md) - long-form product strategy and roadmap archive.
 
-### Launch Readiness Docs (`product/launch/`)
+### Launch Readiness & Public App Routes
+- [/privacy](app/routes/privacy.tsx) - public Privacy Policy route (`/privacy`).
+- [/terms](app/routes/terms.tsx) - public Terms of Service route (`/terms`).
+- [/data-deletion](app/routes/data-deletion.tsx) - public Data Deletion Policy route (`/data-deletion`).
+- [/support](app/routes/support._index.tsx) - public Merchant FAQ & Help Center route (`/support`).
+- [/support/getting-started](app/routes/support.getting-started.tsx) - public 7-step onboarding guide (`/support/getting-started`).
+- [/support/troubleshooting](app/routes/support.troubleshooting.tsx) - public troubleshooting guide (`/support/troubleshooting`).
 - [SHOPIFY_APP_STORE_SUBMISSION_CHECKLIST.md](product/launch/SHOPIFY_APP_STORE_SUBMISSION_CHECKLIST.md) - master submission readiness tracker.
 - [app-store-listing-final.md](product/launch/app-store-listing-final.md) - final App Store listing copy, scope justifications, and review notes.
 - [privacy-policy.md](product/launch/privacy-policy.md) - draft privacy policy.
@@ -55,10 +61,15 @@ Implemented:
 - Stocky/spreadsheet CSV import (file upload/paste, auto-detected headers, column mapping overrides, validation preview, invalid rows export)
 - Settings route (business identity, purchasing defaults, prefix, currency)
 - App Store submission assets, legal drafts, screenshot/video specs, production readiness guide, and support docs
+- Mandatory GDPR Privacy Webhooks (`customers/data_request`, `customers/redact`, `shop/redact`)
+- Public Legal & Support App Routes (`/privacy`, `/terms`, `/data-deletion`, `/support`, `/support/getting-started`, `/support/troubleshooting`)
 
 Launch Status & Next Manual Actions:
 
-- Public Legal Drafts: **Done** (Drafts ready in `product/launch/`)
+- GDPR Privacy Webhooks: **Done** (Implemented in `app/routes/webhooks.privacy.*` & configured in `shopify.app.toml`)
+- Public Legal & Support App Routes: **Done** (Created public routes `/privacy`, `/terms`, `/data-deletion`, `/support`, `/support/getting-started`, `/support/troubleshooting`)
+- Support Email Placeholder: **Assigned** (`support@podesk.app` assigned; requires active mailbox setup before launch)
+- Public Legal URL Hosting: **Needs Production Domain** (App routes implemented; requires production HTTPS domain)
 - App Store Listing Copy & Scope Justification: **Done** (Final draft in `product/launch/`)
 - Screenshot & Video Production Plans: **Done** (Specs ready in `product/launch/`)
 - Actual Screenshots: **Not Started** (Requires manual QA capture on populated test store)
