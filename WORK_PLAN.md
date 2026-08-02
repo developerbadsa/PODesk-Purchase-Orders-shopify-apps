@@ -407,7 +407,7 @@ This is the current priority order.
 |---:|---|---|
 | 1 | Update README with `FEATURES.md` and `WORK_PLAN.md` links. | Done |
 | 2 | Initialize git repo and push clean first commit. | Done |
-| 3 | Run install/setup/typecheck after repo push. | Not Started |
+| 3 | Run install/setup/typecheck after repo push. | Done |
 | 4 | Test Shopify install on development store. | Not Started |
 | 5 | Fix inventory sync pagination and error handling. | Not Started |
 | 6 | Build supplier edit/archive screen. | Not Started |
