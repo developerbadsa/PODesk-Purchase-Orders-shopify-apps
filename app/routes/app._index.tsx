@@ -15,16 +15,10 @@ type ActionData = {
   message: string;
 };
 
-type SyncMode = "full" | "basic";
-
 const STOCKOUT_WINDOW_DAYS = 14;
 const SALES_WINDOW_DAYS = 30;
-const MAX_PRODUCT_PAGES = 20; // 50 products per page = up to 1000 products
-const MAX_ORDER_PAGES = 10;   // 100 orders per page = up to 1000 orders
-
-// ---------------------------------------------------------------------------
-// Loader
-// ---------------------------------------------------------------------------
+const MAX_PRODUCT_PAGES = 20;
+const MAX_ORDER_PAGES = 10;
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
@@ -33,12 +27,15 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const [
     variantCount,
     supplierCount,
+    mappedSkuCount,
     openPurchaseOrderCount,
     atRiskVariants,
     recentPurchaseOrders,
+    inventoryUnits,
   ] = await Promise.all([
     prisma.shopifyVariant.count({ where: { storeId: store.id } }),
     prisma.supplier.count({ where: { storeId: store.id, isArchived: false } }),
+    prisma.supplierVariantMapping.count({ where: { storeId: store.id } }),
     prisma.purchaseOrder.count({
       where: {
         storeId: store.id,
@@ -56,20 +53,19 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       },
       include: { product: true },
       orderBy: [{ daysUntilStockout: "asc" }, { unitsSold30Days: "desc" }],
-      take: 10,
+      take: 8,
     }),
     prisma.purchaseOrder.findMany({
       where: { storeId: store.id },
-      include: { supplier: true, lines: { include: { variant: { include: { product: true } } } } },
+      include: { supplier: true, lines: true },
       orderBy: { createdAt: "desc" },
       take: 5,
     }),
+    prisma.shopifyVariant.aggregate({
+      where: { storeId: store.id },
+      _sum: { inventoryQuantity: true, unitsSold30Days: true },
+    }),
   ]);
-
-  const inventoryUnits = await prisma.shopifyVariant.aggregate({
-    where: { storeId: store.id },
-    _sum: { inventoryQuantity: true, unitsSold30Days: true },
-  });
 
   return {
     shop: session.shop,
@@ -77,6 +73,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     metrics: {
       variantCount,
       supplierCount,
+      mappedSkuCount,
       openPurchaseOrderCount,
       totalInventory: inventoryUnits._sum.inventoryQuantity ?? 0,
       unitsSold30Days: inventoryUnits._sum.unitsSold30Days ?? 0,
@@ -88,7 +85,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       sku: variant.sku,
       inventoryQuantity: variant.inventoryQuantity,
       unitsSold30Days: variant.unitsSold30Days,
-      averageDailySales: variant.averageDailySales,
       daysUntilStockout: variant.daysUntilStockout,
     })),
     recentPurchaseOrders: recentPurchaseOrders.map((po) => ({
@@ -103,79 +99,104 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   };
 };
 
-// ---------------------------------------------------------------------------
-// Action
-// ---------------------------------------------------------------------------
-
 export const action = async ({ request }: ActionFunctionArgs) => {
   const { admin, session } = await authenticate.admin(request);
   const store = await getOrCreateStore(session.shop);
   const formData = await request.formData();
   const intent = String(formData.get("intent") || "");
 
-  if (intent === "sync") {
-    try {
-      const synced = await syncShopifyInventory(admin, store.id);
-      const modeNote =
-        synced.mode === "basic"
-          ? " Basic sync completed without location-level inventory. Reinstall or update app scopes for location-level sync."
-          : "";
-      return {
-        ok: true,
-        message: `Synced ${synced.products} products, ${synced.variants} variants, ${synced.locations} locations. Orders scanned: ${synced.ordersScanned}.${modeNote}`,
-      } satisfies ActionData;
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : "Unknown sync error";
-      console.error("[PODesk] Sync error:", msg);
-      const isAccessDenied =
-        msg.toLowerCase().includes("access denied") ||
-        msg.toLowerCase().includes("permission") ||
-        msg.toLowerCase().includes("scopes");
-
-      const userMessage = isAccessDenied
-        ? "Shopify denied inventory permissions. Reinstall the app from the dev preview and approve product, inventory, location, and order scopes."
-        : `Sync failed: ${msg}`;
-
-      return {
-        ok: false,
-        message: userMessage,
-      } satisfies ActionData;
-    }
+  if (intent !== "sync") {
+    return { ok: false, message: "Unknown action." } satisfies ActionData;
   }
 
-  return { ok: false, message: "Unknown action." } satisfies ActionData;
-};
+  try {
+    const synced = await syncShopifyInventory(admin, store.id);
+    const modeNote =
+      synced.locationAccessDenied
+        ? " Location-level inventory was skipped because Shopify denied location access. Reinstall the dev app and approve product, inventory, location, and order scopes."
+        : "";
 
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
+    return {
+      ok: true,
+      message: `Synced ${synced.products} products, ${synced.variants} variants, ${synced.locations} locations. Orders scanned: ${synced.ordersScanned}.${modeNote}`,
+    } satisfies ActionData;
+  } catch (error) {
+    const msg = normalizeShopifyError(error);
+    console.error("[PODesk] Sync error:", msg);
+    return { ok: false, message: msg } satisfies ActionData;
+  }
+};
 
 export default function Index() {
   const data = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const isSyncing = navigation.state === "submitting";
+  const hasInventory = data.metrics.variantCount > 0;
+  const hasSupplier = data.metrics.supplierCount > 0;
+  const hasMapping = data.metrics.mappedSkuCount > 0;
+  const hasPo = data.metrics.openPurchaseOrderCount > 0 || data.recentPurchaseOrders.length > 0;
 
   return (
     <s-page heading="PODesk">
-      <s-section heading="Shopify inventory sync">
-        <s-stack direction="inline" gap="base">
-          <Form method="post">
-            <input type="hidden" name="intent" value="sync" />
-            <button type="submit" disabled={isSyncing} style={buttonStyle}>
-              {isSyncing ? "Syncing..." : "Sync Shopify inventory"}
-            </button>
-          </Form>
-          <s-paragraph>
-            <s-text>Store: {data.shop}</s-text>
-          </s-paragraph>
-        </s-stack>
+      <s-section heading="Inventory buying workspace">
+        <div style={heroGridStyle}>
+          <div>
+            <div style={eyebrowStyle}>Connected store</div>
+            <h2 style={heroTitleStyle}>{data.shop}</h2>
+            <p style={bodyStyle}>
+              Sync Shopify SKUs, connect suppliers, map supplier costs, and create
+              purchase orders from one operations workspace.
+            </p>
+            <Form method="post">
+              <input type="hidden" name="intent" value="sync" />
+              <button type="submit" disabled={isSyncing} style={primaryButtonStyle}>
+                {isSyncing ? "Syncing inventory..." : "Sync Shopify inventory"}
+              </button>
+            </Form>
+          </div>
+          <div style={syncBoxStyle}>
+            <div style={syncLabelStyle}>Last sync</div>
+            <div style={syncValueStyle}>
+              {data.lastSyncAt ? formatDateTime(data.lastSyncAt) : "Never synced"}
+            </div>
+            <div style={mutedStyle}>
+              Read-only sync. PODesk does not change Shopify inventory in this MVP.
+            </div>
+          </div>
+        </div>
         {actionData?.message ? (
           <div style={noticeStyle(actionData.ok)}>{actionData.message}</div>
         ) : null}
-        <s-paragraph>
-          Last sync: {data.lastSyncAt ? formatDateTime(data.lastSyncAt) : "Never synced"}
-        </s-paragraph>
+      </s-section>
+
+      <s-section heading="Setup progress">
+        <div style={stepGridStyle}>
+          <SetupStep
+            done={hasInventory}
+            title="Sync products"
+            text="Pull Shopify variants, inventory counts, and recent sales."
+            href="/app"
+          />
+          <SetupStep
+            done={hasSupplier}
+            title="Add suppliers"
+            text="Store supplier lead times, terms, notes, and contact details."
+            href="/app/suppliers"
+          />
+          <SetupStep
+            done={hasMapping}
+            title="Map SKUs"
+            text="Connect each Shopify SKU to the correct supplier and cost."
+            href="/app/mappings"
+          />
+          <SetupStep
+            done={hasPo}
+            title="Create a PO"
+            text="Build a purchase order from real synced variants."
+            href="/app/purchase-orders"
+          />
+        </div>
       </s-section>
 
       <s-section heading="Operations snapshot">
@@ -184,16 +205,19 @@ export default function Index() {
           <Metric label="Inventory units" value={data.metrics.totalInventory} />
           <Metric label="Units sold, 30d" value={data.metrics.unitsSold30Days} />
           <Metric label="Suppliers" value={data.metrics.supplierCount} />
+          <Metric label="Mapped SKUs" value={data.metrics.mappedSkuCount} />
           <Metric label="Open POs" value={data.metrics.openPurchaseOrderCount} />
         </div>
       </s-section>
 
       <s-section heading="Reorder attention">
         {data.atRiskVariants.length === 0 ? (
-          <s-paragraph>
-            No stockout risk found yet. Sync data first, then add suppliers and
-            lead times to improve recommendations.
-          </s-paragraph>
+          <EmptyState
+            title="No reorder risks yet"
+            text="Sync inventory first. After products and recent sales are available, PODesk will show SKUs that may need supplier action."
+            actionHref="/app/reorder"
+            actionText="Open reorder planning"
+          />
         ) : (
           <div style={tableWrapStyle}>
             <table style={tableStyle}>
@@ -231,7 +255,12 @@ export default function Index() {
 
       <s-section heading="Recent purchase orders">
         {data.recentPurchaseOrders.length === 0 ? (
-          <s-paragraph>No purchase orders created yet.</s-paragraph>
+          <EmptyState
+            title="No purchase orders yet"
+            text="Once suppliers and SKU mappings exist, create your first draft purchase order."
+            actionHref="/app/purchase-orders"
+            actionText="Create purchase order"
+          />
         ) : (
           <div style={tableWrapStyle}>
             <table style={tableStyle}>
@@ -248,7 +277,9 @@ export default function Index() {
                 {data.recentPurchaseOrders.map((po) => (
                   <tr key={po.id}>
                     <td style={tdStyle}>
-                      <a href={`/app/purchase-orders/${po.id}`} style={linkStyle}>{po.reference}</a>
+                      <a href={`/app/purchase-orders/${po.id}`} style={linkStyle}>
+                        {po.reference}
+                      </a>
                     </td>
                     <td style={tdStyle}>{po.supplier}</td>
                     <td style={tdStyle}>{po.status.replaceAll("_", " ")}</td>
@@ -276,9 +307,47 @@ function Metric({ label, value }: { label: string; value: number }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Store helper
-// ---------------------------------------------------------------------------
+function SetupStep({
+  done,
+  title,
+  text,
+  href,
+}: {
+  done: boolean;
+  title: string;
+  text: string;
+  href: string;
+}) {
+  return (
+    <a href={href} style={stepCardStyle}>
+      <div style={stepStatusStyle(done)}>{done ? "Done" : "Next"}</div>
+      <div style={stepTitleStyle}>{title}</div>
+      <div style={mutedStyle}>{text}</div>
+    </a>
+  );
+}
+
+function EmptyState({
+  title,
+  text,
+  actionHref,
+  actionText,
+}: {
+  title: string;
+  text: string;
+  actionHref: string;
+  actionText: string;
+}) {
+  return (
+    <div style={emptyStateStyle}>
+      <div>
+        <div style={emptyTitleStyle}>{title}</div>
+        <div style={mutedStyle}>{text}</div>
+      </div>
+      <a href={actionHref} style={secondaryButtonStyle}>{actionText}</a>
+    </div>
+  );
+}
 
 async function getOrCreateStore(shop: string) {
   return prisma.store.upsert({
@@ -288,18 +357,10 @@ async function getOrCreateStore(shop: string) {
   });
 }
 
-// ---------------------------------------------------------------------------
-// Paginated Shopify Inventory Sync (Gate 2)
-// ---------------------------------------------------------------------------
-
 async function syncShopifyInventory(admin: AdminClient, storeId: string) {
-  // 1. Sync locations when the installed app token has location access.
-  // During local dev Shopify can keep an older token after scopes change, so
-  // the sync falls back to product-level inventory instead of failing outright.
   const locationResult = await tryShopifyGraphql(admin, LOCATIONS_QUERY, {});
-  const canSyncLocations = locationResult.ok;
-  const syncMode: SyncMode = canSyncLocations ? "full" : "basic";
-  const locationNodes = canSyncLocations ? locationResult.data.locations?.nodes ?? [] : [];
+  const locationAccessDenied = !locationResult.ok;
+  const locationNodes = locationResult.ok ? locationResult.data.locations?.nodes ?? [] : [];
   const syncedLocationIds = new Set<string>();
 
   for (const location of locationNodes) {
@@ -316,7 +377,6 @@ async function syncShopifyInventory(admin: AdminClient, storeId: string) {
     syncedLocationIds.add(location.id);
   }
 
-  // 2. Sync products with cursor-based pagination
   let productCount = 0;
   let variantCount = 0;
   let hasNextProductPage = true;
@@ -329,7 +389,7 @@ async function syncShopifyInventory(admin: AdminClient, storeId: string) {
 
     const productData = await shopifyGraphql(
       admin,
-      canSyncLocations ? PRODUCTS_WITH_LEVELS_QUERY : PRODUCTS_BASIC_QUERY,
+      locationAccessDenied ? PRODUCTS_BASIC_QUERY : PRODUCTS_WITH_LEVELS_QUERY,
       variables,
     );
     const products = productData.products;
@@ -397,7 +457,6 @@ async function syncShopifyInventory(admin: AdminClient, storeId: string) {
         });
         variantCount += 1;
 
-        // Save inventory levels per location
         for (const level of locationQuantities) {
           const locationRecord = await prisma.inventoryLocation.upsert({
             where: { storeId_shopifyLocationId: { storeId, shopifyLocationId: level.location.id } },
@@ -434,37 +493,42 @@ async function syncShopifyInventory(admin: AdminClient, storeId: string) {
     pageCount += 1;
   }
 
-  // 3. Sync recent orders with cursor-based pagination
-  const orderQuery = `created_at:>=${thirtyDaysAgoIsoDate()}`;
+  const ordersResult = await tryShopifyGraphql(admin, ORDERS_QUERY, {
+    first: 100,
+    orderQuery: `created_at:>=${thirtyDaysAgoIsoDate()}`,
+  });
   const soldByVariant = new Map<string, number>();
-  let hasNextOrderPage = true;
-  let orderCursor: string | null = null;
-  let orderPageCount = 0;
   let ordersScanned = 0;
 
-  while (hasNextOrderPage && orderPageCount < MAX_ORDER_PAGES) {
-    const variables: Record<string, unknown> = { first: 100, orderQuery };
-    if (orderCursor) variables.after = orderCursor;
+  if (ordersResult.ok) {
+    let orders = ordersResult.data.orders;
+    let orderCursor = orders?.pageInfo?.endCursor ?? null;
+    let hasNextOrderPage = Boolean(orders?.pageInfo?.hasNextPage);
+    let orderPageCount = 0;
 
-    const orderData = await shopifyGraphql(admin, ORDERS_QUERY, variables);
-    const orders = orderData.orders;
-    if (!orders) break;
-
-    for (const order of orders.nodes) {
-      ordersScanned += 1;
-      for (const lineItem of order.lineItems.nodes) {
-        const variantId = lineItem.variant?.id;
-        if (!variantId) continue;
-        soldByVariant.set(variantId, (soldByVariant.get(variantId) ?? 0) + lineItem.quantity);
+    while (orders && orderPageCount < MAX_ORDER_PAGES) {
+      for (const order of orders.nodes) {
+        ordersScanned += 1;
+        for (const lineItem of order.lineItems.nodes) {
+          const variantId = lineItem.variant?.id;
+          if (!variantId) continue;
+          soldByVariant.set(variantId, (soldByVariant.get(variantId) ?? 0) + lineItem.quantity);
+        }
       }
-    }
 
-    hasNextOrderPage = orders.pageInfo.hasNextPage;
-    orderCursor = orders.pageInfo.endCursor;
-    orderPageCount += 1;
+      if (!hasNextOrderPage || orderPageCount + 1 >= MAX_ORDER_PAGES) break;
+      const nextOrderData = await shopifyGraphql(admin, ORDERS_QUERY, {
+        first: 100,
+        after: orderCursor,
+        orderQuery: `created_at:>=${thirtyDaysAgoIsoDate()}`,
+      });
+      orders = nextOrderData.orders;
+      orderCursor = orders?.pageInfo?.endCursor ?? null;
+      hasNextOrderPage = Boolean(orders?.pageInfo?.hasNextPage);
+      orderPageCount += 1;
+    }
   }
 
-  // 4. Update sales velocity for all variants in this store
   const allVariants = await prisma.shopifyVariant.findMany({
     where: { storeId },
     select: { id: true, shopifyVariantId: true, inventoryQuantity: true },
@@ -482,7 +546,6 @@ async function syncShopifyInventory(admin: AdminClient, storeId: string) {
     });
   }
 
-  // 5. Update store lastSyncAt
   await prisma.store.update({
     where: { id: storeId },
     data: { lastSyncAt: new Date() },
@@ -493,13 +556,9 @@ async function syncShopifyInventory(admin: AdminClient, storeId: string) {
     variants: variantCount,
     locations: syncedLocationIds.size,
     ordersScanned,
-    mode: syncMode,
+    locationAccessDenied,
   };
 }
-
-// ---------------------------------------------------------------------------
-// Shopify GraphQL helpers
-// ---------------------------------------------------------------------------
 
 async function shopifyGraphql(
   admin: AdminClient,
@@ -514,11 +573,11 @@ async function shopifyGraphql(
 
   if (payload.errors && payload.errors.length > 0) {
     const messages = payload.errors.map((e) => e.message).join("; ");
-    throw new Error(`Shopify GraphQL error: ${messages}`);
+    throw new Error(messages);
   }
 
   if (!payload.data) {
-    throw new Error("Shopify returned empty data. Check API scopes and try again.");
+    throw new Error("Shopify returned empty data. Reinstall the app and approve the requested scopes.");
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -540,6 +599,14 @@ async function tryShopifyGraphql(
     }
     throw error;
   }
+}
+
+function normalizeShopifyError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  if (message.toLowerCase().includes("access denied")) {
+    return "Shopify denied the required Admin API permissions. Uninstall PODesk from this dev store, run npm run dev -- --reset, reinstall from the dev preview, and approve product, inventory, location, and order scopes.";
+  }
+  return `Sync failed: ${message}`;
 }
 
 const LOCATIONS_QUERY = `#graphql
@@ -582,7 +649,6 @@ const PRODUCTS_WITH_LEVELS_QUERY = `#graphql
               }
               inventoryLevels(first: 20) {
                 nodes {
-                  id
                   quantities(names: ["available"]) {
                     name
                     quantity
@@ -656,19 +722,10 @@ const ORDERS_QUERY = `#graphql
     }
   }`;
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
 type InventoryLevelNode = {
-  id: string;
   quantities: Array<{ name: string; quantity: number }>;
   location: { id: string; name: string; isActive: boolean };
 };
-
-// ---------------------------------------------------------------------------
-// Utilities
-// ---------------------------------------------------------------------------
 
 function availableQuantity(quantities: Array<{ name: string; quantity: number }>) {
   return quantities.find((q) => q.name === "available")?.quantity ?? 0;
@@ -699,13 +756,88 @@ function formatDate(value: string) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Styles
-// ---------------------------------------------------------------------------
+const heroGridStyle = {
+  display: "grid",
+  gridTemplateColumns: "minmax(0, 1fr) minmax(220px, 320px)",
+  gap: "20px",
+  alignItems: "start",
+} as const;
+
+const eyebrowStyle = {
+  color: "#5c5f62",
+  fontSize: "12px",
+  fontWeight: 650,
+  textTransform: "uppercase",
+} as const;
+
+const heroTitleStyle = {
+  margin: "6px 0 8px",
+  fontSize: "22px",
+  lineHeight: 1.2,
+} as const;
+
+const bodyStyle = {
+  margin: "0 0 16px",
+  maxWidth: "680px",
+  color: "#5c5f62",
+} as const;
+
+const syncBoxStyle = {
+  border: "1px solid #dfe3e8",
+  borderRadius: "8px",
+  padding: "14px",
+  background: "#f6f6f7",
+} as const;
+
+const syncLabelStyle = {
+  color: "#6d7175",
+  fontSize: "12px",
+  fontWeight: 650,
+} as const;
+
+const syncValueStyle = {
+  marginTop: "6px",
+  fontSize: "16px",
+  fontWeight: 650,
+} as const;
+
+const stepGridStyle = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))",
+  gap: "12px",
+} as const;
+
+const stepCardStyle = {
+  display: "block",
+  border: "1px solid #dfe3e8",
+  borderRadius: "8px",
+  padding: "14px",
+  background: "#fff",
+  color: "#202223",
+  textDecoration: "none",
+} as const;
+
+const stepStatusStyle = (done: boolean) =>
+  ({
+    display: "inline-block",
+    borderRadius: "999px",
+    padding: "3px 8px",
+    marginBottom: "10px",
+    fontSize: "12px",
+    fontWeight: 650,
+    color: done ? "#0f5132" : "#5c5f62",
+    background: done ? "#effaf5" : "#f1f2f3",
+  }) as const;
+
+const stepTitleStyle = {
+  fontSize: "14px",
+  fontWeight: 700,
+  marginBottom: "4px",
+} as const;
 
 const metricGridStyle = {
   display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+  gridTemplateColumns: "repeat(auto-fit, minmax(145px, 1fr))",
   gap: "12px",
 } as const;
 
@@ -726,6 +858,22 @@ const mutedStyle = {
   color: "#6d7175",
   fontSize: "13px",
   marginTop: "4px",
+} as const;
+
+const emptyStateStyle = {
+  display: "flex",
+  justifyContent: "space-between",
+  gap: "16px",
+  alignItems: "center",
+  border: "1px solid #dfe3e8",
+  borderRadius: "8px",
+  padding: "14px",
+  background: "#fff",
+} as const;
+
+const emptyTitleStyle = {
+  fontWeight: 700,
+  marginBottom: "4px",
 } as const;
 
 const tableWrapStyle = {
@@ -751,7 +899,7 @@ const tdStyle = {
   verticalAlign: "top",
 } as const;
 
-const buttonStyle = {
+const primaryButtonStyle = {
   border: "0",
   borderRadius: "6px",
   padding: "10px 14px",
@@ -759,6 +907,17 @@ const buttonStyle = {
   color: "#fff",
   fontWeight: 650,
   cursor: "pointer",
+} as const;
+
+const secondaryButtonStyle = {
+  border: "1px solid #babfc3",
+  borderRadius: "6px",
+  padding: "9px 12px",
+  background: "#fff",
+  color: "#202223",
+  fontWeight: 650,
+  textDecoration: "none",
+  whiteSpace: "nowrap",
 } as const;
 
 const linkStyle = {

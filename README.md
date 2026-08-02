@@ -31,12 +31,12 @@ Implemented:
 - Basic 30-day sales velocity and stockout-risk calculation
 - Supplier creation form
 - Basic purchase-order creation form
-- Stocky import placeholder page
+- Stocky/spreadsheet supplier CSV import
 - Product, strategy, and sales planning docs
 
 Not implemented yet:
 
-- Stocky CSV upload/mapping
+- Stocky SKU mapping and PO archive import
 - PO PDF export
 - billing
 - app-store submission setup
