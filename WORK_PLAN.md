@@ -47,17 +47,18 @@ Professional sales goal:
 | Active folder | Done | Use `C:\A-Drive-Backup\Projects\shopify\shopify apps\PODesk`. |
 | Shopify scaffold | Done | React Router Shopify scaffold exists. |
 | Shopify OAuth/session | Done | Scaffold authentication exists. Needs real dev-store test. |
-| Database schema | Ongoing | Core Prisma models exist. Additional models needed for mapping/import/settings. |
-| Inventory sync | Ongoing | First sync action exists. Needs pagination, error handling, and real-store testing. |
-| Supplier management | Ongoing | Create/list exists. Edit/delete not done. |
-| Purchase orders | Ongoing | Basic create/list exists. Detail/edit/multiple lines/export not done. |
-| Reorder table | Ongoing | Basic risk list exists. Proper formula/settings not done. |
+| Database schema | Done | Core models + SupplierVariantMapping + isArchived added. |
+| Inventory sync | Done (code) | Paginated product/order sync, error handling, idempotent upserts. Variant/location pagination limited. Live verification blocked. |
+| Supplier management | Done (code) | Full CRUD: create, list, edit, archive, restore, delete, detail page. Store scope hardened. Live verification blocked. |
+| SKU-supplier mapping | Done (code) | SupplierVariantMapping model, create/delete mappings, supplier SKU/cost/lead override. Store scope hardened. |
+| Purchase orders | Done (code) | Multi-line PO create, detail, edit draft, status lifecycle, duplicate, delete. Store scope & DRAFT status hardened. |
+| Reorder table | Done (code) | Dedicated page with 7/14/30/90d window, buffer, target days, risk classification, suggested qty. "Create PO from suggestion" Not Started. |
 | Stocky import | Ongoing | Placeholder page exists. CSV import not done. |
 | Billing | Not Started | Shopify billing not implemented. |
 | App Store listing | Not Started | Strategy exists. Assets not built. |
 | Sales materials | Ongoing | Outreach copy exists. Demo/video/case study not done. |
 | GitHub repo | Done | Main branch pushed to GitHub remote. |
-| Local verification | Done | 2026-08-02: install, Prisma setup, typecheck, lint, and build passed. |
+| Local verification | Done | 2026-08-02: setup, typecheck, lint, build all passed cleanly after store scope hardening and cleanup. |
 | Security audit | Blocked | `npm audit` reports high vulnerabilities that require breaking dependency changes; do not force-fix blindly. |
 
 ## Phase 0: Foundation And Repo
@@ -105,28 +106,18 @@ Tasks:
 | Embedded app route | Done | `/app` route loads after authentication. |
 | Session persistence | Done | Prisma session model exists. |
 | App navigation | Done | Dashboard and Stocky import links exist. |
-| Test with development store | Blocked | Requires interactive Shopify Partner/dev-store selection. Bounded CLI run timed out without completing install. |
-| Confirm required scopes | Done | Scopes are limited to read products, inventory, locations, orders. |
+| Test with development store | Blocked | Requires interactive Shopify Partner/dev-store selection. CLI requires user login via device code. |
+| Confirm required scopes | Done | Scopes are limited to read products, inventory, locations, orders. No write_inventory scope. |
 | Uninstall cleanup test | Not Started | Uninstall webhook is verified. |
 
-Verification note, 2026-08-02:
+Verification note, 2026-08-02 (Audit & Hardening):
 
-- `npm install` passed.
-- `npm run setup` passed.
-- `npm run typecheck` passed.
-- `npm run lint` passed.
-- `npm run build` passed.
-- Shopify CLI is available: `3.94.3`.
-- `npm audit --omit=dev --audit-level=high` still reports React Router high-severity advisories. The suggested automatic fix requires breaking dependency changes, so this needs a controlled dependency review before production release.
-- Shopify development-store install was not verified in this run because `shopify app dev --use-localhost --no-color` did not complete in the bounded verification window.
-
-Verification attempt 2, 2026-08-02 (Task 2 retest):
-
-- All preflight checks passed again: install, setup, typecheck, lint, build.
-- `shopify app dev --no-color` immediately prompted for Shopify Partner login via device code flow.
-- Blocker: Shopify CLI requires interactive user authentication at https://accounts.shopify.com/activate-with-code before the app can be created/linked and installed on a development store.
-- `client_id` in `shopify.app.toml` is still empty because the app has not been created in the Partner dashboard yet.
-- Task 2 remains Blocked until the user completes Shopify Partner login interactively.
+- `npm run setup`: Passed.
+- `npm run typecheck`: Passed.
+- `npm run lint`: Passed.
+- `npm run build`: Passed.
+- Store scope & DRAFT status verification: Hardened across all route forms and action handlers.
+- Shopify development-store install: Blocked (requires interactive Shopify Partner credentials and dev store linking).
 
 Do not build:
 
@@ -145,19 +136,24 @@ Objective:
 
 PODesk can read Shopify inventory data reliably enough to support purchase orders and reorder suggestions.
 
+Known limitations:
+
+- Variant pagination is not implemented yet. Current sync reads first 100 variants per product, which is acceptable for MVP testing but must be fixed before larger stores.
+- Inventory level pagination is not implemented yet. Current sync reads first 20 locations per variant.
+
 Tasks:
 
 | Task | Status | Acceptance Criteria |
 |---|---|---|
-| Sync products | Ongoing | Products save with Shopify product ID, title, handle, status, vendor. |
-| Sync variants | Ongoing | Variants save with SKU, barcode, inventory item ID, cost, tracked flag. |
-| Sync locations | Ongoing | Active locations save with Shopify location ID. |
-| Sync inventory levels | Ongoing | Inventory saves per variant/location. |
-| Sync recent orders | Ongoing | Recent order quantities calculate SKU sales velocity. |
-| Add pagination | Not Started | Sync handles stores beyond first 50 products/100 orders. |
-| Add sync progress UI | Not Started | Merchant sees sync running, complete, or failed. |
-| Add sync error logging | Not Started | Failed API responses are saved and visible to developer. |
-| Add resync safety | Not Started | Duplicate products/variants are not created. |
+| Sync products | Done | Products save with Shopify product ID, title, handle, status, vendor. Cursor-based pagination, up to 1000 products. |
+| Sync variants | Done | Variants save with SKU, barcode, inventory item ID, cost, tracked flag. |
+| Sync locations | Done | Active locations save with Shopify location ID. |
+| Sync inventory levels | Done | Inventory saves per variant/location with upsert. |
+| Sync recent orders | Done | Recent order quantities calculate SKU sales velocity. Paginated up to 1000 orders. |
+| Add pagination | Done | Products (50/page × 20 pages) and orders (100/page × 10 pages) paginated with cursor. |
+| Add sync progress UI | Done | Button shows syncing state, success/error message with counts. |
+| Add sync error logging | Done | GraphQL errors caught and displayed. Server-side console.error for debugging. |
+| Add resync safety | Done | All upserts are idempotent. Repeated sync does not create duplicates. |
 
 Definition of done:
 
@@ -179,12 +175,12 @@ Tasks:
 
 | Task | Status | Acceptance Criteria |
 |---|---|---|
-| Create supplier | Ongoing | Supplier form saves name, email, phone, lead time, terms, notes. |
-| List suppliers | Ongoing | Dashboard shows supplier count and recent suppliers. |
-| Supplier edit | Not Started | Merchant can update supplier fields. |
-| Supplier delete/archive | Not Started | Merchant can remove inactive supplier without breaking old POs. |
-| Supplier detail page | Not Started | Merchant can see supplier metadata and related SKUs/POs. |
-| SKU-to-supplier mapping | Not Started | Merchant can map Shopify variants to suppliers. |
+| Create supplier | Done | Supplier form saves name, email, phone, lead time, terms, notes. Dedicated /app/suppliers page. |
+| List suppliers | Done | /app/suppliers shows active and archived suppliers with PO and mapping counts. |
+| Supplier edit | Done | /app/suppliers/:id detail page allows editing all fields. |
+| Supplier delete/archive | Done | Archive (soft delete) and restore. Hard delete only if no POs reference the supplier. |
+| Supplier detail page | Done | Shows edit form, mapped SKUs, purchase order history. |
+| SKU-to-supplier mapping | Done | /app/mappings page. SupplierVariantMapping model with supplier SKU, cost, lead time override, primary flag. |
 | Supplier import from CSV | Not Started | CSV can create suppliers with preview and validation. |
 
 Definition of done:
@@ -205,14 +201,14 @@ Tasks:
 
 | Task | Status | Acceptance Criteria |
 |---|---|---|
-| Create basic PO | Ongoing | PO can be created with supplier, SKU, quantity, expected date, notes. |
-| List recent POs | Ongoing | Dashboard shows recent POs with status and supplier. |
-| PO reference generator | Ongoing | PO reference is generated automatically. |
-| Multiple line items | Not Started | One PO can contain multiple SKUs. |
-| PO detail page | Not Started | Merchant can view complete PO and line details. |
-| Edit draft PO | Not Started | Merchant can edit draft before sending. |
-| Update PO status | Not Started | Merchant can move PO through draft/sent/confirmed/received/delayed/cancelled. |
-| Duplicate PO | Not Started | Merchant can repeat common supplier orders faster. |
+| Create basic PO | Done | /app/purchase-orders page. Multi-line PO creation with up to 5 lines at once. |
+| List POs | Done | /app/purchase-orders shows all POs with status badges, cost totals, supplier, dates. |
+| PO reference generator | Done | Auto-generated PO-{timestamp} reference. |
+| Multiple line items | Done | PO creation supports 5 initial lines. Detail page supports adding more lines. |
+| PO detail page | Done | /app/purchase-orders/:id shows full PO with lines, costs, subtotals. |
+| Edit draft PO | Done | Draft POs allow editing notes, arrival date, adding/removing lines. |
+| Update PO status | Done | Status buttons for all 7 states: draft/sent/confirmed/partially received/received/delayed/cancelled. |
+| Duplicate PO | Done | One-click duplicate creates new draft PO from existing. |
 | Export PO PDF | Not Started | Merchant can download supplier-ready PO. |
 | Email PO to supplier | Later | Only after PDF/export is stable. |
 
@@ -234,12 +230,13 @@ Tasks:
 
 | Task | Status | Acceptance Criteria |
 |---|---|---|
-| Basic stockout risk list | Ongoing | Dashboard shows SKUs with low days-left values. |
-| Reorder table screen | Not Started | Dedicated table supports search/filter/sort. |
-| Configurable sales window | Not Started | Merchant can select 7/14/30/90 days. |
-| Lead time in risk formula | Not Started | Supplier lead time affects reorder urgency. |
-| Manual buffer days | Not Started | Merchant can set safety buffer. |
-| Suggested reorder quantity | Not Started | App suggests quantity based on target days and velocity. |
+| Basic stockout risk list | Done | Dashboard shows top 10 at-risk SKUs. |
+| Reorder table screen | Done | /app/reorder with full table, risk summary, supplier/risk filters. |
+| Configurable sales window | Done | 7/14/30/90 day selector in URL params. |
+| Lead time in risk formula | Done | Supplier lead time from mapping or supplier default used in risk classification. |
+| Manual buffer days | Done | Adjustable buffer days parameter. |
+| Suggested reorder quantity | Done | Calculated from target days × avg daily sales − current stock. |
+| Create PO from suggestion | Not Started | Button to convert suggested reorder items into draft PO. |
 | Exclude OOS days | Not Started | Formula does not punish products that were out of stock. |
 | Manual override | Not Started | Merchant can override suggested quantity. |
 
@@ -430,11 +427,11 @@ This is the current priority order.
 | 2 | Initialize git repo and push clean first commit. | Done |
 | 3 | Run install/setup/typecheck after repo push. | Done |
 | 4 | Test Shopify install on development store. | Blocked |
-| 5 | Fix inventory sync pagination and error handling. | Not Started |
-| 6 | Build supplier edit/archive screen. | Not Started |
-| 7 | Build SKU-to-supplier mapping. | Not Started |
-| 8 | Build PO detail/edit/multiple line items. | Not Started |
-| 9 | Build reorder table screen with configurable windows. | Not Started |
+| 5 | Fix inventory sync pagination and error handling. | Done |
+| 6 | Build supplier CRUD (list/create/edit/archive/detail). | Done |
+| 7 | Build SKU-to-supplier mapping. | Done |
+| 8 | Build PO detail/edit/multiple line items/status/duplicate. | Done |
+| 9 | Build reorder table with configurable windows and filters. | Done |
 | 10 | Build CSV upload/preview/mapping for Stocky/spreadsheet import. | Not Started |
 
 ## Hard Rules

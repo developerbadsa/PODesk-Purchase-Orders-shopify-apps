@@ -17,6 +17,12 @@ type ActionData = {
 
 const STOCKOUT_WINDOW_DAYS = 14;
 const SALES_WINDOW_DAYS = 30;
+const MAX_PRODUCT_PAGES = 20; // 50 products per page = up to 1000 products
+const MAX_ORDER_PAGES = 10;   // 100 orders per page = up to 1000 orders
+
+// ---------------------------------------------------------------------------
+// Loader
+// ---------------------------------------------------------------------------
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
@@ -28,10 +34,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     openPurchaseOrderCount,
     atRiskVariants,
     recentPurchaseOrders,
-    suppliers,
   ] = await Promise.all([
     prisma.shopifyVariant.count({ where: { storeId: store.id } }),
-    prisma.supplier.count({ where: { storeId: store.id } }),
+    prisma.supplier.count({ where: { storeId: store.id, isArchived: false } }),
     prisma.purchaseOrder.count({
       where: {
         storeId: store.id,
@@ -56,11 +61,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       include: { supplier: true, lines: { include: { variant: { include: { product: true } } } } },
       orderBy: { createdAt: "desc" },
       take: 5,
-    }),
-    prisma.supplier.findMany({
-      where: { storeId: store.id },
-      orderBy: { createdAt: "desc" },
-      take: 20,
     }),
   ]);
 
@@ -89,7 +89,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       averageDailySales: variant.averageDailySales,
       daysUntilStockout: variant.daysUntilStockout,
     })),
-    suppliers,
     recentPurchaseOrders: recentPurchaseOrders.map((po) => ({
       id: po.id,
       reference: po.reference,
@@ -102,6 +101,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   };
 };
 
+// ---------------------------------------------------------------------------
+// Action
+// ---------------------------------------------------------------------------
+
 export const action = async ({ request }: ActionFunctionArgs) => {
   const { admin, session } = await authenticate.admin(request);
   const store = await getOrCreateStore(session.shop);
@@ -109,109 +112,43 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const intent = String(formData.get("intent") || "");
 
   if (intent === "sync") {
-    const synced = await syncShopifyInventory(admin, store.id);
-    return {
-      ok: true,
-      message: `Synced ${synced.products} products, ${synced.variants} variants, and ${synced.locations} locations.`,
-    } satisfies ActionData;
-  }
-
-  if (intent === "create-supplier") {
-    const name = String(formData.get("name") || "").trim();
-
-    if (!name) {
-      return { ok: false, message: "Supplier name is required." } satisfies ActionData;
-    }
-
-    await prisma.supplier.create({
-      data: {
-        storeId: store.id,
-        name,
-        email: optionalString(formData.get("email")),
-        phone: optionalString(formData.get("phone")),
-        leadTimeDays: numberFromForm(formData.get("leadTimeDays"), 14),
-        minimumOrder: optionalNumber(formData.get("minimumOrder")),
-        paymentTerms: optionalString(formData.get("paymentTerms")),
-        notes: optionalString(formData.get("notes")),
-      },
-    });
-
-    return { ok: true, message: "Supplier created." } satisfies ActionData;
-  }
-
-  if (intent === "create-po") {
-    const supplierId = String(formData.get("supplierId") || "");
-    const sku = String(formData.get("sku") || "").trim();
-    const quantity = numberFromForm(formData.get("quantity"), 0);
-
-    if (!supplierId || !sku || quantity <= 0) {
+    try {
+      const synced = await syncShopifyInventory(admin, store.id);
+      return {
+        ok: true,
+        message: `Synced ${synced.products} products, ${synced.variants} variants, ${synced.locations} locations. Orders scanned: ${synced.ordersScanned}.`,
+      } satisfies ActionData;
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : "Unknown sync error";
+      console.error("[PODesk] Sync error:", msg);
       return {
         ok: false,
-        message: "Supplier, SKU, and quantity are required for a PO.",
+        message: `Sync failed: ${msg}`,
       } satisfies ActionData;
     }
-
-    const supplier = await prisma.supplier.findFirst({
-      where: { id: supplierId, storeId: store.id },
-    });
-    const variant = await prisma.shopifyVariant.findFirst({
-      where: { storeId: store.id, sku },
-    });
-
-    if (!supplier) {
-      return { ok: false, message: "Supplier not found." } satisfies ActionData;
-    }
-
-    if (!variant) {
-      return {
-        ok: false,
-        message: "SKU not found. Sync Shopify data first or check the SKU.",
-      } satisfies ActionData;
-    }
-
-    const reference = `RP-${Date.now()}`;
-    await prisma.purchaseOrder.create({
-      data: {
-        storeId: store.id,
-        supplierId,
-        reference,
-        expectedArrival: dateFromForm(formData.get("expectedArrival")),
-        notes: optionalString(formData.get("notes")),
-        lines: {
-          create: {
-            variantId: variant.id,
-            quantity,
-            unitCost: optionalNumber(formData.get("unitCost")),
-          },
-        },
-      },
-    });
-
-    return { ok: true, message: `Purchase order ${reference} created.` } satisfies ActionData;
   }
 
   return { ok: false, message: "Unknown action." } satisfies ActionData;
 };
 
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
 export default function Index() {
   const data = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
-  const isSubmitting = navigation.state === "submitting";
+  const isSyncing = navigation.state === "submitting";
 
   return (
     <s-page heading="PODesk">
-      <s-section heading="Stocky Rescue">
-        <s-paragraph>
-          Keep suppliers, purchase orders, and reorder decisions running while
-          moving away from Stocky. This first build reads Shopify inventory,
-          calculates basic stockout risk, and creates simple purchase orders.
-        </s-paragraph>
+      <s-section heading="Shopify inventory sync">
         <s-stack direction="inline" gap="base">
           <Form method="post">
             <input type="hidden" name="intent" value="sync" />
-            <button type="submit" disabled={isSubmitting} style={buttonStyle}>
-              {isSubmitting ? "Syncing..." : "Sync Shopify inventory"}
+            <button type="submit" disabled={isSyncing} style={buttonStyle}>
+              {isSyncing ? "Syncing..." : "Sync Shopify inventory"}
             </button>
           </Form>
           <s-paragraph>
@@ -277,61 +214,6 @@ export default function Index() {
         )}
       </s-section>
 
-      <s-section heading="Add supplier">
-        <Form method="post">
-          <input type="hidden" name="intent" value="create-supplier" />
-          <div style={formGridStyle}>
-            <Field label="Supplier name" name="name" required />
-            <Field label="Email" name="email" type="email" />
-            <Field label="Phone" name="phone" />
-            <Field label="Lead time days" name="leadTimeDays" type="number" defaultValue="14" />
-            <Field label="Minimum order" name="minimumOrder" type="number" />
-            <Field label="Payment terms" name="paymentTerms" />
-          </div>
-          <label style={fieldLabelStyle}>
-            Notes
-            <textarea name="notes" rows={3} style={textareaStyle} />
-          </label>
-          <button type="submit" disabled={isSubmitting} style={buttonStyle}>
-            Save supplier
-          </button>
-        </Form>
-      </s-section>
-
-      <s-section heading="Create purchase order">
-        {data.suppliers.length === 0 ? (
-          <s-paragraph>Add a supplier before creating a purchase order.</s-paragraph>
-        ) : (
-          <Form method="post">
-            <input type="hidden" name="intent" value="create-po" />
-            <div style={formGridStyle}>
-              <label style={fieldLabelStyle}>
-                Supplier
-                <select name="supplierId" required style={inputStyle}>
-                  <option value="">Select supplier</option>
-                  {data.suppliers.map((supplier) => (
-                    <option key={supplier.id} value={supplier.id}>
-                      {supplier.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <Field label="SKU" name="sku" required />
-              <Field label="Quantity" name="quantity" type="number" required />
-              <Field label="Unit cost" name="unitCost" type="number" step="0.01" />
-              <Field label="Expected arrival" name="expectedArrival" type="date" />
-            </div>
-            <label style={fieldLabelStyle}>
-              Notes
-              <textarea name="notes" rows={3} style={textareaStyle} />
-            </label>
-            <button type="submit" disabled={isSubmitting} style={buttonStyle}>
-              Create PO
-            </button>
-          </Form>
-        )}
-      </s-section>
-
       <s-section heading="Recent purchase orders">
         {data.recentPurchaseOrders.length === 0 ? (
           <s-paragraph>No purchase orders created yet.</s-paragraph>
@@ -350,7 +232,9 @@ export default function Index() {
               <tbody>
                 {data.recentPurchaseOrders.map((po) => (
                   <tr key={po.id}>
-                    <td style={tdStyle}>{po.reference}</td>
+                    <td style={tdStyle}>
+                      <a href={`/app/purchase-orders/${po.id}`} style={linkStyle}>{po.reference}</a>
+                    </td>
                     <td style={tdStyle}>{po.supplier}</td>
                     <td style={tdStyle}>{po.status.replaceAll("_", " ")}</td>
                     <td style={tdStyle}>{po.lineCount}</td>
@@ -377,35 +261,9 @@ function Metric({ label, value }: { label: string; value: number }) {
   );
 }
 
-function Field({
-  label,
-  name,
-  type = "text",
-  required = false,
-  defaultValue,
-  step,
-}: {
-  label: string;
-  name: string;
-  type?: string;
-  required?: boolean;
-  defaultValue?: string;
-  step?: string;
-}) {
-  return (
-    <label style={fieldLabelStyle}>
-      {label}
-      <input
-        name={name}
-        type={type}
-        required={required}
-        defaultValue={defaultValue}
-        step={step}
-        style={inputStyle}
-      />
-    </label>
-  );
-}
+// ---------------------------------------------------------------------------
+// Store helper
+// ---------------------------------------------------------------------------
 
 async function getOrCreateStore(shop: string) {
   return prisma.store.upsert({
@@ -415,98 +273,17 @@ async function getOrCreateStore(shop: string) {
   });
 }
 
+// ---------------------------------------------------------------------------
+// Paginated Shopify Inventory Sync (Gate 2)
+// ---------------------------------------------------------------------------
+
 async function syncShopifyInventory(admin: AdminClient, storeId: string) {
-  const orderQuery = `created_at:>=${thirtyDaysAgoIsoDate()}`;
-  const response = await admin.graphql(
-    `#graphql
-      query PODeskInitialSync($orderQuery: String!) {
-        locations(first: 25) {
-          nodes {
-            id
-            name
-            isActive
-          }
-        }
-        products(first: 50) {
-          nodes {
-            id
-            title
-            handle
-            status
-            vendor
-            variants(first: 100) {
-              nodes {
-                id
-                title
-                sku
-                barcode
-                inventoryQuantity
-                inventoryItem {
-                  id
-                  tracked
-                  unitCost {
-                    amount
-                    currencyCode
-                  }
-                  inventoryLevels(first: 20) {
-                    nodes {
-                      id
-                      quantities(names: ["available"]) {
-                        name
-                        quantity
-                      }
-                      location {
-                        id
-                        name
-                        isActive
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-        orders(first: 100, query: $orderQuery, sortKey: CREATED_AT, reverse: true) {
-          nodes {
-            id
-            lineItems(first: 100) {
-              nodes {
-                quantity
-                variant {
-                  id
-                }
-              }
-            }
-          }
-        }
-      }`,
-    { variables: { orderQuery } },
-  );
-
-  const payload = (await response.json()) as {
-    data?: ShopifySyncPayload;
-    errors?: unknown;
-  };
-
-  if (!payload.data) {
-    throw new Error(`Shopify sync failed: ${JSON.stringify(payload.errors ?? {})}`);
-  }
-
-  const soldByVariant = new Map<string, number>();
-  for (const order of payload.data.orders.nodes) {
-    for (const lineItem of order.lineItems.nodes) {
-      const variantId = lineItem.variant?.id;
-      if (!variantId) continue;
-      soldByVariant.set(variantId, (soldByVariant.get(variantId) ?? 0) + lineItem.quantity);
-    }
-  }
-
-  let products = 0;
-  let variants = 0;
+  // 1. Sync locations (single query, stores rarely have >25)
+  const locationData = await shopifyGraphql(admin, LOCATIONS_QUERY, {});
+  const locationNodes = locationData.locations?.nodes ?? [];
   const syncedLocationIds = new Set<string>();
 
-  for (const location of payload.data.locations.nodes) {
+  for (const location of locationNodes) {
     await prisma.inventoryLocation.upsert({
       where: { storeId_shopifyLocationId: { storeId, shopifyLocationId: location.id } },
       update: { name: location.name, isActive: location.isActive },
@@ -520,143 +297,309 @@ async function syncShopifyInventory(admin: AdminClient, storeId: string) {
     syncedLocationIds.add(location.id);
   }
 
-  for (const product of payload.data.products.nodes) {
-    const productRecord = await prisma.shopifyProduct.upsert({
-      where: { storeId_shopifyProductId: { storeId, shopifyProductId: product.id } },
-      update: {
-        title: product.title,
-        handle: product.handle,
-        status: product.status,
-        vendor: product.vendor,
-      },
-      create: {
-        storeId,
-        shopifyProductId: product.id,
-        title: product.title,
-        handle: product.handle,
-        status: product.status,
-        vendor: product.vendor,
-      },
-    });
-    products += 1;
+  // 2. Sync products with cursor-based pagination
+  let productCount = 0;
+  let variantCount = 0;
+  let hasNextProductPage = true;
+  let productCursor: string | null = null;
+  let pageCount = 0;
 
-    for (const variant of product.variants.nodes) {
-      const locationQuantities = variant.inventoryItem.inventoryLevels.nodes;
-      const availableFromLocations = locationQuantities.reduce(
-        (total, level) => total + availableQuantity(level.quantities),
-        0,
-      );
-      const inventoryQuantity =
-        locationQuantities.length > 0 ? availableFromLocations : variant.inventoryQuantity;
-      const unitsSold30Days = soldByVariant.get(variant.id) ?? 0;
-      const averageDailySales = unitsSold30Days / SALES_WINDOW_DAYS;
-      const daysUntilStockout =
-        averageDailySales > 0 ? inventoryQuantity / averageDailySales : null;
+  while (hasNextProductPage && pageCount < MAX_PRODUCT_PAGES) {
+    const variables: Record<string, unknown> = { first: 50 };
+    if (productCursor) variables.after = productCursor;
 
-      const variantRecord = await prisma.shopifyVariant.upsert({
-        where: { storeId_shopifyVariantId: { storeId, shopifyVariantId: variant.id } },
+    const productData = await shopifyGraphql(admin, PRODUCTS_QUERY, variables);
+    const products = productData.products;
+    if (!products) break;
+
+    for (const product of products.nodes) {
+      const productRecord = await prisma.shopifyProduct.upsert({
+        where: { storeId_shopifyProductId: { storeId, shopifyProductId: product.id } },
         update: {
-          productId: productRecord.id,
-          shopifyInventoryId: variant.inventoryItem.id,
-          title: variant.title,
-          sku: variant.sku,
-          barcode: variant.barcode,
-          tracked: variant.inventoryItem.tracked,
-          unitCostAmount: optionalFloat(variant.inventoryItem.unitCost?.amount),
-          unitCostCurrency: variant.inventoryItem.unitCost?.currencyCode,
-          inventoryQuantity,
-          unitsSold30Days,
-          averageDailySales,
-          daysUntilStockout,
+          title: product.title,
+          handle: product.handle,
+          status: product.status,
+          vendor: product.vendor,
         },
         create: {
           storeId,
-          productId: productRecord.id,
-          shopifyVariantId: variant.id,
-          shopifyInventoryId: variant.inventoryItem.id,
-          title: variant.title,
-          sku: variant.sku,
-          barcode: variant.barcode,
-          tracked: variant.inventoryItem.tracked,
-          unitCostAmount: optionalFloat(variant.inventoryItem.unitCost?.amount),
-          unitCostCurrency: variant.inventoryItem.unitCost?.currencyCode,
-          inventoryQuantity,
-          unitsSold30Days,
-          averageDailySales,
-          daysUntilStockout,
+          shopifyProductId: product.id,
+          title: product.title,
+          handle: product.handle,
+          status: product.status,
+          vendor: product.vendor,
         },
       });
-      variants += 1;
+      productCount += 1;
 
-      for (const level of locationQuantities) {
-        const locationRecord = await prisma.inventoryLocation.upsert({
-          where: { storeId_shopifyLocationId: { storeId, shopifyLocationId: level.location.id } },
-          update: { name: level.location.name, isActive: level.location.isActive },
+      for (const variant of product.variants.nodes) {
+        const locationQuantities = variant.inventoryItem.inventoryLevels.nodes;
+        const availableFromLocations = locationQuantities.reduce(
+          (total: number, level: InventoryLevelNode) =>
+            total + availableQuantity(level.quantities),
+          0,
+        );
+        const inventoryQuantity =
+          locationQuantities.length > 0 ? availableFromLocations : variant.inventoryQuantity;
+
+        const variantRecord = await prisma.shopifyVariant.upsert({
+          where: { storeId_shopifyVariantId: { storeId, shopifyVariantId: variant.id } },
+          update: {
+            productId: productRecord.id,
+            shopifyInventoryId: variant.inventoryItem.id,
+            title: variant.title,
+            sku: variant.sku,
+            barcode: variant.barcode,
+            tracked: variant.inventoryItem.tracked,
+            unitCostAmount: optionalFloat(variant.inventoryItem.unitCost?.amount),
+            unitCostCurrency: variant.inventoryItem.unitCost?.currencyCode,
+            inventoryQuantity,
+          },
           create: {
             storeId,
-            shopifyLocationId: level.location.id,
-            name: level.location.name,
-            isActive: level.location.isActive,
+            productId: productRecord.id,
+            shopifyVariantId: variant.id,
+            shopifyInventoryId: variant.inventoryItem.id,
+            title: variant.title,
+            sku: variant.sku,
+            barcode: variant.barcode,
+            tracked: variant.inventoryItem.tracked,
+            unitCostAmount: optionalFloat(variant.inventoryItem.unitCost?.amount),
+            unitCostCurrency: variant.inventoryItem.unitCost?.currencyCode,
+            inventoryQuantity,
           },
         });
-        syncedLocationIds.add(level.location.id);
+        variantCount += 1;
 
-        await prisma.inventoryLevel.upsert({
-          where: {
-            variantId_locationId: {
+        // Save inventory levels per location
+        for (const level of locationQuantities) {
+          const locationRecord = await prisma.inventoryLocation.upsert({
+            where: { storeId_shopifyLocationId: { storeId, shopifyLocationId: level.location.id } },
+            update: { name: level.location.name, isActive: level.location.isActive },
+            create: {
+              storeId,
+              shopifyLocationId: level.location.id,
+              name: level.location.name,
+              isActive: level.location.isActive,
+            },
+          });
+          syncedLocationIds.add(level.location.id);
+
+          await prisma.inventoryLevel.upsert({
+            where: {
+              variantId_locationId: {
+                variantId: variantRecord.id,
+                locationId: locationRecord.id,
+              },
+            },
+            update: { available: availableQuantity(level.quantities) },
+            create: {
               variantId: variantRecord.id,
               locationId: locationRecord.id,
+              available: availableQuantity(level.quantities),
             },
-          },
-          update: { available: availableQuantity(level.quantities) },
-          create: {
-            variantId: variantRecord.id,
-            locationId: locationRecord.id,
-            available: availableQuantity(level.quantities),
-          },
-        });
+          });
+        }
       }
     }
+
+    hasNextProductPage = products.pageInfo.hasNextPage;
+    productCursor = products.pageInfo.endCursor;
+    pageCount += 1;
   }
 
+  // 3. Sync recent orders with cursor-based pagination
+  const orderQuery = `created_at:>=${thirtyDaysAgoIsoDate()}`;
+  const soldByVariant = new Map<string, number>();
+  let hasNextOrderPage = true;
+  let orderCursor: string | null = null;
+  let orderPageCount = 0;
+  let ordersScanned = 0;
+
+  while (hasNextOrderPage && orderPageCount < MAX_ORDER_PAGES) {
+    const variables: Record<string, unknown> = { first: 100, orderQuery };
+    if (orderCursor) variables.after = orderCursor;
+
+    const orderData = await shopifyGraphql(admin, ORDERS_QUERY, variables);
+    const orders = orderData.orders;
+    if (!orders) break;
+
+    for (const order of orders.nodes) {
+      ordersScanned += 1;
+      for (const lineItem of order.lineItems.nodes) {
+        const variantId = lineItem.variant?.id;
+        if (!variantId) continue;
+        soldByVariant.set(variantId, (soldByVariant.get(variantId) ?? 0) + lineItem.quantity);
+      }
+    }
+
+    hasNextOrderPage = orders.pageInfo.hasNextPage;
+    orderCursor = orders.pageInfo.endCursor;
+    orderPageCount += 1;
+  }
+
+  // 4. Update sales velocity for all variants in this store
+  const allVariants = await prisma.shopifyVariant.findMany({
+    where: { storeId },
+    select: { id: true, shopifyVariantId: true, inventoryQuantity: true },
+  });
+
+  for (const variant of allVariants) {
+    const unitsSold30Days = soldByVariant.get(variant.shopifyVariantId) ?? 0;
+    const averageDailySales = unitsSold30Days / SALES_WINDOW_DAYS;
+    const daysUntilStockout =
+      averageDailySales > 0 ? variant.inventoryQuantity / averageDailySales : null;
+
+    await prisma.shopifyVariant.update({
+      where: { id: variant.id },
+      data: { unitsSold30Days, averageDailySales, daysUntilStockout },
+    });
+  }
+
+  // 5. Update store lastSyncAt
   await prisma.store.update({
     where: { id: storeId },
     data: { lastSyncAt: new Date() },
   });
 
-  return { products, variants, locations: syncedLocationIds.size };
+  return {
+    products: productCount,
+    variants: variantCount,
+    locations: syncedLocationIds.size,
+    ordersScanned,
+  };
 }
+
+// ---------------------------------------------------------------------------
+// Shopify GraphQL helpers
+// ---------------------------------------------------------------------------
+
+async function shopifyGraphql(
+  admin: AdminClient,
+  query: string,
+  variables: Record<string, unknown>,
+) {
+  const response = await admin.graphql(query, { variables });
+  const payload = (await response.json()) as {
+    data?: Record<string, unknown>;
+    errors?: Array<{ message: string }>;
+  };
+
+  if (payload.errors && payload.errors.length > 0) {
+    const messages = payload.errors.map((e) => e.message).join("; ");
+    throw new Error(`Shopify GraphQL error: ${messages}`);
+  }
+
+  if (!payload.data) {
+    throw new Error("Shopify returned empty data. Check API scopes and try again.");
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return payload.data as any;
+}
+
+const LOCATIONS_QUERY = `#graphql
+  query PODeskLocations {
+    locations(first: 25) {
+      nodes {
+        id
+        name
+        isActive
+      }
+    }
+  }`;
+
+const PRODUCTS_QUERY = `#graphql
+  query PODeskProducts($first: Int!, $after: String) {
+    products(first: $first, after: $after) {
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      nodes {
+        id
+        title
+        handle
+        status
+        vendor
+        variants(first: 100) {
+          nodes {
+            id
+            title
+            sku
+            barcode
+            inventoryQuantity
+            inventoryItem {
+              id
+              tracked
+              unitCost {
+                amount
+                currencyCode
+              }
+              inventoryLevels(first: 20) {
+                nodes {
+                  id
+                  quantities(names: ["available"]) {
+                    name
+                    quantity
+                  }
+                  location {
+                    id
+                    name
+                    isActive
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }`;
+
+const ORDERS_QUERY = `#graphql
+  query PODeskOrders($first: Int!, $after: String, $orderQuery: String!) {
+    orders(first: $first, after: $after, query: $orderQuery, sortKey: CREATED_AT, reverse: true) {
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      nodes {
+        id
+        lineItems(first: 100) {
+          nodes {
+            quantity
+            variant {
+              id
+            }
+          }
+        }
+      }
+    }
+  }`;
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+type InventoryLevelNode = {
+  id: string;
+  quantities: Array<{ name: string; quantity: number }>;
+  location: { id: string; name: string; isActive: boolean };
+};
+
+// ---------------------------------------------------------------------------
+// Utilities
+// ---------------------------------------------------------------------------
 
 function availableQuantity(quantities: Array<{ name: string; quantity: number }>) {
-  return quantities.find((quantity) => quantity.name === "available")?.quantity ?? 0;
-}
-
-function optionalString(value: FormDataEntryValue | null) {
-  const stringValue = String(value || "").trim();
-  return stringValue.length > 0 ? stringValue : null;
-}
-
-function numberFromForm(value: FormDataEntryValue | null, fallback: number) {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : fallback;
-}
-
-function optionalNumber(value: FormDataEntryValue | null) {
-  const stringValue = String(value || "").trim();
-  if (!stringValue) return null;
-  const parsed = Number(stringValue);
-  return Number.isFinite(parsed) ? parsed : null;
+  return quantities.find((q) => q.name === "available")?.quantity ?? 0;
 }
 
 function optionalFloat(value: string | null | undefined) {
   if (!value) return null;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
-}
-
-function dateFromForm(value: FormDataEntryValue | null) {
-  const stringValue = String(value || "").trim();
-  return stringValue ? new Date(`${stringValue}T00:00:00.000Z`) : null;
 }
 
 function thirtyDaysAgoIsoDate() {
@@ -678,60 +621,9 @@ function formatDate(value: string) {
   );
 }
 
-type ShopifySyncPayload = {
-  locations: {
-    nodes: Array<{
-      id: string;
-      name: string;
-      isActive: boolean;
-    }>;
-  };
-  products: {
-    nodes: Array<{
-      id: string;
-      title: string;
-      handle: string | null;
-      status: string;
-      vendor: string | null;
-      variants: {
-        nodes: Array<{
-          id: string;
-          title: string;
-          sku: string | null;
-          barcode: string | null;
-          inventoryQuantity: number;
-          inventoryItem: {
-            id: string;
-            tracked: boolean;
-            unitCost: { amount: string; currencyCode: string } | null;
-            inventoryLevels: {
-              nodes: Array<{
-                id: string;
-                quantities: Array<{ name: string; quantity: number }>;
-                location: {
-                  id: string;
-                  name: string;
-                  isActive: boolean;
-                };
-              }>;
-            };
-          };
-        }>;
-      };
-    }>;
-  };
-  orders: {
-    nodes: Array<{
-      id: string;
-      lineItems: {
-        nodes: Array<{
-          quantity: number;
-          variant: { id: string } | null;
-        }>;
-      };
-    }>;
-  };
-};
+// ---------------------------------------------------------------------------
+// Styles
+// ---------------------------------------------------------------------------
 
 const metricGridStyle = {
   display: "grid",
@@ -781,34 +673,6 @@ const tdStyle = {
   verticalAlign: "top",
 } as const;
 
-const formGridStyle = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-  gap: "12px",
-  marginBottom: "12px",
-} as const;
-
-const fieldLabelStyle = {
-  display: "grid",
-  gap: "6px",
-  color: "#202223",
-  fontSize: "13px",
-  fontWeight: 600,
-} as const;
-
-const inputStyle = {
-  border: "1px solid #c9cccf",
-  borderRadius: "6px",
-  padding: "9px 10px",
-  fontSize: "14px",
-  width: "100%",
-} as const;
-
-const textareaStyle = {
-  ...inputStyle,
-  resize: "vertical",
-} as const;
-
 const buttonStyle = {
   border: "0",
   borderRadius: "6px",
@@ -817,6 +681,11 @@ const buttonStyle = {
   color: "#fff",
   fontWeight: 650,
   cursor: "pointer",
+} as const;
+
+const linkStyle = {
+  color: "#2c6ecb",
+  textDecoration: "none",
 } as const;
 
 const noticeStyle = (ok: boolean) =>

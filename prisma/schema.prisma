@@ -41,11 +41,12 @@ model Store {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  products       ShopifyProduct[]
-  variants       ShopifyVariant[]
-  locations      InventoryLocation[]
-  suppliers      Supplier[]
-  purchaseOrders PurchaseOrder[]
+  products        ShopifyProduct[]
+  variants        ShopifyVariant[]
+  locations       InventoryLocation[]
+  suppliers       Supplier[]
+  purchaseOrders  PurchaseOrder[]
+  variantMappings SupplierVariantMapping[]
 }
 
 model ShopifyProduct {
@@ -87,8 +88,9 @@ model ShopifyVariant {
 
   store           Store            @relation(fields: [storeId], references: [id], onDelete: Cascade)
   product         ShopifyProduct   @relation(fields: [productId], references: [id], onDelete: Cascade)
-  inventoryLevels InventoryLevel[]
-  poLines         PurchaseOrderLine[]
+  inventoryLevels  InventoryLevel[]
+  poLines          PurchaseOrderLine[]
+  supplierMappings SupplierVariantMapping[]
 
   @@unique([storeId, shopifyVariantId])
   @@index([storeId])
@@ -135,13 +137,36 @@ model Supplier {
   minimumOrder Int?
   paymentTerms String?
   notes        String?
+  isArchived   Boolean  @default(false)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  store          Store           @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  purchaseOrders PurchaseOrder[]
+  store            Store                    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  purchaseOrders   PurchaseOrder[]
+  variantMappings  SupplierVariantMapping[]
 
   @@index([storeId])
+}
+
+model SupplierVariantMapping {
+  id                  String   @id @default(cuid())
+  storeId             String
+  supplierId          String
+  variantId           String
+  supplierSku         String?
+  supplierCost        Float?
+  supplierLeadTimeDays Int?
+  isPrimary           Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  store    Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  supplier Supplier       @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  variant  ShopifyVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@unique([supplierId, variantId])
+  @@index([storeId])
+  @@index([variantId])
 }
 
 model PurchaseOrder {
