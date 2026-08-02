@@ -120,6 +120,14 @@ Verification note, 2026-08-02:
 - `npm audit --omit=dev --audit-level=high` still reports React Router high-severity advisories. The suggested automatic fix requires breaking dependency changes, so this needs a controlled dependency review before production release.
 - Shopify development-store install was not verified in this run because `shopify app dev --use-localhost --no-color` did not complete in the bounded verification window.
 
+Verification attempt 2, 2026-08-02 (Task 2 retest):
+
+- All preflight checks passed again: install, setup, typecheck, lint, build.
+- `shopify app dev --no-color` immediately prompted for Shopify Partner login via device code flow.
+- Blocker: Shopify CLI requires interactive user authentication at https://accounts.shopify.com/activate-with-code before the app can be created/linked and installed on a development store.
+- `client_id` in `shopify.app.toml` is still empty because the app has not been created in the Partner dashboard yet.
+- Task 2 remains Blocked until the user completes Shopify Partner login interactively.
+
 Do not build:
 
 - custom login
