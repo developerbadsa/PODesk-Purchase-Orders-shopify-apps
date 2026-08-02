@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type {
   ActionFunctionArgs,
   HeadersFunction,
@@ -168,6 +169,7 @@ export default function MappingsPage() {
   const { mappings, suppliers, variants } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
+  const [editingId, setEditingId] = useState<string | null>(null);
   const isSubmitting = navigation.state === "submitting";
 
   const mappedVariantIds = new Set(mappings.map((m) => m.variantId));
@@ -262,6 +264,13 @@ export default function MappingsPage() {
                     <td style={tdStyle}>{m.supplierLeadTimeDays != null ? `${m.supplierLeadTimeDays}d` : "-"}</td>
                     <td style={tdStyle}>{m.isPrimary ? "Yes" : ""}</td>
                     <td style={tdStyle}>
+                      <button
+                        type="button"
+                        onClick={() => setEditingId(editingId === m.id ? null : m.id)}
+                        style={{ ...smallBtnStyle, marginRight: "4px" }}
+                      >
+                        {editingId === m.id ? "Cancel" : "Edit"}
+                      </button>
                       <Form method="post" style={{ display: "inline" }}>
                         <input type="hidden" name="intent" value="delete-mapping" />
                         <input type="hidden" name="mappingId" value={m.id} />
@@ -275,6 +284,36 @@ export default function MappingsPage() {
           </div>
         )}
       </s-section>
+
+      {editingId && (() => {
+        const target = mappings.find((m) => m.id === editingId);
+        if (!target) return null;
+        return (
+          <s-section heading={`Edit Mapping: ${target.productTitle} (${target.variantTitle})`}>
+            <Form method="post" onSubmit={() => setEditingId(null)}>
+              <input type="hidden" name="intent" value="update-mapping" />
+              <input type="hidden" name="mappingId" value={target.id} />
+              <div style={formGridStyle}>
+                <Field label="Supplier SKU" name="supplierSku" defaultValue={target.supplierSku ?? ""} />
+                <Field label="Supplier cost ($)" name="supplierCost" type="number" step="0.01" defaultValue={target.supplierCost != null ? String(target.supplierCost) : ""} />
+                <Field label="Lead time override (days)" name="supplierLeadTimeDays" type="number" defaultValue={target.supplierLeadTimeDays != null ? String(target.supplierLeadTimeDays) : ""} />
+                <label style={{ ...fieldLabelStyle, flexDirection: "row", alignItems: "center", gap: "8px" }}>
+                  <input type="checkbox" name="isPrimary" defaultChecked={target.isPrimary} />
+                  Primary supplier
+                </label>
+              </div>
+              <div style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
+                <button type="submit" disabled={isSubmitting} style={buttonStyle}>
+                  Save mapping update
+                </button>
+                <button type="button" onClick={() => setEditingId(null)} style={smallBtnStyle}>
+                  Cancel
+                </button>
+              </div>
+            </Form>
+          </s-section>
+        );
+      })()}
 
       <s-section heading="Unmapped variants">
         <s-paragraph>

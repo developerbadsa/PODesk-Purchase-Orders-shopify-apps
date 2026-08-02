@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type {
   ActionFunctionArgs,
   HeadersFunction,
@@ -33,11 +34,17 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
 
   if (!po) throw new Response("Purchase order not found", { status: 404 });
 
-  const variants = await prisma.shopifyVariant.findMany({
-    where: { storeId: store.id },
-    include: { product: true },
-    orderBy: [{ product: { title: "asc" } }, { title: "asc" }],
-  });
+  const [variants, mappings] = await Promise.all([
+    prisma.shopifyVariant.findMany({
+      where: { storeId: store.id },
+      include: { product: true },
+      orderBy: [{ product: { title: "asc" } }, { title: "asc" }],
+    }),
+    prisma.supplierVariantMapping.findMany({
+      where: { storeId: store.id, supplierId: po.supplierId },
+      select: { variantId: true, supplierCost: true },
+    }),
+  ]);
 
   return {
     po: {
@@ -66,6 +73,11 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
       productTitle: v.product.title,
       variantTitle: v.title,
       sku: v.sku,
+      unitCostAmount: v.unitCostAmount,
+    })),
+    mappings: mappings.map((m) => ({
+      variantId: m.variantId,
+      supplierCost: m.supplierCost,
     })),
     isDraft: po.status === "DRAFT",
   };
@@ -195,10 +207,21 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
 };
 
 export default function PurchaseOrderDetailPage() {
-  const { po, variants, isDraft } = useLoaderData<typeof loader>();
+  const { po, variants, mappings, isDraft } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";
+  const [unitCost, setUnitCost] = useState("");
+
+  function handleVariantChange(variantId: string) {
+    if (!variantId) return;
+    const mapping = mappings.find((m) => m.variantId === variantId);
+    const variant = variants.find((v) => v.id === variantId);
+    const cost = mapping?.supplierCost ?? variant?.unitCostAmount ?? null;
+    if (cost != null) {
+      setUnitCost(String(cost));
+    }
+  }
 
   return (
     <s-page heading={po.reference}>
@@ -278,16 +301,33 @@ export default function PurchaseOrderDetailPage() {
             <Form method="post">
               <input type="hidden" name="intent" value="add-line" />
               <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: "8px" }}>
-                <select name="variantId" required style={inputStyle}>
+                <select
+                  name="variantId"
+                  required
+                  style={inputStyle}
+                  onChange={(e) => handleVariantChange(e.target.value)}
+                >
                   <option value="">Select variant</option>
-                  {variants.map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {v.productTitle} - {v.variantTitle} {v.sku ? `(${v.sku})` : ""}
-                    </option>
-                  ))}
+                  {variants.map((v) => {
+                    const isMapped = mappings.some((m) => m.variantId === v.id);
+                    return (
+                      <option key={v.id} value={v.id}>
+                        {v.productTitle} - {v.variantTitle} {v.sku ? `(${v.sku})` : ""}
+                        {isMapped ? " ★ mapped" : ""}
+                      </option>
+                    );
+                  })}
                 </select>
                 <input name="quantity" type="number" placeholder="Qty" min="1" required style={inputStyle} />
-                <input name="unitCost" type="number" step="0.01" placeholder="Cost" style={inputStyle} />
+                <input
+                  name="unitCost"
+                  type="number"
+                  step="0.01"
+                  placeholder="Cost"
+                  style={inputStyle}
+                  value={unitCost}
+                  onChange={(e) => setUnitCost(e.target.value)}
+                />
               </div>
               <button type="submit" disabled={isSubmitting} style={{ ...buttonStyle, marginTop: "8px" }}>
                 Add line

@@ -345,8 +345,10 @@ export default function ReorderPage() {
                             Create draft PO
                           </button>
                         </Form>
+                      ) : !v.supplierId ? (
+                        <a href="/app/mappings" style={{ ...linkStyle, fontSize: "12px" }}>Map supplier</a>
                       ) : (
-                        <span style={mutedStyle}>Map supplier first</span>
+                        <span style={{ ...mutedStyle, fontSize: "12px" }}>Stock OK</span>
                       )}
                     </td>
                   </tr>

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type {
   ActionFunctionArgs,
   HeadersFunction,
@@ -13,9 +14,9 @@ type ActionData = { ok: boolean; message: string };
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
   const store = await prisma.store.findUnique({ where: { shop: session.shop } });
-  if (!store) return { purchaseOrders: [], suppliers: [], variants: [] };
+  if (!store) return { purchaseOrders: [], suppliers: [], variants: [], mappings: [] };
 
-  const [purchaseOrders, suppliers, variants] = await Promise.all([
+  const [purchaseOrders, suppliers, variants, mappings] = await Promise.all([
     prisma.purchaseOrder.findMany({
       where: { storeId: store.id },
       include: {
@@ -32,6 +33,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       where: { storeId: store.id },
       include: { product: true },
       orderBy: [{ product: { title: "asc" } }, { title: "asc" }],
+    }),
+    prisma.supplierVariantMapping.findMany({
+      where: { storeId: store.id },
+      select: { supplierId: true, variantId: true, supplierCost: true, supplierSku: true },
     }),
   ]);
 
@@ -52,6 +57,13 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       productTitle: v.product.title,
       variantTitle: v.title,
       sku: v.sku,
+      unitCostAmount: v.unitCostAmount,
+    })),
+    mappings: mappings.map((m) => ({
+      supplierId: m.supplierId,
+      variantId: m.variantId,
+      supplierCost: m.supplierCost,
+      supplierSku: m.supplierSku,
     })),
   };
 };
@@ -128,10 +140,26 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function PurchaseOrdersPage() {
-  const { purchaseOrders, suppliers, variants } = useLoaderData<typeof loader>();
+  const { purchaseOrders, suppliers, variants, mappings } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";
+
+  const [selectedSupplierId, setSelectedSupplierId] = useState("");
+  const [lineCosts, setLineCosts] = useState<Record<number, string>>({});
+
+  function handleVariantChange(index: number, variantId: string) {
+    if (!variantId) return;
+    const mapping = mappings.find(
+      (m) => m.supplierId === selectedSupplierId && m.variantId === variantId
+    );
+    const variant = variants.find((v) => v.id === variantId);
+
+    const cost = mapping?.supplierCost ?? variant?.unitCostAmount ?? null;
+    if (cost != null) {
+      setLineCosts((prev) => ({ ...prev, [index]: String(cost) }));
+    }
+  }
 
   return (
     <s-page heading="Purchase Orders">
@@ -154,7 +182,13 @@ export default function PurchaseOrdersPage() {
             <div style={formGridStyle}>
               <label style={fieldLabelStyle}>
                 Supplier
-                <select name="supplierId" required style={inputStyle}>
+                <select
+                  name="supplierId"
+                  required
+                  style={inputStyle}
+                  value={selectedSupplierId}
+                  onChange={(e) => setSelectedSupplierId(e.target.value)}
+                >
                   <option value="">Select supplier</option>
                   {suppliers.map((s) => (
                     <option key={s.id} value={s.id}>{s.name}</option>
@@ -168,19 +202,37 @@ export default function PurchaseOrdersPage() {
               <div style={{ fontWeight: 600, fontSize: "13px", marginBottom: "8px" }}>Line items</div>
               {[0, 1, 2, 3, 4].map((i) => (
                 <div key={i} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: "8px", marginBottom: "6px" }}>
-                  <select name="lineVariantId" style={inputStyle}>
+                  <select
+                    name="lineVariantId"
+                    style={inputStyle}
+                    onChange={(e) => handleVariantChange(i, e.target.value)}
+                  >
                     <option value="">- select variant -</option>
-                    {variants.map((v) => (
-                      <option key={v.id} value={v.id}>
-                        {v.productTitle} - {v.variantTitle} {v.sku ? `(${v.sku})` : ""}
-                      </option>
-                    ))}
+                    {variants.map((v) => {
+                      const isMapped = mappings.some(
+                        (m) => m.supplierId === selectedSupplierId && m.variantId === v.id
+                      );
+                      return (
+                        <option key={v.id} value={v.id}>
+                          {v.productTitle} - {v.variantTitle} {v.sku ? `(${v.sku})` : ""}
+                          {isMapped ? " ★ mapped" : ""}
+                        </option>
+                      );
+                    })}
                   </select>
                   <input name="lineQuantity" type="number" placeholder="Qty" min="0" style={inputStyle} />
-                  <input name="lineUnitCost" type="number" step="0.01" placeholder="Cost" style={inputStyle} />
+                  <input
+                    name="lineUnitCost"
+                    type="number"
+                    step="0.01"
+                    placeholder="Cost"
+                    style={inputStyle}
+                    value={lineCosts[i] ?? ""}
+                    onChange={(e) => setLineCosts((prev) => ({ ...prev, [i]: e.target.value }))}
+                  />
                 </div>
               ))}
-              <div style={mutedStyle}>Fill at least one line. Empty lines are ignored.</div>
+              <div style={mutedStyle}>Fill at least one line. Mapped SKUs show ★ and prefill unit cost automatically.</div>
             </div>
 
             <label style={fieldLabelStyle}>
