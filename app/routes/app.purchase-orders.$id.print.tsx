@@ -35,6 +35,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
       expectedArrival: po.expectedArrival ? po.expectedArrival.toISOString() : null,
       notes: po.notes,
       createdAt: po.createdAt.toISOString(),
+      updatedAt: po.updatedAt.toISOString(),
       supplier: {
         name: po.supplier.name,
         email: po.supplier.email,
@@ -94,6 +95,9 @@ export default function PurchaseOrderPrintPage() {
             <div style={dateMetaStyle}>
               <div>
                 <strong>Created:</strong> {formatDate(po.createdAt)}
+              </div>
+              <div>
+                <strong>Last updated:</strong> {formatDate(po.updatedAt)}
               </div>
               {po.expectedArrival && (
                 <div>

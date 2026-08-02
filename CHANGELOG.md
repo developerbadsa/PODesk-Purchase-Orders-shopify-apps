@@ -12,10 +12,14 @@
 - Reduced Shopify GraphQL query cost by using smaller product/order pages and disabling nested location-level inventory sync in the dashboard action.
 - Added supplier management: create, list, edit, archive, restore, delete, and detail view.
 - Added SKU-to-supplier mappings with supplier SKU, cost, lead-time override, and primary supplier support.
-- Added purchase order workflows: multi-line create, list, detail, draft edit, status update, duplicate, and delete draft.
-- Added reorder planning page with configurable velocity window, buffer days, target stock days, risk filters, supplier filters, and create-draft-PO action.
-- Replaced Stocky import placeholder with supplier CSV paste/import for early migration workflow.
-- Verified local `npm run setup`, `npm run typecheck`, `npm run lint`, and `npm run build`.
+- Added purchase order print workflow (`/app/purchase-orders/:id/print`) with business document layout, `@media print` styling, and store-scoped access.
+- Hardened purchase order lifecycle and production readiness:
+  - Added PO reference editing for DRAFT POs with store-scoped duplicate checking.
+  - Enforced strict status transition state machine (blocking invalid state jumps and locking terminal `RECEIVED`/`CANCELLED` states).
+  - Added `updatedAt` activity timestamp tracking across PO detail, PO list, and print views.
+  - Updated PO duplicate action to create a new draft PO and redirect directly to the new PO detail view.
+  - Restricted PO deletion strictly to DRAFT POs.
+- Verified local `npm run typecheck`, `npm run lint`, and `npm run build`.
 
 ## Current MVP Limits
 

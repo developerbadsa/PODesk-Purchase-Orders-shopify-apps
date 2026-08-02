@@ -51,7 +51,7 @@ Professional sales goal:
 | Inventory sync | Done (verified) | Dev-store sync verified on 2026-08-02: 17 products, 26 variants, 2 locations. Query cost issue fixed with smaller product/order pages. |
 | Supplier management | Done (code) | Full CRUD: create, list, edit, archive, restore, delete, detail page. Needs browser workflow test after sync milestone. |
 | SKU-supplier mapping | Done (code) | SupplierVariantMapping model, create/delete mappings, supplier SKU/cost/lead override, multiple suppliers per SKU, primary supplier enforcement. Store scope hardened. |
-| Purchase orders | Done (code) | Multi-line PO create, detail, edit draft, status lifecycle, duplicate, delete. Store scope & DRAFT status hardened. |
+| Purchase orders | Done (verified) | Multi-line PO create, detail, draft reference editing, status state machine, duplicate redirect, delete draft, print view, and activity timestamps. Store scope hardened. |
 | Reorder table | Done (code) | Dedicated page with 7/14/30/90d window, buffer, target days, risk classification, suggested qty, and create-draft-PO action from mapped suggestions. |
 | Stocky import | Ongoing | Supplier CSV paste/import works. SKU mapping and PO archive import not done. |
 | Billing | Not Started | Shopify billing not implemented. |

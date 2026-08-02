@@ -5,15 +5,22 @@ import type {
   LoaderFunctionArgs,
 } from "react-router";
 import { Form, useActionData, useLoaderData, useNavigation, redirect } from "react-router";
+import type { PurchaseOrderStatus } from "@prisma/client";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticate } from "../shopify.server";
 import prisma from "../db.server";
 
 type ActionData = { ok: boolean; message: string };
 
-const VALID_STATUSES = [
-  "DRAFT", "SENT", "CONFIRMED", "PARTIALLY_RECEIVED", "RECEIVED", "DELAYED", "CANCELLED",
-] as const;
+const ALLOWED_STATUS_TRANSITIONS: Record<string, string[]> = {
+  DRAFT: ["SENT", "CANCELLED"],
+  SENT: ["CONFIRMED", "DELAYED", "CANCELLED"],
+  CONFIRMED: ["PARTIALLY_RECEIVED", "RECEIVED", "DELAYED", "CANCELLED"],
+  PARTIALLY_RECEIVED: ["RECEIVED", "DELAYED"],
+  DELAYED: ["CONFIRMED", "RECEIVED", "CANCELLED"],
+  RECEIVED: [],
+  CANCELLED: [],
+};
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
@@ -56,6 +63,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
       expectedArrival: po.expectedArrival?.toISOString().slice(0, 10) ?? "",
       notes: po.notes,
       createdAt: po.createdAt.toISOString(),
+      updatedAt: po.updatedAt.toISOString(),
       lines: po.lines.map((l) => ({
         id: l.id,
         variantId: l.variantId,
@@ -97,24 +105,51 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
   const intent = String(formData.get("intent") || "");
 
   if (intent === "update-status") {
-    const status = String(formData.get("status") || "");
-    if (!VALID_STATUSES.includes(status as typeof VALID_STATUSES[number])) {
-      return { ok: false, message: "Invalid status." } satisfies ActionData;
+    const nextStatus = String(formData.get("status") || "");
+    const allowedNext = ALLOWED_STATUS_TRANSITIONS[po.status] || [];
+    if (!allowedNext.includes(nextStatus)) {
+      return {
+        ok: false,
+        message: `Status transition from ${po.status.replaceAll("_", " ")} to ${nextStatus.replaceAll("_", " ")} is not allowed.`,
+      } satisfies ActionData;
     }
     await prisma.purchaseOrder.update({
       where: { id: po.id },
-      data: { status: status as typeof VALID_STATUSES[number] },
+      data: { status: nextStatus as PurchaseOrderStatus },
     });
-    return { ok: true, message: `Status updated to ${status.replaceAll("_", " ")}.` } satisfies ActionData;
+    return { ok: true, message: `Status updated to ${nextStatus.replaceAll("_", " ")}.` } satisfies ActionData;
   }
 
   if (intent === "update-po") {
     if (po.status !== "DRAFT") {
       return { ok: false, message: "Only draft purchase orders can be edited." } satisfies ActionData;
     }
+
+    const newReference = String(formData.get("reference") || "").trim();
+    if (!newReference) {
+      return { ok: false, message: "Purchase order reference cannot be empty." } satisfies ActionData;
+    }
+
+    if (newReference !== po.reference) {
+      const existing = await prisma.purchaseOrder.findFirst({
+        where: {
+          storeId: store.id,
+          reference: newReference,
+          NOT: { id: po.id },
+        },
+      });
+      if (existing) {
+        return {
+          ok: false,
+          message: `Reference "${newReference}" is already used by another purchase order in your store.`,
+        } satisfies ActionData;
+      }
+    }
+
     await prisma.purchaseOrder.update({
       where: { id: po.id },
       data: {
+        reference: newReference,
         expectedArrival: dateFromForm(formData.get("expectedArrival")),
         notes: optionalString(formData.get("notes")),
       },
@@ -176,7 +211,7 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
     if (!original) return { ok: false, message: "PO not found." } satisfies ActionData;
 
     const reference = `PO-${Date.now()}`;
-    await prisma.purchaseOrder.create({
+    const newPo = await prisma.purchaseOrder.create({
       data: {
         storeId: store.id,
         supplierId: original.supplierId,
@@ -191,7 +226,7 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
         },
       },
     });
-    return { ok: true, message: `Duplicated as ${reference}.` } satisfies ActionData;
+    return redirect(`/app/purchase-orders/${newPo.id}`);
   }
 
   if (intent === "delete") {
@@ -223,6 +258,9 @@ export default function PurchaseOrderDetailPage() {
     }
   }
 
+  const allowedTransitions = ALLOWED_STATUS_TRANSITIONS[po.status] || [];
+  const isTerminalState = allowedTransitions.length === 0;
+
   return (
     <s-page heading={po.reference}>
       {actionData?.message ? (
@@ -236,6 +274,7 @@ export default function PurchaseOrderDetailPage() {
             <div><strong>Status:</strong> <span style={statusBadge(po.status)}>{po.status.replaceAll("_", " ")}</span></div>
             <div><strong>Total cost:</strong> {po.totalCost > 0 ? `$${po.totalCost.toFixed(2)}` : "-"}</div>
             <div><strong>Created:</strong> {formatDate(po.createdAt)}</div>
+            <div><strong>Last updated:</strong> {formatDate(po.updatedAt)}</div>
           </div>
           <a
             href={`/app/purchase-orders/${po.id}/print`}
@@ -247,21 +286,25 @@ export default function PurchaseOrderDetailPage() {
       </s-section>
 
       <s-section heading="Status">
-        <Form method="post" style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-          <input type="hidden" name="intent" value="update-status" />
-          {VALID_STATUSES.map((s) => (
-            <button
-              key={s}
-              type="submit"
-              name="status"
-              value={s}
-              disabled={po.status === s || isSubmitting}
-              style={po.status === s ? activeStatusBtn : statusBtn}
-            >
-              {s.replaceAll("_", " ")}
-            </button>
-          ))}
-        </Form>
+        {isTerminalState ? (
+          <div style={mutedStyle}>No further status changes available for {po.status.replaceAll("_", " ")} purchase orders.</div>
+        ) : (
+          <Form method="post" style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+            <input type="hidden" name="intent" value="update-status" />
+            {allowedTransitions.map((s) => (
+              <button
+                key={s}
+                type="submit"
+                name="status"
+                value={s}
+                disabled={isSubmitting}
+                style={statusBtn}
+              >
+                Move to {s.replaceAll("_", " ")}
+              </button>
+            ))}
+          </Form>
+        )}
       </s-section>
 
       <s-section heading={`Line items (${po.lines.length})`}>
@@ -350,6 +393,7 @@ export default function PurchaseOrderDetailPage() {
           <Form method="post">
             <input type="hidden" name="intent" value="update-po" />
             <div style={formGridStyle}>
+              <Field label="PO reference" name="reference" type="text" required defaultValue={po.reference} />
               <Field label="Expected arrival" name="expectedArrival" type="date" defaultValue={po.expectedArrival} />
             </div>
             <label style={fieldLabelStyle}>
@@ -433,7 +477,6 @@ const buttonStyle = { border: "0", borderRadius: "6px", padding: "10px 14px", ba
 const smallBtnStyle = { border: "1px solid #c9cccf", borderRadius: "4px", padding: "4px 10px", background: "#fff", cursor: "pointer", fontSize: "12px" } as const;
 const dangerBtnStyle = { border: "1px solid #d72c0d", borderRadius: "6px", padding: "10px 14px", background: "#fff", color: "#d72c0d", fontWeight: 650, cursor: "pointer" } as const;
 const statusBtn = { border: "1px solid #c9cccf", borderRadius: "4px", padding: "6px 12px", background: "#fff", cursor: "pointer", fontSize: "12px" } as const;
-const activeStatusBtn = { ...statusBtn, background: "#008060", color: "#fff", borderColor: "#008060" } as const;
 const linkStyle = { color: "#2c6ecb", textDecoration: "none" } as const;
 const printBtnLinkStyle = { display: "inline-block", border: "1px solid #008060", borderRadius: "6px", padding: "8px 14px", background: "#008060", color: "#fff", fontWeight: 650, textDecoration: "none", fontSize: "13px" } as const;
 const mutedStyle = { color: "#6d7175", fontSize: "13px", marginTop: "4px" } as const;
