@@ -283,6 +283,7 @@ export default function PurchaseOrdersPage() {
                   <th style={thStyle}>Total</th>
                   <th style={thStyle}>Expected</th>
                   <th style={thStyle}>Created</th>
+                  <th style={thStyle}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -299,6 +300,12 @@ export default function PurchaseOrdersPage() {
                     <td style={tdStyle}>{po.totalCost > 0 ? `$${po.totalCost.toFixed(2)}` : "-"}</td>
                     <td style={tdStyle}>{po.expectedArrival ? formatDate(po.expectedArrival) : "-"}</td>
                     <td style={tdStyle}>{formatDate(po.createdAt)}</td>
+                    <td style={tdStyle}>
+                      <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                        <a href={`/app/purchase-orders/${po.id}`} style={linkStyle}>View</a>
+                        <a href={`/app/purchase-orders/${po.id}/print`} style={linkStyle}>Print</a>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>

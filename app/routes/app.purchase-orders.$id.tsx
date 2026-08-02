@@ -230,11 +230,19 @@ export default function PurchaseOrderDetailPage() {
       ) : null}
 
       <s-section heading="Details">
-        <div style={metaGridStyle}>
-          <div><strong>Supplier:</strong> <a href={`/app/suppliers/${po.supplierId}`} style={linkStyle}>{po.supplierName}</a></div>
-          <div><strong>Status:</strong> <span style={statusBadge(po.status)}>{po.status.replaceAll("_", " ")}</span></div>
-          <div><strong>Total cost:</strong> {po.totalCost > 0 ? `$${po.totalCost.toFixed(2)}` : "-"}</div>
-          <div><strong>Created:</strong> {formatDate(po.createdAt)}</div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px" }}>
+          <div style={metaGridStyle}>
+            <div><strong>Supplier:</strong> <a href={`/app/suppliers/${po.supplierId}`} style={linkStyle}>{po.supplierName}</a></div>
+            <div><strong>Status:</strong> <span style={statusBadge(po.status)}>{po.status.replaceAll("_", " ")}</span></div>
+            <div><strong>Total cost:</strong> {po.totalCost > 0 ? `$${po.totalCost.toFixed(2)}` : "-"}</div>
+            <div><strong>Created:</strong> {formatDate(po.createdAt)}</div>
+          </div>
+          <a
+            href={`/app/purchase-orders/${po.id}/print`}
+            style={printBtnLinkStyle}
+          >
+            Print PO
+          </a>
         </div>
       </s-section>
 
@@ -357,6 +365,7 @@ export default function PurchaseOrderDetailPage() {
 
       <s-section heading="Actions">
         <div style={{ display: "flex", gap: "8px" }}>
+          <a href={`/app/purchase-orders/${po.id}/print`} style={smallBtnStyle}>Print PO</a>
           <Form method="post" style={{ display: "inline" }}>
             <input type="hidden" name="intent" value="duplicate" />
             <button type="submit" disabled={isSubmitting} style={smallBtnStyle}>Duplicate PO</button>
@@ -426,6 +435,7 @@ const dangerBtnStyle = { border: "1px solid #d72c0d", borderRadius: "6px", paddi
 const statusBtn = { border: "1px solid #c9cccf", borderRadius: "4px", padding: "6px 12px", background: "#fff", cursor: "pointer", fontSize: "12px" } as const;
 const activeStatusBtn = { ...statusBtn, background: "#008060", color: "#fff", borderColor: "#008060" } as const;
 const linkStyle = { color: "#2c6ecb", textDecoration: "none" } as const;
+const printBtnLinkStyle = { display: "inline-block", border: "1px solid #008060", borderRadius: "6px", padding: "8px 14px", background: "#008060", color: "#fff", fontWeight: 650, textDecoration: "none", fontSize: "13px" } as const;
 const mutedStyle = { color: "#6d7175", fontSize: "13px", marginTop: "4px" } as const;
 const tableWrapStyle = { overflowX: "auto" } as const;
 const tableStyle = { width: "100%", borderCollapse: "collapse", fontSize: "14px" } as const;
