@@ -146,19 +146,40 @@ export default function PurchaseOrdersPage() {
   const isSubmitting = navigation.state === "submitting";
 
   const [selectedSupplierId, setSelectedSupplierId] = useState("");
+  const [lineVariants, setLineVariants] = useState<Record<number, string>>({});
   const [lineCosts, setLineCosts] = useState<Record<number, string>>({});
 
-  function handleVariantChange(index: number, variantId: string) {
-    if (!variantId) return;
+  function getVariantCost(supplierId: string, variantId: string): string | null {
+    if (!variantId) return null;
     const mapping = mappings.find(
-      (m) => m.supplierId === selectedSupplierId && m.variantId === variantId
+      (m) => m.supplierId === supplierId && m.variantId === variantId
     );
     const variant = variants.find((v) => v.id === variantId);
-
     const cost = mapping?.supplierCost ?? variant?.unitCostAmount ?? null;
-    if (cost != null) {
-      setLineCosts((prev) => ({ ...prev, [index]: String(cost) }));
+    return cost != null ? String(cost) : null;
+  }
+
+  function handleSupplierChange(newSupplierId: string) {
+    setSelectedSupplierId(newSupplierId);
+    const nextCosts: Record<number, string> = {};
+    for (const [indexStr, variantId] of Object.entries(lineVariants)) {
+      const idx = Number(indexStr);
+      if (variantId) {
+        const cost = getVariantCost(newSupplierId, variantId);
+        nextCosts[idx] = cost ?? "";
+      }
     }
+    setLineCosts(nextCosts);
+  }
+
+  function handleVariantChange(index: number, variantId: string) {
+    setLineVariants((prev) => ({ ...prev, [index]: variantId }));
+    if (!variantId) {
+      setLineCosts((prev) => ({ ...prev, [index]: "" }));
+      return;
+    }
+    const cost = getVariantCost(selectedSupplierId, variantId);
+    setLineCosts((prev) => ({ ...prev, [index]: cost ?? "" }));
   }
 
   return (
@@ -187,7 +208,7 @@ export default function PurchaseOrdersPage() {
                   required
                   style={inputStyle}
                   value={selectedSupplierId}
-                  onChange={(e) => setSelectedSupplierId(e.target.value)}
+                  onChange={(e) => handleSupplierChange(e.target.value)}
                 >
                   <option value="">Select supplier</option>
                   {suppliers.map((s) => (
@@ -205,6 +226,7 @@ export default function PurchaseOrdersPage() {
                   <select
                     name="lineVariantId"
                     style={inputStyle}
+                    value={lineVariants[i] ?? ""}
                     onChange={(e) => handleVariantChange(i, e.target.value)}
                   >
                     <option value="">- select variant -</option>

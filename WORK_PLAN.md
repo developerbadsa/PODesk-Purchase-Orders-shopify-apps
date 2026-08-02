@@ -59,7 +59,7 @@ Professional sales goal:
 | Sales materials | Ongoing | Outreach copy exists. Demo/video/case study not done. |
 | GitHub repo | Done | Main branch pushed to GitHub remote. |
 | Local verification | Done | 2026-08-02: setup, typecheck, lint, build all passed. Shopify dev install and inventory sync verified. |
-| Security audit | Blocked | `npm audit` reports high vulnerabilities that require breaking dependency changes; do not force-fix blindly. |
+| Security audit | Blocked | High React Router vulnerabilities in Shopify app template dependencies. Launch blocker until safe upstream patch is available; do not force-fix blindly. |
 
 ## Phase 0: Foundation And Repo
 

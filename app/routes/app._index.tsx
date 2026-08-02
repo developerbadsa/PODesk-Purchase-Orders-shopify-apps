@@ -18,8 +18,11 @@ type ActionData = {
 const STOCKOUT_WINDOW_DAYS = 14;
 const SALES_WINDOW_DAYS = 30;
 const PRODUCTS_PER_PAGE = 25;
+// MVP safety limit: limit nested variants per product to prevent Shopify GraphQL query cost errors
+const PRODUCT_VARIANTS_PER_PRODUCT_LIMIT = 100;
 const ORDERS_PER_PAGE = 25;
-const ORDER_LINE_ITEMS_PER_PAGE = 25;
+// MVP safety limit: limit nested line items per order to prevent Shopify GraphQL query cost errors
+const ORDER_LINE_ITEMS_PER_ORDER_LIMIT = 25;
 const MAX_PRODUCT_PAGES = 40;
 const MAX_ORDER_PAGES = 10;
 
@@ -121,7 +124,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
     return {
       ok: true,
-      message: `Synced ${synced.products} products, ${synced.variants} variants, ${synced.locations} locations. Orders scanned: ${synced.ordersScanned}. Location inventory sync is intentionally disabled in dev until bulk sync is added.${modeNote}`,
+      message: `Basic MVP sync complete: synced ${synced.products} products, ${synced.variants} variants, ${synced.locations} locations. Orders scanned: ${synced.ordersScanned}. Note: Nested limits applied (${PRODUCT_VARIANTS_PER_PRODUCT_LIMIT} variants/product, ${ORDER_LINE_ITEMS_PER_ORDER_LIMIT} lines/order). Location inventory sync is intentionally disabled in dev until bulk sync is added.${modeNote}`,
     } satisfies ActionData;
   } catch (error) {
     const msg = normalizeShopifyError(error);
@@ -387,7 +390,10 @@ async function syncShopifyInventory(admin: AdminClient, storeId: string) {
   let pageCount = 0;
 
   while (hasNextProductPage && pageCount < MAX_PRODUCT_PAGES) {
-    const variables: Record<string, unknown> = { first: PRODUCTS_PER_PAGE };
+    const variables: Record<string, unknown> = {
+      first: PRODUCTS_PER_PAGE,
+      variantsFirst: PRODUCT_VARIANTS_PER_PRODUCT_LIMIT,
+    };
     if (productCursor) variables.after = productCursor;
 
     const productData = await shopifyGraphql(admin, PRODUCTS_BASIC_QUERY, variables);
@@ -494,7 +500,7 @@ async function syncShopifyInventory(admin: AdminClient, storeId: string) {
 
   const ordersResult = await tryShopifyGraphql(admin, ORDERS_QUERY, {
     first: ORDERS_PER_PAGE,
-    lineItemsFirst: ORDER_LINE_ITEMS_PER_PAGE,
+    lineItemsFirst: ORDER_LINE_ITEMS_PER_ORDER_LIMIT,
     orderQuery: `created_at:>=${thirtyDaysAgoIsoDate()}`,
   });
   const soldByVariant = new Map<string, number>();
@@ -519,7 +525,7 @@ async function syncShopifyInventory(admin: AdminClient, storeId: string) {
       if (!hasNextOrderPage || orderPageCount + 1 >= MAX_ORDER_PAGES) break;
       const nextOrderData = await shopifyGraphql(admin, ORDERS_QUERY, {
         first: ORDERS_PER_PAGE,
-        lineItemsFirst: ORDER_LINE_ITEMS_PER_PAGE,
+        lineItemsFirst: ORDER_LINE_ITEMS_PER_ORDER_LIMIT,
         after: orderCursor,
         orderQuery: `created_at:>=${thirtyDaysAgoIsoDate()}`,
       });
@@ -624,8 +630,9 @@ const LOCATIONS_QUERY = `#graphql
     }
   }`;
 
+// TODO: Implement Shopify Bulk Operations (bulkOperationRunQuery) or paginated nested variant queries for large products (100+ variants).
 const PRODUCTS_BASIC_QUERY = `#graphql
-  query PODeskProductsBasic($first: Int!, $after: String) {
+  query PODeskProductsBasic($first: Int!, $after: String, $variantsFirst: Int!) {
     products(first: $first, after: $after) {
       pageInfo {
         hasNextPage
@@ -637,7 +644,7 @@ const PRODUCTS_BASIC_QUERY = `#graphql
         handle
         status
         vendor
-        variants(first: 100) {
+        variants(first: $variantsFirst) {
           nodes {
             id
             title
@@ -658,6 +665,7 @@ const PRODUCTS_BASIC_QUERY = `#graphql
     }
   }`;
 
+// TODO: Implement Shopify Bulk Operations or paginated nested line item queries for enterprise-grade order sync (25+ line items per order).
 const ORDERS_QUERY = `#graphql
   query PODeskOrders($first: Int!, $after: String, $orderQuery: String!, $lineItemsFirst: Int!) {
     orders(first: $first, after: $after, query: $orderQuery, sortKey: CREATED_AT, reverse: true) {

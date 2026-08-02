@@ -18,6 +18,9 @@ const SAMPLE_CSV = `name,email,phone,leadTimeDays,paymentTerms,minimumOrder,note
 Acme Wholesale,buying@acme.test,+1 555 0100,14,Net 30,500,Main apparel supplier
 North Supply,orders@north.test,+1 555 0101,21,Prepaid,250,Backup supplier`;
 
+const MAX_CSV_CHARACTERS = 200_000;
+const MAX_CSV_ROWS = 500;
+
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
   const store = await prisma.store.findUnique({ where: { shop: session.shop } });
@@ -51,18 +54,33 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     return { ok: false, message: "Paste supplier CSV before importing." } satisfies ActionData;
   }
 
+  if (csv.length > MAX_CSV_CHARACTERS) {
+    return {
+      ok: false,
+      message: `CSV text is too large (${csv.length.toLocaleString()} characters). Limit is ${MAX_CSV_CHARACTERS.toLocaleString()} characters.`,
+    } satisfies ActionData;
+  }
+
   try {
     const rows = parseCsv(csv);
     if (rows.length === 0) {
-      return { ok: false, message: "CSV has no data rows." } satisfies ActionData;
+      return { ok: false, message: "CSV has no valid data rows or header line." } satisfies ActionData;
+    }
+
+    if (rows.length > MAX_CSV_ROWS) {
+      return {
+        ok: false,
+        message: `CSV contains too many rows (${rows.length} rows). Limit is ${MAX_CSV_ROWS} rows per import.`,
+      } satisfies ActionData;
     }
 
     const requiredColumns = ["name"];
     const missingColumns = requiredColumns.filter((column) => !(column in rows[0]));
     if (missingColumns.length > 0) {
+      const foundHeaders = Object.keys(rows[0]).join(", ");
       return {
         ok: false,
-        message: `CSV is missing required column: ${missingColumns.join(", ")}`,
+        message: `CSV is missing required column: ${missingColumns.join(", ")}. Found headers: ${foundHeaders || "none"}`,
       } satisfies ActionData;
     }
 
@@ -228,11 +246,23 @@ function Column({
   );
 }
 
+function normalizeHeader(raw: string): string {
+  const clean = raw.trim().toLowerCase().replace(/[\s_-]+/g, "");
+  if (clean === "name" || clean === "suppliername" || clean === "company") return "name";
+  if (clean === "email" || clean === "supplieremail") return "email";
+  if (clean === "phone" || clean === "telephone" || clean === "mobile") return "phone";
+  if (clean === "leadtimedays" || clean === "leadtime" || clean === "leadtimeindays") return "leadTimeDays";
+  if (clean === "paymentterms" || clean === "terms" || clean === "payterms") return "paymentTerms";
+  if (clean === "minimumorder" || clean === "moq" || clean === "minorder" || clean === "minimumorderquantity") return "minimumOrder";
+  if (clean === "notes" || clean === "note" || clean === "comments") return "notes";
+  return raw.trim();
+}
+
 function parseCsv(csv: string) {
   const rows = parseCsvRows(csv);
   if (rows.length < 2) return [];
 
-  const headers = rows[0].map((header) => header.trim());
+  const headers = rows[0].map((header) => normalizeHeader(header));
   return rows.slice(1).map((cells) => {
     const row: Record<string, string> = {};
     headers.forEach((header, index) => {

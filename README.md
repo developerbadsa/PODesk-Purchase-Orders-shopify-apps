@@ -93,3 +93,11 @@ The first product must prove:
 3. Merchants can create simple purchase orders.
 4. Merchants can see which SKUs need reorder attention.
 5. Stocky migration/import pain is real enough to pay for.
+
+## Security & Known Launch Blockers
+
+> [!WARNING]
+> **Production Release Blocker**: `npm audit` reports high-severity security advisories stemming from upstream `@react-router/*` / Shopify app scaffold dependencies.
+> Do NOT run `npm audit fix --force` as it causes breaking architectural changes to `@shopify/shopify-app-react-router`.
+> Production launch is blocked until Shopify / React Router releases safe, compatible patch updates.
+

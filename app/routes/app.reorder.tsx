@@ -225,14 +225,14 @@ export default function ReorderPage() {
       <s-section heading="Filters">
         <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", alignItems: "end" }}>
           <label style={fieldLabelStyle}>
-            Sales window
+            Sales window model
             <select
               value={currentWindow}
               onChange={(e) => updateFilter("window", e.target.value)}
               style={inputStyle}
             >
               {SALES_WINDOWS.map((w) => (
-                <option key={w} value={String(w)}>{w} days</option>
+                <option key={w} value={String(w)}>{w} days (velocity est.)</option>
               ))}
             </select>
           </label>
@@ -285,7 +285,7 @@ export default function ReorderPage() {
           </label>
         </div>
         <div style={{ ...mutedStyle, marginTop: "8px" }}>
-          Showing {data.filteredCount} of {data.totalCount} tracked variants
+          Showing {data.filteredCount} of {data.totalCount} tracked variants. Sales figures for 7, 14, and 90 days are estimated from your synced 30-day sales velocity model.
         </div>
       </s-section>
 
@@ -300,7 +300,7 @@ export default function ReorderPage() {
                   <th style={thStyle}>Product</th>
                   <th style={thStyle}>SKU</th>
                   <th style={thStyle}>Stock</th>
-                  <th style={thStyle}>Sold ({currentWindow}d)</th>
+                  <th style={thStyle}>Est. sold ({currentWindow}d)</th>
                   <th style={thStyle}>Avg/day</th>
                   <th style={thStyle}>Days left</th>
                   <th style={thStyle}>Supplier</th>
