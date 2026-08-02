@@ -15,6 +15,8 @@ type ActionData = {
   message: string;
 };
 
+type SyncMode = "full" | "basic";
+
 const STOCKOUT_WINDOW_DAYS = 14;
 const SALES_WINDOW_DAYS = 30;
 const MAX_PRODUCT_PAGES = 20; // 50 products per page = up to 1000 products
@@ -114,9 +116,13 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   if (intent === "sync") {
     try {
       const synced = await syncShopifyInventory(admin, store.id);
+      const modeNote =
+        synced.mode === "basic"
+          ? " Basic sync completed without location-level inventory. Reinstall or update app scopes for location-level sync."
+          : "";
       return {
         ok: true,
-        message: `Synced ${synced.products} products, ${synced.variants} variants, ${synced.locations} locations. Orders scanned: ${synced.ordersScanned}.`,
+        message: `Synced ${synced.products} products, ${synced.variants} variants, ${synced.locations} locations. Orders scanned: ${synced.ordersScanned}.${modeNote}`,
       } satisfies ActionData;
     } catch (error) {
       const msg = error instanceof Error ? error.message : "Unknown sync error";
@@ -278,9 +284,13 @@ async function getOrCreateStore(shop: string) {
 // ---------------------------------------------------------------------------
 
 async function syncShopifyInventory(admin: AdminClient, storeId: string) {
-  // 1. Sync locations (single query, stores rarely have >25)
-  const locationData = await shopifyGraphql(admin, LOCATIONS_QUERY, {});
-  const locationNodes = locationData.locations?.nodes ?? [];
+  // 1. Sync locations when the installed app token has location access.
+  // During local dev Shopify can keep an older token after scopes change, so
+  // the sync falls back to product-level inventory instead of failing outright.
+  const locationResult = await tryShopifyGraphql(admin, LOCATIONS_QUERY, {});
+  const canSyncLocations = locationResult.ok;
+  const syncMode: SyncMode = canSyncLocations ? "full" : "basic";
+  const locationNodes = canSyncLocations ? locationResult.data.locations?.nodes ?? [] : [];
   const syncedLocationIds = new Set<string>();
 
   for (const location of locationNodes) {
@@ -308,7 +318,11 @@ async function syncShopifyInventory(admin: AdminClient, storeId: string) {
     const variables: Record<string, unknown> = { first: 50 };
     if (productCursor) variables.after = productCursor;
 
-    const productData = await shopifyGraphql(admin, PRODUCTS_QUERY, variables);
+    const productData = await shopifyGraphql(
+      admin,
+      canSyncLocations ? PRODUCTS_WITH_LEVELS_QUERY : PRODUCTS_BASIC_QUERY,
+      variables,
+    );
     const products = productData.products;
     if (!products) break;
 
@@ -333,7 +347,10 @@ async function syncShopifyInventory(admin: AdminClient, storeId: string) {
       productCount += 1;
 
       for (const variant of product.variants.nodes) {
-        const locationQuantities = variant.inventoryItem.inventoryLevels.nodes;
+        const locationQuantities =
+          "inventoryLevels" in variant.inventoryItem
+            ? variant.inventoryItem.inventoryLevels.nodes
+            : [];
         const availableFromLocations = locationQuantities.reduce(
           (total: number, level: InventoryLevelNode) =>
             total + availableQuantity(level.quantities),
@@ -467,6 +484,7 @@ async function syncShopifyInventory(admin: AdminClient, storeId: string) {
     variants: variantCount,
     locations: syncedLocationIds.size,
     ordersScanned,
+    mode: syncMode,
   };
 }
 
@@ -498,6 +516,23 @@ async function shopifyGraphql(
   return payload.data as any;
 }
 
+async function tryShopifyGraphql(
+  admin: AdminClient,
+  query: string,
+  variables: Record<string, unknown>,
+) {
+  try {
+    return { ok: true as const, data: await shopifyGraphql(admin, query, variables) };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (message.toLowerCase().includes("access denied")) {
+      console.warn("[PODesk] Shopify scope fallback:", message);
+      return { ok: false as const, message };
+    }
+    throw error;
+  }
+}
+
 const LOCATIONS_QUERY = `#graphql
   query PODeskLocations {
     locations(first: 25) {
@@ -509,7 +544,7 @@ const LOCATIONS_QUERY = `#graphql
     }
   }`;
 
-const PRODUCTS_QUERY = `#graphql
+const PRODUCTS_WITH_LEVELS_QUERY = `#graphql
   query PODeskProducts($first: Int!, $after: String) {
     products(first: $first, after: $after) {
       pageInfo {
@@ -549,6 +584,40 @@ const PRODUCTS_QUERY = `#graphql
                     isActive
                   }
                 }
+              }
+            }
+          }
+        }
+      }
+    }
+  }`;
+
+const PRODUCTS_BASIC_QUERY = `#graphql
+  query PODeskProductsBasic($first: Int!, $after: String) {
+    products(first: $first, after: $after) {
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      nodes {
+        id
+        title
+        handle
+        status
+        vendor
+        variants(first: 100) {
+          nodes {
+            id
+            title
+            sku
+            barcode
+            inventoryQuantity
+            inventoryItem {
+              id
+              tracked
+              unitCost {
+                amount
+                currencyCode
               }
             }
           }
