@@ -1,6 +1,5 @@
 import type { HeadersFunction, LoaderFunctionArgs } from "react-router";
 import {
-  isRouteErrorResponse,
   Outlet,
   useLoaderData,
   useRouteError,
@@ -40,29 +39,6 @@ export default function App() {
 // Shopify needs React Router to catch some thrown responses, so that their headers are included in the response.
 export function ErrorBoundary() {
   const error = useRouteError();
-
-  if (isRouteErrorResponse(error) && error.status === 401) {
-    return (
-      <main
-        style={{
-          display: "grid",
-          gap: "12px",
-          padding: "40px",
-          maxWidth: "720px",
-        }}
-      >
-        <h1 style={{ margin: 0 }}>Reconnect PODesk</h1>
-        <p style={{ margin: 0, lineHeight: 1.5 }}>
-          Shopify could not verify the current app session. This usually happens
-          after reinstalling a development app or changing production
-          configuration.
-        </p>
-        <a href="/" target="_top" rel="noreferrer">
-          Open PODesk login
-        </a>
-      </main>
-    );
-  }
 
   return boundary.error(error);
 }
