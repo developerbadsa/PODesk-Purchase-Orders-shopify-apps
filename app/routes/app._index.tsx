@@ -226,7 +226,14 @@ export default function Index() {
       <s-section heading="Inventory buying workspace">
         <div style={heroGridStyle}>
           <div>
-            <div style={eyebrowStyle}>Connected store</div>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "6px" }}>
+              <img
+                src="/brand/podesk-app-icon.png"
+                alt="PODesk"
+                style={{ width: "32px", height: "32px", borderRadius: "6px", flexShrink: 0 }}
+              />
+              <span style={eyebrowStyle}>Connected store</span>
+            </div>
             <h2 style={heroTitleStyle}>{data.shop}</h2>
             <p style={bodyStyle}>
               Sync Shopify SKUs, connect suppliers, map supplier costs, and create

@@ -10,7 +10,7 @@ Status: **Beta Release / Free Listing**
 
 - **App Name**: `PODesk: Purchase Orders`
 - **Subtitle**: `Inventory reorder alerts, supplier purchase orders & Stocky CSV import.` *(Within 63 characters limit)*
-- **App Icon Description**: Clean corporate desk icon with PO document and upward stock arrow on dark blue gradient.
+- **App Icon Description**: Dark rounded square icon with a white purchase order document, simple checklist/grid lines, and a teal checkmark.
 
 ---
 

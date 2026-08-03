@@ -35,3 +35,7 @@ pnpm-lock.yaml
 .gemini/
 .github/
 
+# Raw logo drafts; final brand assets live in product/assets/brand and public/brand
+product/assets/Gemini_Generated_Image_*.png
+product/assets/logo/
+

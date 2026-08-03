@@ -11,6 +11,11 @@ export default function GettingStartedPage() {
   return (
     <div style={containerStyle}>
       <header style={headerStyle}>
+        <img
+          src="/brand/podesk-logo-horizontal.png"
+          alt="PODesk"
+          style={{ maxWidth: "200px", height: "auto", display: "block", marginBottom: "16px" }}
+        />
         <h1 style={{ margin: "0 0 8px 0", fontSize: "28px" }}>Getting Started with PODesk</h1>
         <p style={{ margin: 0, color: "#616161", fontSize: "14px" }}>
           <strong>PODesk: Purchase Orders</strong> &bull; Merchant Onboarding Guide
