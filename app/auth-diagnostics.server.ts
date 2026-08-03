@@ -2,6 +2,7 @@ function summarizeRequest(request: Request) {
   const url = new URL(request.url);
   const authorization = request.headers.get("authorization");
   const referer = request.headers.get("referer");
+  const tokenSummary = summarizeSessionToken(request);
 
   return {
     method: request.method,
@@ -16,12 +17,79 @@ function summarizeRequest(request: Request) {
     authorizationType: authorization?.startsWith("Bearer ") ? "Bearer" : authorization ? "Other" : "None",
     hasShopifyBounceHeader: request.headers.has("x-shopify-bounce"),
     refererOrigin: referer ? safeOrigin(referer) : null,
+    ...tokenSummary,
   };
 }
 
 function safeOrigin(value: string) {
   try {
     return new URL(value).origin;
+  } catch {
+    return "invalid";
+  }
+}
+
+function summarizeSessionToken(request: Request) {
+  const url = new URL(request.url);
+  const authorization = request.headers.get("authorization");
+  const bearerToken = authorization?.startsWith("Bearer ")
+    ? authorization.slice("Bearer ".length)
+    : null;
+  const idToken = url.searchParams.get("id_token");
+  const token = bearerToken || idToken;
+
+  if (!token) {
+    return {
+      sessionTokenSource: null,
+    };
+  }
+
+  const payload = decodeJwtPayload(token);
+  const configuredApiKey = process.env.SHOPIFY_API_KEY || "";
+  const nowSeconds = Math.floor(Date.now() / 1000);
+
+  return {
+    sessionTokenSource: bearerToken ? "authorization" : "id_token",
+    tokenAudMatchesConfiguredApiKey:
+      typeof payload?.aud === "string" && Boolean(configuredApiKey)
+        ? payload.aud === configuredApiKey
+        : null,
+    tokenAudSuffix: typeof payload?.aud === "string" ? maskSuffix(payload.aud) : null,
+    configuredApiKeySuffix: configuredApiKey ? maskSuffix(configuredApiKey) : null,
+    tokenDestHost: typeof payload?.dest === "string" ? safeHost(payload.dest) : null,
+    tokenIssHost: typeof payload?.iss === "string" ? safeHost(payload.iss) : null,
+    tokenExpInSeconds:
+      typeof payload?.exp === "number" ? payload.exp - nowSeconds : null,
+    tokenNbfInSeconds:
+      typeof payload?.nbf === "number" ? payload.nbf - nowSeconds : null,
+  };
+}
+
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
+  const payloadSegment = token.split(".")[1];
+
+  if (!payloadSegment) return null;
+
+  try {
+    const normalized = payloadSegment
+      .replace(/-/g, "+")
+      .replace(/_/g, "/")
+      .padEnd(Math.ceil(payloadSegment.length / 4) * 4, "=");
+    const json = Buffer.from(normalized, "base64").toString("utf8");
+
+    return JSON.parse(json) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+function maskSuffix(value: string) {
+  return value.length > 6 ? `...${value.slice(-6)}` : "***";
+}
+
+function safeHost(value: string) {
+  try {
+    return new URL(value).host;
   } catch {
     return "invalid";
   }

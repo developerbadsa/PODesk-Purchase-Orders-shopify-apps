@@ -7,6 +7,7 @@ import {
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { AppProvider } from "@shopify/shopify-app-react-router/react";
 
+import { recoverFromInvalidEmbeddedSession } from "../auth-recovery.server";
 import {
   logAuthFailure,
   logAuthRequest,
@@ -22,6 +23,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     logAuthSuccess("app-loader:success", request, session.shop);
   } catch (error) {
     logAuthFailure("app-loader:thrown", request, error);
+    const recoveryResponse = recoverFromInvalidEmbeddedSession(request, error);
+
+    if (recoveryResponse) {
+      throw recoveryResponse;
+    }
+
     throw error;
   }
 
