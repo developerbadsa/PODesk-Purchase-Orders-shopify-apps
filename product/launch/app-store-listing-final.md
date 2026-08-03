@@ -113,5 +113,5 @@ PODesk requests **4 read-only access scopes**:
 
 ## 9. Support Contact
 
-- **Support Email**: `support@podesk.app` *(Note: Replace with active support mailbox before public launch)*
+- **Support Email**: `podeskapp@gmail.com`
 - **Developer Name**: `[Your Business / Developer Name Placeholder]`

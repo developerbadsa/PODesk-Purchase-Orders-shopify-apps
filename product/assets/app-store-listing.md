@@ -101,8 +101,8 @@ If you are currently managing supplier orders on spreadsheets, losing sales due 
 
 ---
 
-## Merchant Support & Legal Placeholders
+## Merchant Support & Legal Details
 
-- **Support Email**: `support@podesk.app` (Placeholder)
-- **Privacy Policy URL**: `https://podesk.app/privacy` (Placeholder)
-- **Terms of Service URL**: `https://podesk.app/terms` (Placeholder)
+- **Support Email**: `podeskapp@gmail.com`
+- **Privacy Policy URL**: `https://podesk.app/privacy`
+- **Terms of Service URL**: `https://podesk.app/terms`

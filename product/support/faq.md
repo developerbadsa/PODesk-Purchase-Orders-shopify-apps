@@ -73,4 +73,4 @@ Currently, PODesk syncs all your active Shopify locations and calculates reorder
 ---
 
 ### Q11: How do I uninstall or get my data removed?
-Uninstalling is standard: go to **Shopify Admin > Settings > Apps and sales channels > Uninstall**. Once uninstalled, Shopify sends an automated webhook to our servers, revoking access immediately. All store records, session tokens, suppliers, mappings, and POs are scheduled for complete deletion within 30 days per our [Data Deletion Policy](/data-deletion). If you need immediate data removal, drop us a line at `support@podesk.app` *(Note: Replace with active mailbox before public launch)*.
+Uninstalling is standard: go to **Shopify Admin > Settings > Apps and sales channels > Uninstall**. Once uninstalled, Shopify sends an automated webhook to our servers, revoking access immediately. All store records, session tokens, suppliers, mappings, and POs are scheduled for complete deletion within 30 days per our [Data Deletion Policy](/data-deletion). If you need immediate data removal, drop us a line at `podeskapp@gmail.com`.

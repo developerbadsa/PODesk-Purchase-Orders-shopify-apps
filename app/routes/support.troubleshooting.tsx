@@ -117,9 +117,9 @@ export default function TroubleshootingPage() {
         <section style={sectionStyle}>
           <h2>Need Further Assistance?</h2>
           <p>Contact our merchant support team:</p>
-          <p><strong>Support Email:</strong> <code>support@podesk.app</code></p>
+          <p><strong>Support Email:</strong> <code>podeskapp@gmail.com</code></p>
           <p style={{ fontSize: "13px", color: "#757575", marginTop: "4px" }}>
-            *(Note: Replace support@podesk.app with your live active support mailbox before public launch).*
+            *(Note: Current live support mailbox for PODesk).*
           </p>
         </section>
       </main>

@@ -14,7 +14,7 @@
   - Added `/support` (`app/routes/support._index.tsx`) rendering public Merchant Help Center & FAQ.
   - Added `/support/getting-started` (`app/routes/support.getting-started.tsx`) rendering public 7-step onboarding guide.
   - Added `/support/troubleshooting` (`app/routes/support.troubleshooting.tsx`) rendering public troubleshooting guide.
-- Standardized support email placeholder across documentation and public routes to `support@podesk.app`, marking clearly that live mailbox activation is required before public launch.
+- Standardized the live support email across documentation and public routes as `podeskapp@gmail.com`.
 - Updated project documentation (`README.md`, `WORK_PLAN.md`, `FEATURES.md`, `PROJECT_STATUS.html`, `SHOPIFY_APP_STORE_SUBMISSION_CHECKLIST.md`, `PRODUCTION_READINESS.md`).
 
 ## 2026-08-02 (Launch Readiness & Documentation Release)

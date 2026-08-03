@@ -60,7 +60,7 @@ Upon expiration of the 30-day purge window or receipt of an explicit deletion re
 Merchants who wish to confirm data deletion or request immediate data removal prior to the automated 30-day cycle may contact support:
 
 1. **Email Subject**: `PODesk Data Deletion Request - [Your Myshopify Domain]`
-2. **Send To**: `support@podesk.app` *(Note: Replace with active support mailbox before public launch)*
+2. **Send To**: `podeskapp@gmail.com`
 3. **Required Information**: Provide your `.myshopify.com` store domain and confirmation that you are an authorized administrator of the store.
 
 Upon verification, our support team will manually execute the store data deletion script and issue an email confirmation within **3 business days**.

@@ -114,9 +114,9 @@ export default function TermsPage() {
         <section style={sectionStyle}>
           <h2>10. Contact Information</h2>
           <p>For inquiries regarding these Terms of Service:</p>
-          <p><strong>Support Email:</strong> <code>support@podesk.app</code></p>
+          <p><strong>Support Email:</strong> <code>podeskapp@gmail.com</code></p>
           <p style={{ fontSize: "13px", color: "#757575", marginTop: "4px" }}>
-            *(Note: Replace support@podesk.app with your live active support mailbox before public launch).*
+            *(Note: Current live support mailbox for PODesk).*
           </p>
         </section>
       </main>

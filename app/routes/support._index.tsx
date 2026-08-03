@@ -88,16 +88,16 @@ export default function SupportIndexPage() {
 
           <div style={faqCardStyle}>
             <h3>Q10: How do I uninstall or get my data removed?</h3>
-            <p>Uninstalling is standard: go to <strong>Shopify Admin &gt; Settings &gt; Apps and sales channels &gt; Uninstall</strong>. Once uninstalled, all session tokens are revoked and store data is scheduled for complete deletion within 30 days per our <a href="/data-deletion" style={linkStyle}>Data Deletion Policy</a>. For immediate data removal, drop us a line at <code>support@podesk.app</code>.</p>
+            <p>Uninstalling is standard: go to <strong>Shopify Admin &gt; Settings &gt; Apps and sales channels &gt; Uninstall</strong>. Once uninstalled, all session tokens are revoked and store data is scheduled for complete deletion within 30 days per our <a href="/data-deletion" style={linkStyle}>Data Deletion Policy</a>. For immediate data removal, drop us a line at <code>podeskapp@gmail.com</code>.</p>
           </div>
         </section>
 
         <section style={sectionStyle}>
           <h2>Need Further Assistance?</h2>
           <p>Contact our merchant support team:</p>
-          <p><strong>Support Email:</strong> <code>support@podesk.app</code></p>
+          <p><strong>Support Email:</strong> <code>podeskapp@gmail.com</code></p>
           <p style={{ fontSize: "13px", color: "#757575", marginTop: "4px" }}>
-            *(Note: Replace support@podesk.app with your live active support mailbox before public launch).*
+            *(Note: Current live support mailbox for PODesk).*
           </p>
         </section>
       </main>

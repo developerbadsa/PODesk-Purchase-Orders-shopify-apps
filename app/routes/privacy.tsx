@@ -104,9 +104,9 @@ export default function PrivacyPage() {
         <section style={sectionStyle}>
           <h2>8. Contact Information</h2>
           <p>For inquiries regarding this Privacy Policy or data requests:</p>
-          <p><strong>Support Email:</strong> <code>support@podesk.app</code></p>
+          <p><strong>Support Email:</strong> <code>podeskapp@gmail.com</code></p>
           <p style={{ fontSize: "13px", color: "#757575", marginTop: "4px" }}>
-            *(Note: Replace support@podesk.app with your live active support mailbox before public launch).*
+            *(Note: Current live support mailbox for PODesk).*
           </p>
         </section>
       </main>

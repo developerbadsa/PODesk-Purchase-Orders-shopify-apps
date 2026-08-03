@@ -690,7 +690,7 @@ Before sending the first cold email or submitting to the App Store, verify every
 - [ ] 5 high-resolution App Store screenshots created with Polaris text banners.
 - [ ] Landing page live with clear value proposition and 14-day free trial CTA.
 - [ ] Privacy Policy and Terms of Service pages published.
-- [ ] Support email address (`support@podesk.app` or equivalent) monitored and active.
+- [x] Support email address (`podeskapp@gmail.com`) monitored and active.
 
 ### Sales Preparation
 - [ ] Lead list of 200 targeted Shopify/POS stores compiled.

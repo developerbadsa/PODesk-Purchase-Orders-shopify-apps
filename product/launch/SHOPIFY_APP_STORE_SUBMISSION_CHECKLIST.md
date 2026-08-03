@@ -67,7 +67,7 @@ This checklist tracks all submission requirements mandated by Shopify for listin
 
 ## 6. Support Contact & Credentials
 
-- [x] **Support Contact Email**: Placeholder (`support@podesk.app` — *Replace with active support mailbox before public launch*) assigned. (Status: **Done**)
+- [x] **Support Contact Email**: `podeskapp@gmail.com` is active and ready for merchant support. (Status: **Done**)
 - [ ] **Test Store Credentials**: Dedicated Shopify Partner development test store prepared with sample products and orders for Shopify reviewers. (Status: **Needs Work**)
 
 ---

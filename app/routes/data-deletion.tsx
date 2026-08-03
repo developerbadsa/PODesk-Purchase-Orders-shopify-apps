@@ -112,12 +112,12 @@ export default function DataDeletionPage() {
           <h2>6. How to Request Manual Data Deletion</h2>
           <p>Merchants who wish to confirm data deletion or request immediate data removal prior to the automated 30-day cycle may contact support:</p>
           <div style={{ background: "#f5f5f5", padding: "16px", borderRadius: "6px", fontSize: "14px" }}>
-            <p style={{ margin: "0 0 8px 0" }}><strong>Send Email To:</strong> <code>support@podesk.app</code></p>
+            <p style={{ margin: "0 0 8px 0" }}><strong>Send Email To:</strong> <code>podeskapp@gmail.com</code></p>
             <p style={{ margin: "0 0 8px 0" }}><strong>Subject Line:</strong> <code>PODesk Data Deletion Request - [Your Myshopify Domain]</code></p>
             <p style={{ margin: 0 }}><strong>Required Information:</strong> Provide your <code>.myshopify.com</code> store domain and confirmation that you are an authorized administrator of the store.</p>
           </div>
           <p style={{ fontSize: "13px", color: "#757575", marginTop: "4px" }}>
-            *(Note: Replace support@podesk.app with your live active support mailbox before public launch).*
+            *(Note: Current live support mailbox for PODesk).*
           </p>
         </section>
       </main>

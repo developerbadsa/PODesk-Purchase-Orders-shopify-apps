@@ -68,7 +68,7 @@ Launch Status & Next Manual Actions:
 
 - GDPR Privacy Webhooks: **Done** (Implemented in `app/routes/webhooks.privacy.*` & configured in `shopify.app.toml`)
 - Public Legal & Support App Routes: **Done** (Created public routes `/privacy`, `/terms`, `/data-deletion`, `/support`, `/support/getting-started`, `/support/troubleshooting`)
-- Support Email Placeholder: **Assigned** (`support@podesk.app` assigned; requires active mailbox setup before launch)
+- Support Email: **Active** (`podeskapp@gmail.com`)
 - Public Legal URL Hosting: **Needs Production Domain** (App routes implemented; requires production HTTPS domain)
 - App Store Listing Copy & Scope Justification: **Done** (Final draft in `product/launch/`)
 - Screenshot & Video Production Plans: **Done** (Specs ready in `product/launch/`)
