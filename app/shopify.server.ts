@@ -7,12 +7,20 @@ import {
 import prisma from "./db.server";
 import { ResilientPrismaSessionStorage } from "./session-storage.server";
 
+function cleanEnv(value?: string) {
+  return value?.trim().replace(/^["']|["']$/g, "");
+}
+
+const shopifyApiKey = cleanEnv(process.env.SHOPIFY_API_KEY);
+const shopifyApiSecret = cleanEnv(process.env.SHOPIFY_API_SECRET);
+const shopifyAppUrl = cleanEnv(process.env.SHOPIFY_APP_URL);
+
 const shopify = shopifyApp({
-  apiKey: process.env.SHOPIFY_API_KEY,
-  apiSecretKey: process.env.SHOPIFY_API_SECRET || "",
+  apiKey: shopifyApiKey,
+  apiSecretKey: shopifyApiSecret || "",
   apiVersion: ApiVersion.October25,
   scopes: (process.env.SCOPES || "read_products,read_inventory,read_locations,read_orders").split(","),
-  appUrl: process.env.SHOPIFY_APP_URL || "",
+  appUrl: shopifyAppUrl || "",
   authPathPrefix: "/auth",
   sessionStorage: new ResilientPrismaSessionStorage(prisma),
   distribution: AppDistribution.AppStore,

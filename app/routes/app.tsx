@@ -15,6 +15,10 @@ import {
 } from "../auth-diagnostics.server";
 import { authenticate } from "../shopify.server";
 
+function cleanEnv(value?: string) {
+  return value?.trim().replace(/^["']|["']$/g, "");
+}
+
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   logAuthRequest("app-loader:start", request);
 
@@ -33,7 +37,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   }
 
   // eslint-disable-next-line no-undef
-  return { apiKey: process.env.SHOPIFY_API_KEY || "" };
+  return { apiKey: cleanEnv(process.env.SHOPIFY_API_KEY) || "" };
 };
 
 export default function App() {

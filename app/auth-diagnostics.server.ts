@@ -1,8 +1,11 @@
+import { createHmac, timingSafeEqual } from "node:crypto";
+
 function summarizeRequest(request: Request) {
   const url = new URL(request.url);
   const authorization = request.headers.get("authorization");
   const referer = request.headers.get("referer");
   const tokenSummary = summarizeSessionToken(request);
+  const configuredApiSecret = cleanEnv(process.env.SHOPIFY_API_SECRET) || "";
 
   return {
     method: request.method,
@@ -11,6 +14,9 @@ function summarizeRequest(request: Request) {
     embedded: url.searchParams.get("embedded") === "1",
     hasHost: url.searchParams.has("host"),
     hasHmac: url.searchParams.has("hmac"),
+    queryHmacMatchesConfiguredSecret: configuredApiSecret
+      ? verifyShopifyQueryHmac(url.searchParams, configuredApiSecret)
+      : null,
     hasLegacySessionParam: url.searchParams.has("session"),
     hasIdToken: url.searchParams.has("id_token"),
     hasAuthorization: Boolean(authorization),
@@ -45,11 +51,15 @@ function summarizeSessionToken(request: Request) {
   }
 
   const payload = decodeJwtPayload(token);
-  const configuredApiKey = process.env.SHOPIFY_API_KEY || "";
+  const configuredApiKey = cleanEnv(process.env.SHOPIFY_API_KEY) || "";
+  const configuredApiSecret = cleanEnv(process.env.SHOPIFY_API_SECRET) || "";
   const nowSeconds = Math.floor(Date.now() / 1000);
 
   return {
     sessionTokenSource: bearerToken ? "authorization" : "id_token",
+    tokenSignatureMatchesConfiguredSecret: configuredApiSecret
+      ? verifyJwtHs256(token, configuredApiSecret)
+      : null,
     tokenAudMatchesConfiguredApiKey:
       typeof payload?.aud === "string" && Boolean(configuredApiKey)
         ? payload.aud === configuredApiKey
@@ -63,6 +73,69 @@ function summarizeSessionToken(request: Request) {
     tokenNbfInSeconds:
       typeof payload?.nbf === "number" ? payload.nbf - nowSeconds : null,
   };
+}
+
+function cleanEnv(value?: string) {
+  return value?.trim().replace(/^["']|["']$/g, "");
+}
+
+function verifyJwtHs256(token: string, secret: string): boolean | null {
+  const [header, payload, signature] = token.split(".");
+
+  if (!header || !payload || !signature) {
+    return null;
+  }
+
+  try {
+    const expectedSignature = createHmac("sha256", secret)
+      .update(`${header}.${payload}`)
+      .digest("base64url");
+
+    return safeStringEqual(expectedSignature, signature);
+  } catch {
+    return null;
+  }
+}
+
+function verifyShopifyQueryHmac(
+  searchParams: URLSearchParams,
+  secret: string
+): boolean | null {
+  const receivedHmac = searchParams.get("hmac");
+
+  if (!receivedHmac) {
+    return null;
+  }
+
+  try {
+    const message = Array.from(searchParams.entries())
+      .filter(([key]) => key !== "hmac" && key !== "signature")
+      .sort(([leftKey, leftValue], [rightKey, rightValue]) => {
+        const keyCompare = leftKey.localeCompare(rightKey);
+        return keyCompare === 0 ? leftValue.localeCompare(rightValue) : keyCompare;
+      })
+      .map(([key, value]) => `${key}=${value}`)
+      .join("&");
+
+    const expectedHmac = createHmac("sha256", secret)
+      .update(message)
+      .digest("hex");
+
+    return safeStringEqual(expectedHmac, receivedHmac);
+  } catch {
+    return null;
+  }
+}
+
+function safeStringEqual(left: string, right: string) {
+  const leftBuffer = Buffer.from(left);
+  const rightBuffer = Buffer.from(right);
+
+  if (leftBuffer.length !== rightBuffer.length) {
+    return false;
+  }
+
+  return timingSafeEqual(leftBuffer, rightBuffer);
 }
 
 function decodeJwtPayload(token: string): Record<string, unknown> | null {

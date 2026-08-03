@@ -12,6 +12,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
   let dbHost: string | null = null;
   const rawDbUrl = process.env.DATABASE_URL;
+  const rawApiSecret = process.env.SHOPIFY_API_SECRET;
+  const cleanedApiSecret = rawApiSecret?.trim().replace(/^["']|["']$/g, "");
+
   if (rawDbUrl) {
     try {
       const sanitized = rawDbUrl.trim().replace(/^["']|["']$/g, "");
@@ -38,7 +41,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   return Response.json({
     appUrlPresent: Boolean(process.env.SHOPIFY_APP_URL),
     apiKeyPresent: Boolean(process.env.SHOPIFY_API_KEY),
-    apiSecretPresent: Boolean(process.env.SHOPIFY_API_SECRET),
+    apiSecretPresent: Boolean(cleanedApiSecret),
+    apiSecretLength: cleanedApiSecret?.length ?? null,
+    apiSecretHadWrappingQuotesOrWhitespace:
+      Boolean(rawApiSecret) && rawApiSecret !== cleanedApiSecret,
     databaseUrlPresent: Boolean(process.env.DATABASE_URL),
     databaseHost: dbHost,
     prismaSessionCount,
