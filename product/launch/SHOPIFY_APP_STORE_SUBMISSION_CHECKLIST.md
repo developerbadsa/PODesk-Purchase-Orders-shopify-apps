@@ -20,7 +20,7 @@ This checklist tracks all submission requirements mandated by Shopify for listin
 | User & Support Documentation | Done | FAQ, Getting Started, and Troubleshooting guides written in `product/support/`. |
 | Actual Screenshots | Needs Work | Screenshots must be captured from a populated test store with realistic data. |
 | Actual Demo Video | Needs Work | 2–3 minute video recording and voiceover required. |
-| GDPR Webhooks Implementation | Done | Webhook handlers for `customers/data_request`, `customers/redact`, and `shop/redact` implemented in `app/routes/webhooks.privacy.*` and subscribed in `shopify.app.toml`. |
+| GDPR Webhooks Implementation | Done | Webhook handler for `customers/data_request`, `customers/redact`, and `shop/redact` implemented in `app/routes/webhooks.privacy.tsx` and subscribed with `compliance_topics` in `shopify.app.toml`. |
 | Public Legal & Support App Routes | Done | `/privacy`, `/terms`, `/data-deletion`, `/support`, `/support/getting-started`, `/support/troubleshooting`, and `/brand/*` routes verified returning 200 OK. |
 | Production Webhost & HTTPS Setup | Done | Live host `https://podesk-purchase-orders.vercel.app` provisioned with active SSL and PostgreSQL backend. |
 | Manual QA Pass | Done | Browser QA across desktop/mobile viewports executed (`product/launch/LIVE_QA_REPORT.md`). |
@@ -89,7 +89,7 @@ This checklist tracks all submission requirements mandated by Shopify for listin
 
 - [x] `app/uninstalled` configured in `shopify.app.toml`. (Status: **Done**)
 - [x] `app/scopes_update` configured in `shopify.app.toml`. (Status: **Done**)
-- [x] GDPR mandatory webhook handlers configured in `shopify.app.toml` & `app/routes/webhooks.privacy.*`:
+- [x] GDPR mandatory webhook handler configured in `shopify.app.toml` & `app/routes/webhooks.privacy.tsx`:
   - `customers/data_request` (Returns 200 acknowledgment; PODesk stores no customer PII). (Status: **Done**)
   - `customers/redact` (Returns 200 acknowledgment; PODesk stores no customer PII). (Status: **Done**)
   - `shop/redact` (Deletes shop session and cascades store data deletion). (Status: **Done**)

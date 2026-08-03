@@ -58,7 +58,7 @@ Professional sales goal:
 | Stocky import | Done (verified) | Full CSV supplier and SKU mapping import with file/paste, column detection, manual column override, preview validation, import execution, job history, downloadable sample CSV (podesk-supplier-sku-import-sample.csv), and store-scoped invalid rows export. |
 | Legal Pages (Drafts) | Done | Public Privacy Policy, Terms of Service, and Data Deletion Policy drafts completed in `product/launch/`. |
 | Public Legal & Support App Routes | Done | Created public routes `/privacy`, `/terms`, `/data-deletion`, `/support`, `/support/getting-started`, `/support/troubleshooting`. |
-| GDPR Privacy Webhooks | Done | Implemented `customers/data_request`, `customers/redact`, and `shop/redact` in `app/routes/webhooks.privacy.*` & subscribed in `shopify.app.toml`. |
+| GDPR Privacy Webhooks | Done | Implemented unified `customers/data_request`, `customers/redact`, and `shop/redact` compliance handler in `app/routes/webhooks.privacy.tsx` & subscribed with `compliance_topics` in `shopify.app.toml`. |
 | Support Email | Done | `podeskapp@gmail.com` active across docs and public routes. |
 | Public Legal URL Hosting | Done | Public app routes verified returning 200 OK on live Vercel host. |
 | App Store Listing Draft | Done | Final copy, scope justifications, review notes, and submission checklist completed in `product/launch/`. |

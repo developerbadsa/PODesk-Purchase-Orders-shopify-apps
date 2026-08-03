@@ -66,7 +66,7 @@ Implemented:
 
 Launch Status & Next Manual Actions:
 
-- GDPR Privacy Webhooks: **Done** (Implemented in `app/routes/webhooks.privacy.*` & configured in `shopify.app.toml`)
+- GDPR Privacy Webhooks: **Done** (Implemented in `app/routes/webhooks.privacy.tsx` & configured with `compliance_topics` in `shopify.app.toml`)
 - Public Legal & Support App Routes: **Done** (Created public routes `/privacy`, `/terms`, `/data-deletion`, `/support`, `/support/getting-started`, `/support/troubleshooting`)
 - Support Email: **Active** (`podeskapp@gmail.com`)
 - Public Legal URL Hosting: **Needs Production Domain** (App routes implemented; requires production HTTPS domain)

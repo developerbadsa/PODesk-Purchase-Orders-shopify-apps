@@ -3,10 +3,10 @@
 ## 2026-08-02 (GDPR Privacy Webhooks & Public Launch Pages Release)
 
 - Added mandatory Shopify GDPR Privacy Webhook handlers:
-  - Added `app/routes/webhooks.privacy.customers.data_request.tsx` (returns 200 acknowledgment; PODesk stores no customer PII).
-  - Added `app/routes/webhooks.privacy.customers.redact.tsx` (returns 200 acknowledgment; PODesk stores no customer PII).
-  - Added `app/routes/webhooks.privacy.shop.redact.tsx` (purges shop sessions and cascades `Store` entity deletion).
-- Updated `shopify.app.toml` to register `customers/data_request`, `customers/redact`, and `shop/redact` webhook subscriptions.
+  - Added unified `app/routes/webhooks.privacy.tsx` compliance endpoint for `customers/data_request`, `customers/redact`, and `shop/redact`.
+  - Customer privacy webhooks return 200 acknowledgment because PODesk stores no end-customer PII.
+  - Shop redact webhooks purge shop sessions and cascade `Store` entity deletion.
+- Updated `shopify.app.toml` to register privacy webhooks with `compliance_topics`.
 - Created standalone public App Routes accessible without Shopify admin authentication:
   - Added `/privacy` (`app/routes/privacy.tsx`) rendering public Privacy Policy.
   - Added `/terms` (`app/routes/terms.tsx`) rendering public Terms of Service.
