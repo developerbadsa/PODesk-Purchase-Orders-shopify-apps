@@ -10,8 +10,10 @@ function withServerlessPoolConfig(databaseUrl?: string) {
     return undefined;
   }
 
+  const sanitized = databaseUrl.trim().replace(/^["']|["']$/g, "");
+
   try {
-    const url = new URL(databaseUrl);
+    const url = new URL(sanitized);
     if (!url.searchParams.has("connection_limit")) {
       url.searchParams.set("connection_limit", "1");
     }
@@ -21,7 +23,7 @@ function withServerlessPoolConfig(databaseUrl?: string) {
 
     return url.toString();
   } catch {
-    return databaseUrl;
+    return sanitized;
   }
 }
 
