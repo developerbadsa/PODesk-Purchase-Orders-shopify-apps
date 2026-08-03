@@ -38,6 +38,13 @@ async function withRetries<T>(operation: string, fn: () => Promise<T>): Promise<
   throw lastError;
 }
 
+function logStorageResult(
+  operation: string,
+  details: Record<string, string | number | boolean | null | undefined>
+) {
+  console.log(`[PODesk session storage] ${operation}`, details);
+}
+
 function sessionToRow(session: Session): SessionRow {
   const sessionParams = session.toObject();
   const associatedUser = sessionParams.onlineAccessInfo?.associated_user;
@@ -104,6 +111,15 @@ export class ResilientPrismaSessionStorage implements SessionStorage {
       })
     );
 
+    logStorageResult("storeSession:success", {
+      id: session.id,
+      shop: session.shop,
+      isOnline: session.isOnline,
+      hasAccessToken: Boolean(session.accessToken),
+      scope: session.scope,
+      expiresAt: session.expires?.toISOString(),
+    });
+
     return true;
   }
 
@@ -112,21 +128,40 @@ export class ResilientPrismaSessionStorage implements SessionStorage {
       this.prisma.session.findUnique({ where: { id } })
     );
 
+    logStorageResult("loadSession:result", {
+      id,
+      found: Boolean(row),
+      shop: row?.shop,
+      isOnline: row?.isOnline,
+      hasAccessToken: Boolean(row?.accessToken),
+      expiresAt: row?.expires?.toISOString(),
+    });
+
     return row ? rowToSession(row) : undefined;
   }
 
   async deleteSession(id: string): Promise<boolean> {
-    await withRetries("deleteSession", () =>
+    const result = await withRetries("deleteSession", () =>
       this.prisma.session.deleteMany({ where: { id } })
     );
+
+    logStorageResult("deleteSession:success", {
+      id,
+      deletedCount: result.count,
+    });
 
     return true;
   }
 
   async deleteSessions(ids: string[]): Promise<boolean> {
-    await withRetries("deleteSessions", () =>
+    const result = await withRetries("deleteSessions", () =>
       this.prisma.session.deleteMany({ where: { id: { in: ids } } })
     );
+
+    logStorageResult("deleteSessions:success", {
+      ids: ids.length,
+      deletedCount: result.count,
+    });
 
     return true;
   }
@@ -139,6 +174,11 @@ export class ResilientPrismaSessionStorage implements SessionStorage {
         orderBy: [{ expires: "desc" }],
       })
     );
+
+    logStorageResult("findSessionsByShop:result", {
+      shop,
+      found: rows.length,
+    });
 
     return rows.map(rowToSession);
   }

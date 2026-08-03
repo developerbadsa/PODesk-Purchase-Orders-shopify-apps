@@ -16,6 +16,17 @@ const shopify = shopifyApp({
   authPathPrefix: "/auth",
   sessionStorage: new ResilientPrismaSessionStorage(prisma),
   distribution: AppDistribution.AppStore,
+  hooks: {
+    afterAuth: async ({ session }) => {
+      console.log("[PODesk auth] afterAuth", {
+        shop: session.shop,
+        id: session.id,
+        isOnline: session.isOnline,
+        hasAccessToken: Boolean(session.accessToken),
+        scope: session.scope,
+      });
+    },
+  },
   future: {
     expiringOfflineAccessTokens: true,
   },

@@ -7,10 +7,23 @@ import {
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { AppProvider } from "@shopify/shopify-app-react-router/react";
 
+import {
+  logAuthFailure,
+  logAuthRequest,
+  logAuthSuccess,
+} from "../auth-diagnostics.server";
 import { authenticate } from "../shopify.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  await authenticate.admin(request);
+  logAuthRequest("app-loader:start", request);
+
+  try {
+    const { session } = await authenticate.admin(request);
+    logAuthSuccess("app-loader:success", request, session.shop);
+  } catch (error) {
+    logAuthFailure("app-loader:thrown", request, error);
+    throw error;
+  }
 
   // eslint-disable-next-line no-undef
   return { apiKey: process.env.SHOPIFY_API_KEY || "" };
