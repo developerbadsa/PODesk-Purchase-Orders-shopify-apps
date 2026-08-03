@@ -21,9 +21,9 @@ This checklist tracks all submission requirements mandated by Shopify for listin
 | Actual Screenshots | Needs Work | Screenshots must be captured from a populated test store with realistic data. |
 | Actual Demo Video | Needs Work | 2–3 minute video recording and voiceover required. |
 | GDPR Webhooks Implementation | Done | Webhook handlers for `customers/data_request`, `customers/redact`, and `shop/redact` implemented in `app/routes/webhooks.privacy.*` and subscribed in `shopify.app.toml`. |
-| Public Legal & Support App Routes | Done | `/privacy`, `/terms`, `/data-deletion`, `/support`, `/support/getting-started`, and `/support/troubleshooting` routes created. |
-| Production Webhost & HTTPS Setup | Needs Work | Production server (Render/Fly.io/AWS), SSL domain, and live database must be provisioned for public URLs. |
-| Manual QA Pass | Needs Work | Browser QA across desktop/mobile viewport scenarios must be executed prior to review. |
+| Public Legal & Support App Routes | Done | `/privacy`, `/terms`, `/data-deletion`, `/support`, `/support/getting-started`, `/support/troubleshooting`, and `/brand/*` routes verified returning 200 OK. |
+| Production Webhost & HTTPS Setup | Done | Live host `https://podesk-purchase-orders.vercel.app` provisioned with active SSL and PostgreSQL backend. |
+| Manual QA Pass | Done | Browser QA across desktop/mobile viewports executed (`product/launch/LIVE_QA_REPORT.md`). |
 | Security & Dependency Audit | Blocked | `npm audit` reports high React Router vulnerability from Shopify app template dependencies. Launch blocked until upstream safe patch. |
 | Production Billing Enforcement | Later | App is 100% free during initial launch beta. Billing scaffold exists but is intentionally unenforced. |
 
@@ -33,18 +33,18 @@ This checklist tracks all submission requirements mandated by Shopify for listin
 
 - [x] **App Name**: `PODesk: Purchase Orders` configured in `shopify.app.toml`. (Status: **Done**)
 - [x] **App Scopes**: `read_inventory,read_locations,read_orders,read_products` configured. (Status: **Done**)
-- [ ] **Production App URLs**: Production HTTPS domain and OAuth redirect URLs configured in Shopify Partner Dashboard. (Status: **Needs Work**)
-- [ ] **Embedded Admin Configuration**: Verified loading inside Shopify Admin frame over HTTPS. (Status: **Needs Work**)
+- [x] **Production App URLs**: Production HTTPS domain (`https://podesk-purchase-orders.vercel.app`) and OAuth redirect URLs (`/auth/callback` and `/api/auth`) configured. (Status: **Done**)
+- [x] **Embedded Admin Configuration**: Verified loading inside Shopify Admin frame over HTTPS. (Status: **Done**)
 
 ---
 
 ## 3. Required Public URLs
 
-- [ ] **App Landing Page / Public Home**: HTTPS URL explaining product and listing app details. (Status: **Needs Work**)
-- [x] **Privacy Policy URL**: Draft created (`product/launch/privacy-policy.md`). Host at `/privacy`. (Status: **Done (Draft)**)
-- [x] **Terms of Service URL**: Draft created (`product/launch/terms-of-service.md`). Host at `/terms`. (Status: **Done (Draft)**)
-- [x] **Data Deletion Policy URL**: Draft created (`product/launch/data-deletion-policy.md`). Host at `/data-deletion`. (Status: **Done (Draft)**)
-- [x] **Support / Help Docs URL**: Written in `product/support/`. Host at `/support`. (Status: **Done (Draft)**)
+- [x] **App Landing Page / Public Home**: HTTPS URL `https://podesk-purchase-orders.vercel.app/` with brand header and shop login form. (Status: **Done**)
+- [x] **Privacy Policy URL**: Hosted at `/privacy` returning status 200 OK. (Status: **Done**)
+- [x] **Terms of Service URL**: Hosted at `/terms` returning status 200 OK. (Status: **Done**)
+- [x] **Data Deletion Policy URL**: Hosted at `/data-deletion` returning status 200 OK. (Status: **Done**)
+- [x] **Support / Help Docs URL**: Hosted at `/support` returning status 200 OK. (Status: **Done**)
 
 ---
 
@@ -105,16 +105,16 @@ This checklist tracks all submission requirements mandated by Shopify for listin
 
 ## 10. Manual QA Checklist
 
-- [ ] Install app on fresh development store. (Status: **Needs Execution**)
-- [ ] Trigger **Sync Shopify inventory** and verify products, variants, and sales velocity populate cleanly. (Status: **Needs Execution**)
-- [ ] Create a new supplier and configure company contact info. (Status: **Needs Execution**)
-- [ ] Map 5+ SKUs to the supplier with custom supplier SKUs, unit costs, and lead times. (Status: **Needs Execution**)
-- [ ] Open `/app/reorder`, adjust sales window and buffer days, set a manual reorder override, and verify suggested quantities update correctly. (Status: **Needs Execution**)
-- [ ] Select multiple at-risk SKUs for a single supplier and create a multi-row draft PO. (Status: **Needs Execution**)
-- [ ] Open PO detail page, edit notes/arrival date, copy supplier email text, and preview print page. (Status: **Needs Execution**)
-- [ ] Record a partial item receipt on the PO and verify receiving progress bar and status update to `PARTIALLY_RECEIVED`. (Status: **Needs Execution**)
-- [ ] Upload and paste a CSV file on `/app/imports`, verify column auto-detection and row validation preview, and execute import. (Status: **Needs Execution**)
-- [ ] Uninstall app from test store and confirm clean cleanup without database orphans. (Status: **Needs Execution**)
+- [x] Install app on fresh development store. (Status: **Done**)
+- [x] Trigger **Sync Shopify inventory** and verify products, variants, and sales velocity populate cleanly. (Status: **Done**)
+- [x] Create a new supplier and configure company contact info. (Status: **Done**)
+- [x] Map 5+ SKUs to the supplier with custom supplier SKUs, unit costs, and lead times. (Status: **Done**)
+- [x] Open `/app/reorder`, adjust sales window and buffer days, set a manual reorder override, and verify suggested quantities update correctly. (Status: **Done**)
+- [x] Select multiple at-risk SKUs for a single supplier and create a multi-row draft PO. (Status: **Done**)
+- [x] Open PO detail page, edit notes/arrival date, copy supplier email text, and preview print page. (Status: **Done**)
+- [x] Record a partial item receipt on the PO and verify receiving progress bar and status update to `PARTIALLY_RECEIVED`. (Status: **Done**)
+- [x] Upload and paste a CSV file on `/app/imports`, verify column auto-detection and row validation preview, and execute import. (Status: **Done**)
+- [x] Uninstall app from test store and confirm clean cleanup without database orphans. (Status: **Done**)
 
 ---
 
@@ -128,8 +128,8 @@ This checklist tracks all submission requirements mandated by Shopify for listin
 
 ## 12. Production Hosting Checklist
 
-- [ ] Select cloud hosting platform (Render / Fly.io / Railway / AWS). (Status: **Needs Work**)
-- [ ] Provision managed PostgreSQL instance with daily snapshots. (Status: **Needs Work**)
-- [ ] Configure environment variables (`SHOPIFY_API_KEY`, `SHOPIFY_API_SECRET`, `SCOPES`, `DATABASE_URL`, `HOST`). (Status: **Needs Work**)
-- [ ] Configure HTTPS SSL certificate for production app domain. (Status: **Needs Work**)
-- [ ] Setup application monitoring and error tracking (e.g. Sentry). (Status: **Needs Work**)
+- [x] Select cloud hosting platform (Vercel Production Host). (Status: **Done**)
+- [x] Provision managed PostgreSQL instance with daily snapshots. (Status: **Done**)
+- [x] Configure environment variables (`SHOPIFY_API_KEY`, `SHOPIFY_API_SECRET`, `SHOPIFY_APP_URL`, `SCOPES`, `DATABASE_URL`, `NODE_ENV`). (Status: **Done**)
+- [x] Configure HTTPS SSL certificate for production app domain (`https://podesk-purchase-orders.vercel.app`). (Status: **Done**)
+- [x] Setup application monitoring and error tracking. (Status: **Done**)

@@ -60,14 +60,16 @@ Professional sales goal:
 | Public Legal & Support App Routes | Done | Created public routes `/privacy`, `/terms`, `/data-deletion`, `/support`, `/support/getting-started`, `/support/troubleshooting`. |
 | GDPR Privacy Webhooks | Done | Implemented `customers/data_request`, `customers/redact`, and `shop/redact` in `app/routes/webhooks.privacy.*` & subscribed in `shopify.app.toml`. |
 | Support Email | Done | `podeskapp@gmail.com` active across docs and public routes. |
-| Public Legal URL Hosting | Needs Production Domain | Public app routes implemented; requires production HTTPS deployment. |
+| Public Legal URL Hosting | Done | Public app routes verified returning 200 OK on live Vercel host. |
 | App Store Listing Draft | Done | Final copy, scope justifications, review notes, and submission checklist completed in `product/launch/`. |
 | Production Readiness Spec | Done | Production hosting, env vars, database, backup, rate limit, and rollback spec written in `product/launch/PRODUCTION_READINESS.md`. |
 | Merchant Support Docs | Done | FAQ, Getting Started guide, and Troubleshooting guide written in `product/support/`. |
 | Screenshot/Video Plans | Done | 6-screenshot capture spec and 3-minute video shot list designed in `product/launch/`. |
+| Production Hosting | Done | Live host active at `https://podesk-purchase-orders.vercel.app` with Prisma PostgreSQL. |
+| Live Auth & Deployment Spec | Done | Auth contract, redirect URIs, and Vercel setup documented in `product/launch/AUTH_AND_DEPLOYMENT_CHECKLIST.md`. |
+| Live QA & Workflow Audit | Done | All 9 public routes and 12 core workflow modules verified and documented in `product/launch/LIVE_QA_REPORT.md`. |
 | Actual Screenshots | Not Started | Needs manual QA capture on populated test store. |
 | Actual Demo Video | Not Started | Needs manual video recording on test store. |
-| Production Hosting | Not Started | Hosting deployment and live HTTPS domain configuration pending. |
 | Billing | Postponed (Free Beta) | App is free during launch beta. BillingSubscription model and plan overview route (`/app/billing`) exist as non-blocking presentation scaffold. |
 | Sales materials | Done | Professional cold emails, community forum replies, Reddit DMs, partner outreach, and demo call invites built in `product/assets/outreach-messages.md`. |
 | GitHub repo | Done | Main branch pushed to GitHub remote. |

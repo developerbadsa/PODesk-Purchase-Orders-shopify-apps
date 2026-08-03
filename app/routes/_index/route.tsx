@@ -27,6 +27,13 @@ export default function IndexRoute() {
   return (
     <div className={styles.index}>
       <div className={styles.content}>
+        <div className={styles.logoContainer}>
+          <img
+            src="/brand/podesk-logo-horizontal.png"
+            alt="PODesk Logo"
+            className={styles.logo}
+          />
+        </div>
         <h1 className={styles.heading}>PODesk: Purchase Orders</h1>
         <p className={styles.text}>
           Inventory buying, suppliers, SKU mappings, and purchase orders for

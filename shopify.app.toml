@@ -2,7 +2,7 @@
 
 client_id = "d13330e0e34d870c16ebaf279dcd54d1"
 name = "PODesk: Purchase Orders"
-application_url = "https://shopify.dev/apps/default-app-home"
+application_url = "https://podesk-purchase-orders.vercel.app"
 embedded = true
 
 [build]
@@ -36,4 +36,7 @@ api_version = "2026-10"
 scopes = "read_inventory,read_locations,read_orders,read_products"
 
 [auth]
-redirect_urls = [ "https://shopify.dev/apps/default-app-home/api/auth" ]
+redirect_urls = [
+  "https://podesk-purchase-orders.vercel.app/auth/callback",
+  "https://podesk-purchase-orders.vercel.app/api/auth"
+]

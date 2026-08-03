@@ -93,7 +93,7 @@ Do not optimize early product decisions for:
 | Dashboard | Actionable empty states | Done | P0 | Contextual empty states across Suppliers, Mappings, POs, Reorder, and Import routes. |
 | App Store | Submission checklist & final listing copy | Done | P0 | Final copy, scope justifications, submission checklist, and review notes in `product/launch/app-store-listing-final.md` and `SHOPIFY_APP_STORE_SUBMISSION_CHECKLIST.md`. |
 | App Store | Legal drafts & production spec | Done | P0 | Draft Privacy Policy, Terms of Service, Data Deletion Policy, and Production Readiness spec in `product/launch/`. |
-| App Store | Public legal & support app routes | Done | P0 | Public routes `/privacy`, `/terms`, `/data-deletion`, `/support`, `/support/getting-started`, `/support/troubleshooting`. |
+| App Store | Public legal & support app routes | Done (Verified) | P0 | Public routes `/privacy`, `/terms`, `/data-deletion`, `/support`, `/support/getting-started`, `/support/troubleshooting`, and `/brand/*` verified returning 200 OK on live Vercel host. |
 | App Store | GDPR privacy webhook handlers | Done | P0 | Handlers for `customers/data_request`, `customers/redact`, and `shop/redact` in `app/routes/webhooks.privacy.*` & subscribed in `shopify.app.toml`. |
 | App Store | Screenshot capture pack & demo shot list | Done | P0 | 6-screenshot capture specification and 3-minute video shot list built in `product/launch/`. |
 | App Store | Support & troubleshooting docs | Done | P0 | FAQ, Getting Started, and Troubleshooting guides built in `product/support/`. |

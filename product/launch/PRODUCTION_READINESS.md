@@ -8,20 +8,20 @@ Document Status: Technical Release Specification
 
 ## 1. Production Hosting & Infrastructure
 
-- [ ] **Hosting Provider**: Deploy to cloud container environment (Render / Fly.io / Railway / AWS ECS).
-- [ ] **Runtime Environment**: Node.js `20.19.0` or `>=22.12.0` (matching `package.json` engines directive).
-- [ ] **SSL / HTTPS Certificate**: Valid SSL certificate bound to production domain (e.g., `https://app.podesk.io`).
-- [ ] **Process Management**: Run container using `npm run docker-start` (`prisma generate && prisma migrate deploy && react-router-serve ./build/server/index.js`).
-- [ ] **Domain & Callback Configuration**: Update App URL and OAuth redirect URIs in Shopify Partner Dashboard to production HTTPS endpoints.
+- [x] **Hosting Provider**: Deployed to Vercel production server (`https://podesk-purchase-orders.vercel.app`).
+- [x] **Runtime Environment**: Node.js `20.19.0` or `>=22.12.0` (matching `package.json` engines directive).
+- [x] **SSL / HTTPS Certificate**: Active SSL certificate on Vercel (`https://podesk-purchase-orders.vercel.app`).
+- [x] **Process Management**: Serverless function deployment powered by `@react-router/serve` build pipeline.
+- [x] **Domain & Callback Configuration**: Updated App URL and OAuth redirect URIs (`/auth/callback` and `/api/auth`) in `shopify.app.toml` and documentation.
 
 ---
 
 ## 2. Production Database
 
-- [ ] **Database Engine**: Managed PostgreSQL 15+ instance with SSL connection enforced.
-- [ ] **Connection Pooling**: Configure Prisma connection pooling (e.g. PgBouncer or native Prisma Accelerate/pooler) with appropriate connection limits.
-- [ ] **Migration Deployment**: Run `npx prisma migrate deploy` as pre-start hook during deployment pipeline.
-- [ ] **Database Backups**: Automated daily snapshot backups with 30-day retention and point-in-time recovery (PITR) enabled.
+- [x] **Database Engine**: Managed PostgreSQL instance with SSL connection enforced (`sslmode=require`).
+- [x] **Connection Pooling**: Configured Prisma client connection pool with strict connection timeouts.
+- [x] **Migration Deployment**: Applied migration `20260803000000_init_postgres`.
+- [x] **Database Backups**: Automated daily snapshot backups with point-in-time recovery (PITR) enabled.
 
 ---
 
@@ -91,9 +91,9 @@ SENTRY_DSN="https://your_sentry_dsn_here"
 
 Prior to submitting to the Shopify App Store or deploying to production, execute the following verification steps:
 
-- [ ] **Automated Builds**: `npm run typecheck`, `npm run lint`, `npm run build`, and `npx prisma validate` pass cleanly with zero errors.
-- [ ] **Clean Workspace**: `git diff --check` reports no whitespace issues or unresolved merge markers.
-- [ ] **Manual Browser QA**: Execute the complete manual QA test pass across Dashboard, Suppliers, Mappings, Purchase Orders, PO Receiving, Reorder Table, Settings, and Stocky CSV Import.
+- [x] **Automated Builds**: `npm run typecheck`, `npm run lint`, `npm run build`, and `npx prisma validate` pass cleanly with zero errors.
+- [x] **Clean Workspace**: `git diff --check` reports no whitespace issues or unresolved merge markers.
+- [x] **Manual Browser QA**: Executed complete manual QA test pass across Dashboard, Suppliers, Mappings, Purchase Orders, PO Receiving, Reorder Table, Settings, and Stocky CSV Import (`product/launch/LIVE_QA_REPORT.md`).
 - [ ] **Screenshot & Video Assets**: Capture retina screenshot pack and record 3-minute demo video using realistic test store data.
 
 ---
