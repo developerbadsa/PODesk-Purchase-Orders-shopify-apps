@@ -100,6 +100,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const supplierEmailAutomationMode = parseSupplierEmailAutomationMode(
       formData.get("supplierEmailAutomationMode")
     );
+    const remindDraftPoDaysRaw = String(formData.get("remindDraftPoDays") || "").trim();
+    const remindDraftPoDays = remindDraftPoDaysRaw ? Number.parseInt(remindDraftPoDaysRaw, 10) : null;
+    const followUpSentPoDaysRaw = String(formData.get("followUpSentPoDays") || "").trim();
+    const followUpSentPoDays = followUpSentPoDaysRaw ? Number.parseInt(followUpSentPoDaysRaw, 10) : null;
     const hasEmailDeliveryFields = formData.has("emailProvider");
     const emailProvider = hasEmailDeliveryFields
       ? parseEmailProvider(formData.get("emailProvider"))
@@ -220,6 +224,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         smtpPort,
         smtpUser,
         smtpPassword,
+        remindDraftPoDays,
+        followUpSentPoDays,
       },
     });
 
@@ -430,6 +436,36 @@ export default function SettingsPage() {
               )}
             </div>
             )}
+          </div>
+        </s-section>
+
+        <s-section heading="Automations">
+          <div style={formCardStyle}>
+            <div style={sectionTitleStyle}>Automated Reminders & Follow-ups</div>
+            <p style={sectionTextStyle}>
+              Configure how many days to wait before sending automatic email reminders.
+              Leave blank or set to 0 to disable an automation.
+            </p>
+
+            <div style={formGridStyle}>
+              <Field
+                label="Draft PO Reminder (Days)"
+                name="remindDraftPoDays"
+                type="number"
+                defaultValue={settings?.remindDraftPoDays?.toString() ?? ""}
+                placeholder="e.g. 3"
+              />
+              <Field
+                label="Supplier Follow-up (Days after sending)"
+                name="followUpSentPoDays"
+                type="number"
+                defaultValue={settings?.followUpSentPoDays?.toString() ?? ""}
+                placeholder="e.g. 5"
+              />
+            </div>
+            <p style={{ ...sectionTextStyle, fontSize: "12px", marginTop: "12px" }}>
+              Note: Follow-up emails will only be sent if "Auto-send after review" is selected and Email Delivery is configured.
+            </p>
           </div>
         </s-section>
 

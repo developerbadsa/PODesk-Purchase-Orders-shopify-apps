@@ -171,6 +171,9 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
       notes: po.notes,
       lastSentAt: po.lastSentAt?.toISOString() ?? null,
       sentCount: po.sentCount,
+      isRecurring: po.isRecurring,
+      recurringIntervalDays: po.recurringIntervalDays,
+      nextRecurringDate: po.nextRecurringDate?.toISOString().slice(0, 10) ?? "",
       createdAt: po.createdAt.toISOString(),
       updatedAt: po.updatedAt.toISOString(),
       lines: processedLines,
@@ -590,6 +593,29 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
     return redirect(`/app/purchase-orders/${newPo.id}`);
   }
 
+  if (intent === "set-recurring") {
+    const isRecurring = formData.get("isRecurring") === "true";
+    const recurringIntervalDaysInput = formData.get("recurringIntervalDays");
+    const recurringIntervalDays = recurringIntervalDaysInput ? Number.parseInt(String(recurringIntervalDaysInput), 10) : null;
+    const nextRecurringDateInput = formData.get("nextRecurringDate");
+    const nextRecurringDate = nextRecurringDateInput ? new Date(`${String(nextRecurringDateInput)}T00:00:00.000Z`) : null;
+
+    if (isRecurring && (!recurringIntervalDays || !nextRecurringDate)) {
+      return { ok: false, message: "Recurring interval and next date are required when enabling recurring orders." } satisfies ActionData;
+    }
+
+    await prisma.purchaseOrder.update({
+      where: { id: po.id },
+      data: {
+        isRecurring,
+        recurringIntervalDays: isRecurring ? recurringIntervalDays : null,
+        nextRecurringDate: isRecurring ? nextRecurringDate : null,
+      },
+    });
+
+    return { ok: true, message: isRecurring ? "Purchase order set to recurring." : "Recurring order disabled." } satisfies ActionData;
+  }
+
   if (intent === "delete") {
     if (po.status !== "DRAFT") {
       return { ok: false, message: "Only draft purchase orders can be deleted." } satisfies ActionData;
@@ -703,6 +729,47 @@ export default function PurchaseOrderDetailPage() {
             Print PO
           </Link>
         </div>
+      </s-section>
+
+      <s-section heading="Recurring Settings">
+        <Form method="post">
+          <input type="hidden" name="intent" value="set-recurring" />
+          <div style={{ display: "flex", gap: "12px", alignItems: "center", marginBottom: "12px" }}>
+            <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", fontWeight: 500 }}>
+              <input 
+                type="checkbox" 
+                name="isRecurring" 
+                value="true"
+                defaultChecked={po.isRecurring} 
+              />
+              Make this PO recurring
+            </label>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", maxWidth: "500px" }}>
+            <label style={fieldLabelStyle}>
+              Interval (Days)
+              <input 
+                type="number" 
+                name="recurringIntervalDays" 
+                defaultValue={po.recurringIntervalDays?.toString() ?? ""} 
+                placeholder="e.g. 30" 
+                style={inputStyle} 
+              />
+            </label>
+            <label style={fieldLabelStyle}>
+              Next Generation Date
+              <input 
+                type="date" 
+                name="nextRecurringDate" 
+                defaultValue={po.nextRecurringDate ?? ""} 
+                style={inputStyle} 
+              />
+            </label>
+          </div>
+          <button type="submit" disabled={isSubmitting} style={{ ...buttonStyle, marginTop: "12px" }}>
+            Save recurring settings
+          </button>
+        </Form>
       </s-section>
 
       <s-section heading="Receiving">
