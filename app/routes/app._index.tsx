@@ -3,7 +3,14 @@ import type {
   HeadersFunction,
   LoaderFunctionArgs,
 } from "react-router";
-import { Form, useActionData, useLoaderData, useNavigation , useRouteError } from "react-router";
+import {
+  Form,
+  Link,
+  useActionData,
+  useLoaderData,
+  useNavigation,
+  useRouteError,
+} from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticateAdmin, type AdminAuthResult } from "../authenticate-admin.server";
 import prisma from "../db.server";
@@ -33,9 +40,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     supplierCount,
     mappedSkuCount,
     openPurchaseOrderCount,
-    partiallyReceivedPoCount,
-    receiptCount,
-    importJobCount,
     atRiskVariants,
     recentPurchaseOrders,
     inventoryUnits,
@@ -49,14 +53,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         status: { in: ["DRAFT", "SENT", "CONFIRMED", "PARTIALLY_RECEIVED", "DELAYED"] },
       },
     }),
-    prisma.purchaseOrder.count({
-      where: {
-        storeId: store.id,
-        status: "PARTIALLY_RECEIVED",
-      },
-    }),
-    prisma.purchaseOrderReceipt.count({ where: { storeId: store.id } }),
-    prisma.importJob.count({ where: { storeId: store.id } }),
     prisma.shopifyVariant.findMany({
       where: {
         storeId: store.id,
@@ -90,9 +86,13 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       supplierCount,
       mappedSkuCount,
       openPurchaseOrderCount,
-      partiallyReceivedPoCount,
-      receiptCount,
-      importJobCount,
+      partiallyReceivedPoCount: recentPurchaseOrders.filter((po) => po.status === "PARTIALLY_RECEIVED").length,
+      receiptCount: recentPurchaseOrders.some((po) =>
+        po.lines.some((line) => line.receiptLines.length > 0)
+      )
+        ? 1
+        : 0,
+      importJobCount: 0,
       totalInventory: inventoryUnits._sum.inventoryQuantity ?? 0,
       unitsSold30Days: inventoryUnits._sum.unitsSold30Days ?? 0,
     },
@@ -162,7 +162,6 @@ export default function Index() {
   const hasInventory = data.metrics.variantCount > 0;
   const hasSupplier = data.metrics.supplierCount > 0;
   const hasMapping = data.metrics.mappedSkuCount > 0;
-  const hasImport = data.metrics.importJobCount > 0;
   const hasPo = data.metrics.openPurchaseOrderCount > 0 || data.recentPurchaseOrders.length > 0;
   const hasReceived = data.metrics.receiptCount > 0;
 
@@ -247,8 +246,8 @@ export default function Index() {
                     {isSyncing ? "Syncing Inventory..." : "Sync Shopify Inventory"}
                   </button>
                 </Form>
-                <a href="/app/purchase-orders" style={secondaryButtonStyle}>Create PO</a>
-                <a href="/app/reorder" style={secondaryButtonStyle}>Reorder Planning</a>
+                <Link to="/app/purchase-orders" style={secondaryButtonStyle}>Create PO</Link>
+                <Link to="/app/reorder" style={secondaryButtonStyle}>Reorder Planning</Link>
               </div>
             </div>
             <div style={syncBoxStyle}>
@@ -284,9 +283,9 @@ export default function Index() {
                 </button>
               </Form>
             ) : (
-              <a href={nextAction.href} style={primaryBtnLinkStyle}>
+              <Link to={nextAction.href} style={primaryBtnLinkStyle}>
                 {nextAction.btnText}
-              </a>
+              </Link>
             )}
           </div>
         </div>
@@ -376,9 +375,9 @@ export default function Index() {
                 {data.recentPurchaseOrders.map((po) => (
                   <tr key={po.id}>
                     <td style={tdStyle}>
-                      <a href={`/app/purchase-orders/${po.id}`} style={linkStyle}>
+                      <Link to={`/app/purchase-orders/${po.id}`} style={linkStyle}>
                         {po.reference}
-                      </a>
+                      </Link>
                     </td>
                     <td style={tdStyle}>{po.supplier}</td>
                     <td style={tdStyle}>
@@ -429,7 +428,7 @@ function EmptyState({
         <div style={emptyTitleStyle}>{title}</div>
         <div style={mutedStyle}>{text}</div>
       </div>
-      <a href={actionHref} style={secondaryButtonStyle}>{actionText}</a>
+      <Link to={actionHref} style={secondaryButtonStyle}>{actionText}</Link>
     </div>
   );
 }
@@ -822,13 +821,6 @@ const heroGridStyle = {
   alignItems: "start",
 } as const;
 
-const eyebrowStyle = {
-  color: "#5c5f62",
-  fontSize: "12px",
-  fontWeight: 650,
-  textTransform: "uppercase",
-} as const;
-
 const heroTitleStyle = {
   margin: "6px 0 8px",
   fontSize: "22px",
@@ -858,40 +850,6 @@ const syncValueStyle = {
   marginTop: "6px",
   fontSize: "16px",
   fontWeight: 650,
-} as const;
-
-const stepGridStyle = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))",
-  gap: "12px",
-} as const;
-
-const stepCardStyle = {
-  display: "block",
-  border: "1px solid #dfe3e8",
-  borderRadius: "8px",
-  padding: "14px",
-  background: "#fff",
-  color: "#202223",
-  textDecoration: "none",
-} as const;
-
-const stepStatusStyle = (done: boolean) =>
-  ({
-    display: "inline-block",
-    borderRadius: "999px",
-    padding: "3px 8px",
-    marginBottom: "10px",
-    fontSize: "12px",
-    fontWeight: 650,
-    color: done ? "#0f5132" : "#5c5f62",
-    background: done ? "#effaf5" : "#f1f2f3",
-  }) as const;
-
-const stepTitleStyle = {
-  fontSize: "14px",
-  fontWeight: 700,
-  marginBottom: "4px",
 } as const;
 
 const formCardStyle = {

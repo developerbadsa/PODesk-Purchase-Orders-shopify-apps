@@ -1,5 +1,5 @@
 import type { HeadersFunction, LoaderFunctionArgs } from "react-router";
-import { useLoaderData, useRouteError } from "react-router";
+import { Link, useLoaderData, useRouteError } from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticateAdmin } from "../authenticate-admin.server";
 import prisma from "../db.server";
@@ -134,9 +134,9 @@ export default function PurchaseOrderPrintPage() {
 
       {/* Action Bar - Screen Only */}
       <div className="no-print" style={actionBarContainerStyle}>
-        <a href={`/app/purchase-orders/${po.id}`} style={backButtonStyle}>
+        <Link to={`/app/purchase-orders/${po.id}`} style={backButtonStyle}>
           &larr; Back to PO
-        </a>
+        </Link>
         <button
           type="button"
           onClick={() => window.print()}

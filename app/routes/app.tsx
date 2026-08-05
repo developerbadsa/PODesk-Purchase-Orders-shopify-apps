@@ -1,4 +1,4 @@
-import type { HeadersFunction, LoaderFunctionArgs } from "react-router";
+import type { HeadersFunction } from "react-router";
 import {
   Outlet,
   useLoaderData,
@@ -7,15 +7,11 @@ import {
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { AppProvider } from "@shopify/shopify-app-react-router/react";
 
-import { authenticateAdmin } from "../authenticate-admin.server";
-
 function cleanEnv(value?: string) {
   return value?.trim().replace(/^["']|["']$/g, "");
 }
 
-export const loader = async ({ request }: LoaderFunctionArgs) => {
-  await authenticateAdmin(request, "app-loader");
-
+export const loader = async () => {
   // eslint-disable-next-line no-undef
   return { apiKey: cleanEnv(process.env.SHOPIFY_API_KEY) || "" };
 };

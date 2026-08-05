@@ -27,6 +27,10 @@ function summarizeRequest(request: Request) {
   };
 }
 
+function shouldLogAuthDiagnostics() {
+  return process.env.AUTH_DIAGNOSTICS === "1";
+}
+
 function safeOrigin(value: string) {
   try {
     return new URL(value).origin;
@@ -194,10 +198,12 @@ function summarizeThrown(error: unknown) {
 }
 
 export function logAuthRequest(label: string, request: Request) {
+  if (!shouldLogAuthDiagnostics()) return;
   console.log(`[PODesk auth] ${label}`, summarizeRequest(request));
 }
 
 export function logAuthSuccess(label: string, request: Request, shop?: string) {
+  if (!shouldLogAuthDiagnostics()) return;
   console.log(`[PODesk auth] ${label}`, {
     ...summarizeRequest(request),
     authenticatedShop: shop,

@@ -4,7 +4,7 @@ import type {
   HeadersFunction,
   LoaderFunctionArgs,
 } from "react-router";
-import { Form, useActionData, useLoaderData, useNavigation, useSearchParams, redirect , useRouteError } from "react-router";
+import { Form, Link, useActionData, useLoaderData, useNavigation, useSearchParams, redirect, useRouteError } from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticateAdmin } from "../authenticate-admin.server";
 import prisma from "../db.server";
@@ -654,7 +654,7 @@ export default function ReorderPage() {
                       <td style={tdStyle}>{v.daysLeft != null ? v.daysLeft : "-"}</td>
                       <td style={tdStyle}>
                         {v.supplierName ? (
-                          <a href={`/app/suppliers/${v.supplierId}`} style={linkStyle}>{v.supplierName}</a>
+                          <Link to={`/app/suppliers/${v.supplierId}`} style={linkStyle}>{v.supplierName}</Link>
                         ) : (
                           <span style={mutedStyle}>Unmapped</span>
                         )}

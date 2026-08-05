@@ -4,7 +4,7 @@ import type {
   HeadersFunction,
   LoaderFunctionArgs,
 } from "react-router";
-import { Form, useActionData, useLoaderData, useNavigation , useRouteError } from "react-router";
+import { Form, Link, useActionData, useLoaderData, useNavigation, useRouteError } from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticateAdmin } from "../authenticate-admin.server";
 import prisma from "../db.server";
@@ -369,7 +369,7 @@ export default function PurchaseOrdersPage() {
                 {purchaseOrders.map((po) => (
                   <tr key={po.id}>
                     <td style={tdStyle}>
-                      <a href={`/app/purchase-orders/${po.id}`} style={linkStyle}>{po.reference}</a>
+                      <Link to={`/app/purchase-orders/${po.id}`} style={linkStyle}>{po.reference}</Link>
                     </td>
                     <td style={tdStyle}>{po.supplierName}</td>
                     <td style={tdStyle}>
@@ -388,8 +388,8 @@ export default function PurchaseOrdersPage() {
                     <td style={tdStyle}>{formatDate(po.updatedAt)}</td>
                     <td style={tdStyle}>
                       <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                        <a href={`/app/purchase-orders/${po.id}`} style={linkStyle}>View</a>
-                        <a href={`/app/purchase-orders/${po.id}/print`} style={linkStyle}>Print</a>
+                        <Link to={`/app/purchase-orders/${po.id}`} style={linkStyle}>View</Link>
+                        <Link to={`/app/purchase-orders/${po.id}/print`} style={linkStyle}>Print</Link>
                       </div>
                     </td>
                   </tr>

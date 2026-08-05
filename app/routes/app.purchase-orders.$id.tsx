@@ -4,7 +4,7 @@ import type {
   HeadersFunction,
   LoaderFunctionArgs,
 } from "react-router";
-import { Form, useActionData, useLoaderData, useNavigation, redirect, useRouteError } from "react-router";
+import { Form, Link, useActionData, useLoaderData, useNavigation, redirect, useRouteError } from "react-router";
 import type { PurchaseOrderStatus } from "@prisma/client";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticateAdmin } from "../authenticate-admin.server";
@@ -545,7 +545,7 @@ export default function PurchaseOrderDetailPage() {
       <s-section heading="Details">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px" }}>
           <div style={metaGridStyle}>
-            <div><strong>Supplier:</strong> <a href={`/app/suppliers/${po.supplierId}`} style={linkStyle}>{po.supplierName}</a></div>
+            <div><strong>Supplier:</strong> <Link to={`/app/suppliers/${po.supplierId}`} style={linkStyle}>{po.supplierName}</Link></div>
             <div><strong>Status:</strong> <span style={statusBadge(po.status)}>{po.status.replaceAll("_", " ")}</span></div>
             <div><strong>Total cost:</strong> {po.totalCost > 0 ? formatCurrency(po.totalCost, currencyCode) : "-"}</div>
             <div><strong>Currency:</strong> {currencyCode}</div>
@@ -555,12 +555,12 @@ export default function PurchaseOrderDetailPage() {
             <div><strong>Created:</strong> {formatDate(po.createdAt)}</div>
             <div><strong>Last updated:</strong> {formatDate(po.updatedAt)}</div>
           </div>
-          <a
-            href={`/app/purchase-orders/${po.id}/print`}
+          <Link
+            to={`/app/purchase-orders/${po.id}/print`}
             style={printBtnLinkStyle}
           >
             Print PO
-          </a>
+          </Link>
         </div>
       </s-section>
 
@@ -881,14 +881,12 @@ export default function PurchaseOrderDetailPage() {
             Open email draft
           </a>
 
-          <a
-            href={`/app/purchase-orders/${po.id}/print`}
-            target="_blank"
-            rel="noreferrer"
+          <Link
+            to={`/app/purchase-orders/${po.id}/print`}
             style={secondaryBtnLinkStyle}
           >
             Open printable PO
-          </a>
+          </Link>
 
           {canMarkSent && (
             <Form method="post" style={{ display: "inline" }}>
@@ -957,7 +955,7 @@ export default function PurchaseOrderDetailPage() {
 
       <s-section heading="Actions">
         <div style={{ display: "flex", gap: "8px" }}>
-          <a href={`/app/purchase-orders/${po.id}/print`} style={smallBtnStyle}>Print PO</a>
+          <Link to={`/app/purchase-orders/${po.id}/print`} style={smallBtnStyle}>Print PO</Link>
           <Form method="post" style={{ display: "inline" }}>
             <input type="hidden" name="intent" value="duplicate" />
             <button type="submit" disabled={isSubmitting} style={smallBtnStyle}>Duplicate PO</button>

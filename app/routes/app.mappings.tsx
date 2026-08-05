@@ -4,7 +4,7 @@ import type {
   HeadersFunction,
   LoaderFunctionArgs,
 } from "react-router";
-import { Form, useActionData, useLoaderData, useNavigation , useRouteError } from "react-router";
+import { Form, Link, useActionData, useLoaderData, useNavigation, useRouteError } from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticateAdmin } from "../authenticate-admin.server";
 import prisma from "../db.server";
@@ -275,7 +275,7 @@ export default function MappingsPage() {
                     </td>
                     <td style={tdStyle}>{m.sku || "-"}</td>
                     <td style={tdStyle}>
-                      <a href={`/app/suppliers/${m.supplierId}`} style={linkStyle}>{m.supplierName}</a>
+                      <Link to={`/app/suppliers/${m.supplierId}`} style={linkStyle}>{m.supplierName}</Link>
                     </td>
                     <td style={tdStyle}>{m.supplierSku || "-"}</td>
                     <td style={tdStyle}>{m.supplierCost != null ? `$${m.supplierCost.toFixed(2)}` : "-"}</td>

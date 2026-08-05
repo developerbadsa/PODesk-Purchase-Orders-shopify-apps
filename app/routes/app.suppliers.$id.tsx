@@ -3,7 +3,7 @@ import type {
   HeadersFunction,
   LoaderFunctionArgs,
 } from "react-router";
-import { Form, useActionData, useLoaderData, useNavigation, redirect, useRouteError } from "react-router";
+import { Form, Link, useActionData, useLoaderData, useNavigation, redirect, useRouteError } from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticateAdmin } from "../authenticate-admin.server";
 import prisma from "../db.server";
@@ -223,7 +223,7 @@ export default function SupplierDetailPage() {
                 {purchaseOrders.map((po) => (
                   <tr key={po.id}>
                     <td style={tdStyle}>
-                      <a href={`/app/purchase-orders/${po.id}`} style={linkStyle}>{po.reference}</a>
+                      <Link to={`/app/purchase-orders/${po.id}`} style={linkStyle}>{po.reference}</Link>
                     </td>
                     <td style={tdStyle}>{po.status.replaceAll("_", " ")}</td>
                     <td style={tdStyle}>{po.lineCount}</td>
