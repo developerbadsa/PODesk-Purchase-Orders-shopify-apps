@@ -211,6 +211,12 @@ export function logAuthSuccess(label: string, request: Request, shop?: string) {
 }
 
 export function logAuthFailure(label: string, request: Request, error: unknown) {
+  if (!shouldLogAuthDiagnostics()) {
+    // Always log a minimal warning even without diagnostics, but skip the
+    // expensive summarizeRequest() call (JWT decode + HMAC crypto ops).
+    console.warn(`[PODesk auth] ${label}`, summarizeThrown(error));
+    return;
+  }
   console.warn(`[PODesk auth] ${label}`, {
     ...summarizeRequest(request),
     thrown: summarizeThrown(error),

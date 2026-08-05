@@ -32,14 +32,27 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       where: { storeId: store.id, isArchived: false },
       orderBy: { name: "asc" },
     }),
+    // Only load variants that have at least one supplier mapping —
+    // avoids loading thousands of unmapped variants for the PO line item picker.
     prisma.shopifyVariant.findMany({
-      where: { storeId: store.id },
-      include: { product: true },
+      where: {
+        storeId: store.id,
+        supplierMappings: { some: { storeId: store.id } },
+      },
+      select: {
+        id: true,
+        title: true,
+        sku: true,
+        unitCostAmount: true,
+        product: { select: { title: true } },
+      },
       orderBy: [{ product: { title: "asc" } }, { title: "asc" }],
+      take: 1000,
     }),
     prisma.supplierVariantMapping.findMany({
       where: { storeId: store.id },
       select: { supplierId: true, variantId: true, supplierCost: true, supplierSku: true },
+      take: 2000,
     }),
   ]);
 

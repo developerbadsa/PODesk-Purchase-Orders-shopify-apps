@@ -58,10 +58,22 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
         },
       },
     }),
+    // Only load variants with mappings for the add-line-item picker.
+    // Using select instead of include avoids over-fetching product data.
     prisma.shopifyVariant.findMany({
-      where: { storeId: store.id },
-      include: { product: true },
+      where: {
+        storeId: store.id,
+        supplierMappings: { some: { storeId: store.id } },
+      },
+      select: {
+        id: true,
+        title: true,
+        sku: true,
+        unitCostAmount: true,
+        product: { select: { title: true } },
+      },
       orderBy: [{ product: { title: "asc" } }, { title: "asc" }],
+      take: 1000,
     }),
     prisma.supplierVariantMapping.findMany({
       where: { storeId: store.id },

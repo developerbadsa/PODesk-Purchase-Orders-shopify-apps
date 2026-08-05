@@ -29,10 +29,19 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       where: { storeId: store.id, isArchived: false },
       orderBy: { name: "asc" },
     }),
+    // Use select instead of include to avoid over-fetching product fields
+    // for the variant dropdown.
     prisma.shopifyVariant.findMany({
       where: { storeId: store.id },
-      include: { product: true },
+      select: {
+        id: true,
+        title: true,
+        sku: true,
+        shopifyVariantId: true,
+        product: { select: { title: true } },
+      },
       orderBy: [{ product: { title: "asc" } }, { title: "asc" }],
+      take: 2000,
     }),
   ]);
 
