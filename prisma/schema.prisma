@@ -125,6 +125,7 @@ model ShopifyVariant {
   @@unique([storeId, shopifyVariantId])
   @@index([storeId])
   @@index([sku])
+  @@index([storeId, daysUntilStockout])
 }
 
 model InventoryLocation {

@@ -19,6 +19,8 @@ const DEFAULT_TARGET_DAYS = 30;
 
 type ActionData = { ok: boolean; message: string };
 
+const PAGE_SIZE = 50;
+
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticateAdmin(request, "reorder-loader");
   const store = await prisma.store.findUnique({ where: { shop: session.shop } });
@@ -29,6 +31,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       lastSyncAt: null,
       totalCount: 0,
       filteredCount: 0,
+      page: 1,
+      pageSize: PAGE_SIZE,
       riskCounts: { critical: 0, reorderSoon: 0, watch: 0, healthy: 0 },
     };
   }
@@ -39,23 +43,47 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const targetDays = parseInt(url.searchParams.get("target") || String(DEFAULT_TARGET_DAYS), 10);
   const filterSupplier = url.searchParams.get("supplier") || "";
   const filterRisk = url.searchParams.get("risk") || "";
+  const page = Math.max(1, parseInt(url.searchParams.get("page") || "1", 10));
 
-  // Get all tracked variants with primary supplier mappings and saved reorder overrides
+  // Build supplier-filtered where clause for DB-level filtering
+  const supplierFilter = filterSupplier
+    ? { supplierMappings: { some: { supplierId: filterSupplier, isPrimary: true } } }
+    : {};
+
+  // Get total tracked variant count (for pagination metadata)
+  const totalCount = await prisma.shopifyVariant.count({
+    where: { storeId: store.id, tracked: true, ...supplierFilter },
+  });
+
+  // Fetch only the current page of variants
   const variants = await prisma.shopifyVariant.findMany({
-    where: { storeId: store.id, tracked: true },
-    include: {
-      product: true,
+    where: { storeId: store.id, tracked: true, ...supplierFilter },
+    select: {
+      id: true,
+      title: true,
+      sku: true,
+      inventoryQuantity: true,
+      unitsSold30Days: true,
+      daysUntilStockout: true,
+      product: { select: { title: true } },
       supplierMappings: {
         where: { isPrimary: true },
-        include: { supplier: true },
+        select: {
+          supplierId: true,
+          supplierLeadTimeDays: true,
+          supplier: { select: { name: true, leadTimeDays: true } },
+        },
         take: 1,
       },
       reorderOverrides: {
         where: { storeId: store.id },
+        select: { overrideQuantity: true, reason: true, notes: true },
         take: 1,
       },
     },
     orderBy: [{ daysUntilStockout: "asc" }, { unitsSold30Days: "desc" }],
+    skip: (page - 1) * PAGE_SIZE,
+    take: PAGE_SIZE,
   });
 
   const suppliers = await prisma.supplier.findMany({
@@ -63,7 +91,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     orderBy: { name: "asc" },
   });
 
-  // Calculate reorder metrics & overrides per variant
+  // Calculate reorder metrics & overrides per variant (page only)
   const reorderData = variants.map((v) => {
     const primaryMapping = v.supplierMappings[0] ?? null;
     const supplierName = primaryMapping?.supplier.name ?? null;
@@ -114,26 +142,66 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     };
   });
 
-  // Apply filters
-  let filtered = reorderData;
-  if (filterSupplier) {
-    filtered = filtered.filter((v) => v.supplierId === filterSupplier);
-  }
-  if (filterRisk) {
-    filtered = filtered.filter((v) => v.risk === filterRisk);
-  }
+  // Apply risk filter client-side within page (risk is computed, not stored)
+  const filtered = filterRisk
+    ? reorderData.filter((v) => v.risk === filterRisk)
+    : reorderData;
+
+  // Risk summary counts across the full DB (not just this page) for the badges
+  const [criticalCount, reorderSoonCount, watchCount, healthyCount] = await Promise.all([
+    prisma.shopifyVariant.count({
+      where: {
+        storeId: store.id,
+        tracked: true,
+        ...supplierFilter,
+        daysUntilStockout: { lte: 7 },
+        averageDailySales: { gt: 0 },
+      },
+    }),
+    prisma.shopifyVariant.count({
+      where: {
+        storeId: store.id,
+        tracked: true,
+        ...supplierFilter,
+        daysUntilStockout: { gt: 7, lte: 14 },
+        averageDailySales: { gt: 0 },
+      },
+    }),
+    prisma.shopifyVariant.count({
+      where: {
+        storeId: store.id,
+        tracked: true,
+        ...supplierFilter,
+        daysUntilStockout: { gt: 14, lte: 30 },
+        averageDailySales: { gt: 0 },
+      },
+    }),
+    prisma.shopifyVariant.count({
+      where: {
+        storeId: store.id,
+        tracked: true,
+        ...supplierFilter,
+        OR: [
+          { daysUntilStockout: { gt: 30 } },
+          { averageDailySales: { lte: 0 } },
+        ],
+      },
+    }),
+  ]);
 
   return {
     variants: filtered,
     suppliers: suppliers.map((s) => ({ id: s.id, name: s.name })),
     lastSyncAt: store.lastSyncAt?.toISOString() ?? null,
-    totalCount: reorderData.length,
+    totalCount,
     filteredCount: filtered.length,
+    page,
+    pageSize: PAGE_SIZE,
     riskCounts: {
-      critical: reorderData.filter((v) => v.risk === "Critical").length,
-      reorderSoon: reorderData.filter((v) => v.risk === "Reorder Soon").length,
-      watch: reorderData.filter((v) => v.risk === "Watch").length,
-      healthy: reorderData.filter((v) => v.risk === "Healthy").length,
+      critical: criticalCount,
+      reorderSoon: reorderSoonCount,
+      watch: watchCount,
+      healthy: healthyCount,
     },
   };
 };
@@ -547,7 +615,9 @@ export default function ReorderPage() {
         </div>
 
         <div style={{ ...mutedStyle, marginTop: "8px", marginBottom: "16px" }}>
-          Showing {data.filteredCount} of {data.totalCount} tracked variants. Sales figures for 7, 14, and 90 days are estimated from your synced 30-day sales velocity model.
+          Showing {data.variants.length} of {data.totalCount} tracked variants
+          {data.totalCount > data.pageSize ? ` (page ${data.page} of ${Math.ceil(data.totalCount / data.pageSize)})` : ""}
+          . Sales figures for 7, 14, and 90 days are estimated from your synced 30-day sales velocity model.
         </div>
       </s-section>
 
@@ -739,6 +809,39 @@ export default function ReorderPage() {
                 })}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* Pagination controls */}
+        {data.totalCount > data.pageSize && (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "16px", padding: "12px 0", borderTop: "1px solid #e1e3e5" }}>
+            <div style={{ color: "#6d7175", fontSize: "13px" }}>
+              Page {data.page} of {Math.ceil(data.totalCount / data.pageSize)} &nbsp;·&nbsp; {data.totalCount} total variants
+            </div>
+            <div style={{ display: "flex", gap: "8px" }}>
+              <button
+                disabled={data.page <= 1}
+                onClick={() => {
+                  const p = new URLSearchParams(searchParams);
+                  p.set("page", String(data.page - 1));
+                  setSearchParams(p);
+                }}
+                style={{ padding: "6px 14px", border: "1px solid #c9cccf", borderRadius: "6px", background: data.page <= 1 ? "#f6f6f7" : "#fff", color: data.page <= 1 ? "#8c9196" : "#202223", cursor: data.page <= 1 ? "not-allowed" : "pointer", fontSize: "13px", fontWeight: 550 }}
+              >
+                ← Previous
+              </button>
+              <button
+                disabled={data.page >= Math.ceil(data.totalCount / data.pageSize)}
+                onClick={() => {
+                  const p = new URLSearchParams(searchParams);
+                  p.set("page", String(data.page + 1));
+                  setSearchParams(p);
+                }}
+                style={{ padding: "6px 14px", border: "1px solid #c9cccf", borderRadius: "6px", background: data.page >= Math.ceil(data.totalCount / data.pageSize) ? "#f6f6f7" : "#fff", color: data.page >= Math.ceil(data.totalCount / data.pageSize) ? "#8c9196" : "#202223", cursor: data.page >= Math.ceil(data.totalCount / data.pageSize) ? "not-allowed" : "pointer", fontSize: "13px", fontWeight: 550 }}
+              >
+                Next →
+              </button>
+            </div>
           </div>
         )}
       </s-section>

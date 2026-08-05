@@ -38,10 +38,15 @@ async function withRetries<T>(operation: string, fn: () => Promise<T>): Promise<
   throw lastError;
 }
 
+function shouldLogSessionStorage() {
+  return process.env.SESSION_DEBUG === "1";
+}
+
 function logStorageResult(
   operation: string,
   details: Record<string, string | number | boolean | null | undefined>
 ) {
+  if (!shouldLogSessionStorage()) return;
   console.log(`[PODesk session storage] ${operation}`, details);
 }
 
