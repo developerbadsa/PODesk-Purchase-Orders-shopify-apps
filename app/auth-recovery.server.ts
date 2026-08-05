@@ -23,12 +23,26 @@ export function recoverFromInvalidEmbeddedSession(
   }
 
   const url = new URL(request.url);
-  const shop = url.searchParams.get("shop");
-  const host = url.searchParams.get("host");
-  const isEmbedded = url.searchParams.get("embedded") === "1";
+  let shop = url.searchParams.get("shop");
+  let host = url.searchParams.get("host");
+
+  if (!shop) {
+    const referer = request.headers.get("referer");
+    if (referer) {
+      try {
+        const refUrl = new URL(referer);
+        shop = refUrl.searchParams.get("shop");
+        host = host || refUrl.searchParams.get("host");
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  const isEmbedded = url.searchParams.get("embedded") === "1" || Boolean(host);
   const alreadyRetried = url.searchParams.get(RECOVERY_PARAM) === "1";
 
-  if (!shop || !host || !isEmbedded || alreadyRetried) {
+  if (!shop || !host || alreadyRetried) {
     return null;
   }
 
@@ -36,6 +50,8 @@ export function recoverFromInvalidEmbeddedSession(
   for (const param of RESTRICTED_RELOAD_PARAMS) {
     reloadUrl.searchParams.delete(param);
   }
+  reloadUrl.searchParams.set("shop", shop);
+  reloadUrl.searchParams.set("host", host);
   reloadUrl.searchParams.set(RECOVERY_PARAM, "1");
 
   const bounceUrl = new URL(SESSION_TOKEN_PATH, url.origin);
