@@ -183,66 +183,70 @@ export default function MappingsPage() {
 
       <s-section heading="Assign SKU to supplier">
         {suppliers.length === 0 ? (
-          <div style={{ padding: "18px", background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: "8px" }}>
-            <div style={{ fontWeight: 650, fontSize: "14px", marginBottom: "6px" }}>No suppliers found</div>
-            <p style={{ margin: "0 0 12px", color: "#6d7175", fontSize: "13px" }}>
+          <div style={{ padding: "20px", background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: "10px" }}>
+            <div style={{ fontWeight: 650, fontSize: "15px", marginBottom: "6px", color: "#202223" }}>No suppliers found</div>
+            <p style={{ margin: "0 0 14px", color: "#6d7175", fontSize: "13px" }}>
               Add a supplier first before mapping products and SKUs.
             </p>
             <a href="/app/suppliers" style={buttonStyle}>Add Supplier</a>
           </div>
         ) : variants.length === 0 ? (
-          <div style={{ padding: "18px", background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: "8px" }}>
-            <div style={{ fontWeight: 650, fontSize: "14px", marginBottom: "6px" }}>No Shopify variants synced yet</div>
-            <p style={{ margin: "0 0 12px", color: "#6d7175", fontSize: "13px" }}>
+          <div style={{ padding: "20px", background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: "10px" }}>
+            <div style={{ fontWeight: 650, fontSize: "15px", marginBottom: "6px", color: "#202223" }}>No Shopify variants synced yet</div>
+            <p style={{ margin: "0 0 14px", color: "#6d7175", fontSize: "13px" }}>
               Run inventory sync from the dashboard to pull your Shopify variants into PODesk.
             </p>
             <a href="/app" style={buttonStyle}>Go to Dashboard to Sync</a>
           </div>
         ) : (
-          <Form method="post">
-            <input type="hidden" name="intent" value="create-mapping" />
-            <div style={formGridStyle}>
-              <label style={fieldLabelStyle}>
-                Supplier
-                <select name="supplierId" required style={inputStyle}>
-                  <option value="">Select supplier</option>
-                  {suppliers.map((s) => (
-                    <option key={s.id} value={s.id}>{s.name}</option>
-                  ))}
-                </select>
-              </label>
-              <label style={fieldLabelStyle}>
-                Variant / SKU
-                <select name="variantId" required style={inputStyle}>
-                  <option value="">Select variant</option>
-                  {variants.map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {v.productTitle} - {v.variantTitle} {v.sku ? `(${v.sku})` : ""}
-                      {mappedVariantIds.has(v.id) ? " - already mapped" : ""}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <Field label="Supplier SKU" name="supplierSku" />
-              <Field label="Supplier cost" name="supplierCost" type="number" step="0.01" />
-              <Field label="Lead time override (days)" name="supplierLeadTimeDays" type="number" />
-              <label style={{ ...fieldLabelStyle, flexDirection: "row", alignItems: "center", gap: "8px" }}>
-                <input type="checkbox" name="isPrimary" defaultChecked />
-                Primary supplier
-              </label>
-            </div>
-            <button type="submit" disabled={isSubmitting} style={buttonStyle}>
-              Create mapping
-            </button>
-          </Form>
+          <div style={formCardStyle}>
+            <Form method="post">
+              <input type="hidden" name="intent" value="create-mapping" />
+              <div style={formGridStyle}>
+                <label style={fieldLabelStyle}>
+                  Supplier <span style={{ color: "#d72c0d" }}>*</span>
+                  <select name="supplierId" required style={inputStyle}>
+                    <option value="">Select supplier</option>
+                    {suppliers.map((s) => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
+                </label>
+                <label style={fieldLabelStyle}>
+                  Variant / SKU <span style={{ color: "#d72c0d" }}>*</span>
+                  <select name="variantId" required style={inputStyle}>
+                    <option value="">Select variant</option>
+                    {variants.map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {v.productTitle} - {v.variantTitle} {v.sku ? `(${v.sku})` : ""}
+                        {mappedVariantIds.has(v.id) ? " - (already mapped)" : ""}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <Field label="Supplier SKU (Optional)" name="supplierSku" placeholder="e.g. SUP-SKU-101" />
+                <Field label="Supplier cost ($)" name="supplierCost" type="number" step="0.01" placeholder="e.g. 15.50" />
+                <Field label="Lead time override (days)" name="supplierLeadTimeDays" type="number" placeholder="e.g. 14" />
+              </div>
+              <div style={{ margin: "14px 0 18px" }}>
+                <label style={checkboxLabelStyle}>
+                  <input type="checkbox" name="isPrimary" defaultChecked style={{ width: "16px", height: "16px", accentColor: "#008060" }} />
+                  Set as primary supplier for this SKU
+                </label>
+              </div>
+              <button type="submit" disabled={isSubmitting} style={buttonStyle}>
+                {isSubmitting ? "Saving mapping..." : "Create mapping"}
+              </button>
+            </Form>
+          </div>
         )}
       </s-section>
 
       <s-section heading={`Current mappings (${mappings.length})`}>
         {mappings.length === 0 ? (
-          <div style={{ padding: "18px", background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: "8px" }}>
-            <div style={{ fontWeight: 650, fontSize: "14px", marginBottom: "6px" }}>No SKU mappings created yet</div>
-            <p style={{ margin: "0 0 12px", color: "#6d7175", fontSize: "13px" }}>
+          <div style={{ padding: "20px", background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: "10px" }}>
+            <div style={{ fontWeight: 650, fontSize: "15px", marginBottom: "6px", color: "#202223" }}>No SKU mappings created yet</div>
+            <p style={{ margin: "0 0 14px", color: "#6d7175", fontSize: "13px" }}>
               Map your variants using the form above or import existing supplier mappings from Stocky / spreadsheets via CSV.
             </p>
             <a href="/app/imports" style={buttonStyle}>Import Mappings via CSV</a>
@@ -266,7 +270,7 @@ export default function MappingsPage() {
                 {mappings.map((m) => (
                   <tr key={m.id}>
                     <td style={tdStyle}>
-                      {m.productTitle}
+                      <span style={{ fontWeight: 600, color: "#202223" }}>{m.productTitle}</span>
                       <div style={mutedStyle}>{m.variantTitle}</div>
                     </td>
                     <td style={tdStyle}>{m.sku || "-"}</td>
@@ -304,27 +308,31 @@ export default function MappingsPage() {
         if (!target) return null;
         return (
           <s-section heading={`Edit Mapping: ${target.productTitle} (${target.variantTitle})`}>
-            <Form method="post" onSubmit={() => setEditingId(null)}>
-              <input type="hidden" name="intent" value="update-mapping" />
-              <input type="hidden" name="mappingId" value={target.id} />
-              <div style={formGridStyle}>
-                <Field label="Supplier SKU" name="supplierSku" defaultValue={target.supplierSku ?? ""} />
-                <Field label="Supplier cost ($)" name="supplierCost" type="number" step="0.01" defaultValue={target.supplierCost != null ? String(target.supplierCost) : ""} />
-                <Field label="Lead time override (days)" name="supplierLeadTimeDays" type="number" defaultValue={target.supplierLeadTimeDays != null ? String(target.supplierLeadTimeDays) : ""} />
-                <label style={{ ...fieldLabelStyle, flexDirection: "row", alignItems: "center", gap: "8px" }}>
-                  <input type="checkbox" name="isPrimary" defaultChecked={target.isPrimary} />
-                  Primary supplier
-                </label>
-              </div>
-              <div style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
-                <button type="submit" disabled={isSubmitting} style={buttonStyle}>
-                  Save mapping update
-                </button>
-                <button type="button" onClick={() => setEditingId(null)} style={smallBtnStyle}>
-                  Cancel
-                </button>
-              </div>
-            </Form>
+            <div style={formCardStyle}>
+              <Form method="post" onSubmit={() => setEditingId(null)}>
+                <input type="hidden" name="intent" value="update-mapping" />
+                <input type="hidden" name="mappingId" value={target.id} />
+                <div style={formGridStyle}>
+                  <Field label="Supplier SKU" name="supplierSku" defaultValue={target.supplierSku ?? ""} />
+                  <Field label="Supplier cost ($)" name="supplierCost" type="number" step="0.01" defaultValue={target.supplierCost != null ? String(target.supplierCost) : ""} />
+                  <Field label="Lead time override (days)" name="supplierLeadTimeDays" type="number" defaultValue={target.supplierLeadTimeDays != null ? String(target.supplierLeadTimeDays) : ""} />
+                </div>
+                <div style={{ margin: "14px 0 18px" }}>
+                  <label style={checkboxLabelStyle}>
+                    <input type="checkbox" name="isPrimary" defaultChecked={target.isPrimary} style={{ width: "16px", height: "16px", accentColor: "#008060" }} />
+                    Set as primary supplier for this SKU
+                  </label>
+                </div>
+                <div style={{ display: "flex", gap: "10px" }}>
+                  <button type="submit" disabled={isSubmitting} style={buttonStyle}>
+                    Save mapping update
+                  </button>
+                  <button type="button" onClick={() => setEditingId(null)} style={smallBtnStyle}>
+                    Cancel
+                  </button>
+                </div>
+              </Form>
+            </div>
           </s-section>
         );
       })()}
@@ -341,14 +349,14 @@ export default function MappingsPage() {
 }
 
 function Field({
-  label, name, type = "text", required = false, defaultValue, step,
+  label, name, type = "text", required = false, defaultValue, step, placeholder,
 }: {
-  label: string; name: string; type?: string; required?: boolean; defaultValue?: string; step?: string;
+  label: string; name: string; type?: string; required?: boolean; defaultValue?: string; step?: string; placeholder?: string;
 }) {
   return (
     <label style={fieldLabelStyle}>
-      {label}
-      <input name={name} type={type} required={required} defaultValue={defaultValue} step={step} style={inputStyle} />
+      <span>{label} {required ? <span style={{ color: "#d72c0d" }}>*</span> : null}</span>
+      <input name={name} type={type} required={required} defaultValue={defaultValue} step={step} placeholder={placeholder} style={inputStyle} />
     </label>
   );
 }
@@ -373,18 +381,20 @@ function optionalIntNumber(value: FormDataEntryValue | null) {
 }
 
 // Styles
-const formGridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "12px", marginBottom: "12px" } as const;
-const fieldLabelStyle = { display: "grid", gap: "6px", color: "#202223", fontSize: "13px", fontWeight: 600 } as const;
-const inputStyle = { border: "1px solid #c9cccf", borderRadius: "6px", padding: "9px 10px", fontSize: "14px", width: "100%" } as const;
-const buttonStyle = { border: "0", borderRadius: "6px", padding: "10px 14px", background: "#008060", color: "#fff", fontWeight: 650, cursor: "pointer" } as const;
-const smallBtnStyle = { border: "1px solid #c9cccf", borderRadius: "4px", padding: "4px 10px", background: "#fff", cursor: "pointer", fontSize: "12px" } as const;
-const linkStyle = { color: "#2c6ecb", textDecoration: "none" } as const;
+const formCardStyle = { background: "#ffffff", border: "1px solid #e1e3e5", borderRadius: "10px", padding: "20px 24px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" } as const;
+const formGridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "16px" } as const;
+const fieldLabelStyle = { display: "flex", flexDirection: "column", gap: "6px", color: "#202223", fontSize: "13px", fontWeight: 600 } as const;
+const inputStyle = { height: "40px", border: "1px solid #8c9196", borderRadius: "8px", padding: "0 12px", fontSize: "14px", width: "100%", backgroundColor: "#ffffff", outline: "none", boxSizing: "border-box" } as const;
+const buttonStyle = { height: "40px", border: "0", borderRadius: "8px", padding: "0 20px", background: "#008060", color: "#fff", fontWeight: 650, fontSize: "14px", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", textDecoration: "none" } as const;
+const smallBtnStyle = { height: "32px", border: "1px solid #c9cccf", borderRadius: "6px", padding: "0 12px", background: "#fff", color: "#202223", cursor: "pointer", fontSize: "13px", fontWeight: 600, display: "inline-flex", alignItems: "center" } as const;
+const checkboxLabelStyle = { display: "inline-flex", alignItems: "center", gap: "8px", color: "#202223", fontSize: "14px", fontWeight: 550, cursor: "pointer", userSelect: "none" } as const;
+const linkStyle = { color: "#2c6ecb", textDecoration: "none", fontWeight: 600 } as const;
 const mutedStyle = { color: "#6d7175", fontSize: "13px", marginTop: "4px" } as const;
 const tableWrapStyle = { overflowX: "auto" } as const;
 const tableStyle = { width: "100%", borderCollapse: "collapse", fontSize: "14px" } as const;
-const thStyle = { textAlign: "left", borderBottom: "1px solid #dfe3e8", padding: "10px 8px", whiteSpace: "nowrap" } as const;
-const tdStyle = { borderBottom: "1px solid #f1f2f3", padding: "10px 8px", verticalAlign: "top" } as const;
-const noticeStyle = (ok: boolean) => ({ border: `1px solid ${ok ? "#95c9b4" : "#e0b3b2"}`, background: ok ? "#effaf5" : "#fff4f4", borderRadius: "8px", marginTop: "12px", marginBottom: "12px", padding: "10px 12px", color: ok ? "#0f5132" : "#8a1f11" }) as const;
+const thStyle = { textAlign: "left", borderBottom: "1px solid #dfe3e8", padding: "12px 10px", whiteSpace: "nowrap", color: "#5c5f62", fontSize: "13px", fontWeight: 650 } as const;
+const tdStyle = { borderBottom: "1px solid #f1f2f3", padding: "12px 10px", verticalAlign: "middle" } as const;
+const noticeStyle = (ok: boolean) => ({ border: `1px solid ${ok ? "#95c9b4" : "#e0b3b2"}`, background: ok ? "#effaf5" : "#fff4f4", borderRadius: "8px", marginTop: "12px", marginBottom: "12px", padding: "12px 16px", color: ok ? "#0f5132" : "#8a1f11", fontWeight: 550 }) as const;
 
 export const headers: HeadersFunction = (headersArgs) => {
   return boundary.headers(headersArgs);

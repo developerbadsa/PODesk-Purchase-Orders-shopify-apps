@@ -392,7 +392,7 @@ function optionalNumber(value: FormDataEntryValue | null) {
 }
 
 // Styles
-const supplierFormStyle = { display: "grid", gap: "18px" } as const;
+const supplierFormStyle = { display: "grid", gap: "20px", background: "#ffffff", border: "1px solid #e1e3e5", borderRadius: "10px", padding: "20px 24px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" } as const;
 const formIntroStyle = {
   display: "flex",
   justifyContent: "space-between",
@@ -427,8 +427,8 @@ const groupHeadingStyle = {
 } as const;
 const formGridStyle = {
   display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-  gap: "14px 16px",
+  gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+  gap: "16px",
 } as const;
 const fieldLabelStyle = {
   display: "grid",
@@ -443,16 +443,16 @@ const requiredMarkStyle = { color: "#d72c0d", fontWeight: 700 } as const;
 const inputWrapStyle = { position: "relative", display: "block" } as const;
 const inputBaseStyle = {
   boxSizing: "border-box",
-  border: "1px solid #c9cccf",
-  borderRadius: "6px",
-  padding: "10px 12px",
-  minHeight: "40px",
+  border: "1px solid #8c9196",
+  borderRadius: "8px",
+  padding: "0 12px",
+  height: "40px",
   fontSize: "14px",
   lineHeight: "20px",
   width: "100%",
   background: "#ffffff",
   color: "#202223",
-  outlineColor: "#008060",
+  outline: "none",
 } as const;
 const inputStyle = inputBaseStyle;
 const inputWithSuffixStyle = { ...inputBaseStyle, paddingRight: "56px" } as const;
@@ -467,8 +467,10 @@ const suffixStyle = {
 } as const;
 const textareaStyle = {
   ...inputBaseStyle,
+  height: "auto",
+  minHeight: "80px",
+  padding: "10px 12px",
   resize: "vertical",
-  minHeight: "86px",
   fontFamily: "inherit",
 } as const;
 const helpTextStyle = {
@@ -485,22 +487,27 @@ const formActionsStyle = {
 const buttonStyle = (disabled: boolean) =>
   ({
     border: "0",
-    borderRadius: "6px",
-    padding: "10px 16px",
-    minHeight: "40px",
+    borderRadius: "8px",
+    padding: "0 20px",
+    height: "40px",
     background: disabled ? "#8bbbab" : "#008060",
     color: "#fff",
     fontWeight: 650,
+    fontSize: "14px",
     cursor: disabled ? "default" : "pointer",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    boxShadow: "0 1px 2px rgba(0, 0, 0, 0.12)",
   }) as const;
-const smallBtnStyle = { border: "1px solid #c9cccf", borderRadius: "4px", padding: "4px 10px", background: "#fff", cursor: "pointer", fontSize: "12px" } as const;
+const smallBtnStyle = { height: "32px", border: "1px solid #c9cccf", borderRadius: "6px", padding: "0 12px", background: "#fff", color: "#202223", cursor: "pointer", fontSize: "13px", fontWeight: 600, display: "inline-flex", alignItems: "center" } as const;
 const dangerBtnStyle = { ...smallBtnStyle, color: "#d72c0d", borderColor: "#d72c0d" } as const;
-const linkStyle = { color: "#2c6ecb", textDecoration: "none" } as const;
+const linkStyle = { color: "#2c6ecb", textDecoration: "none", fontWeight: 600 } as const;
 const tableWrapStyle = { overflowX: "auto" } as const;
 const tableStyle = { width: "100%", borderCollapse: "collapse", fontSize: "14px" } as const;
-const thStyle = { textAlign: "left", borderBottom: "1px solid #dfe3e8", padding: "10px 8px", whiteSpace: "nowrap" } as const;
-const tdStyle = { borderBottom: "1px solid #f1f2f3", padding: "10px 8px", verticalAlign: "top" } as const;
-const noticeStyle = (ok: boolean) => ({ border: `1px solid ${ok ? "#95c9b4" : "#e0b3b2"}`, background: ok ? "#effaf5" : "#fff4f4", borderRadius: "8px", marginTop: "12px", marginBottom: "12px", padding: "10px 12px", color: ok ? "#0f5132" : "#8a1f11" }) as const;
+const thStyle = { textAlign: "left", borderBottom: "1px solid #dfe3e8", padding: "12px 10px", whiteSpace: "nowrap", color: "#5c5f62", fontSize: "13px", fontWeight: 650 } as const;
+const tdStyle = { borderBottom: "1px solid #f1f2f3", padding: "12px 10px", verticalAlign: "middle" } as const;
+const noticeStyle = (ok: boolean) => ({ border: `1px solid ${ok ? "#95c9b4" : "#e0b3b2"}`, background: ok ? "#effaf5" : "#fff4f4", borderRadius: "8px", marginTop: "12px", marginBottom: "12px", padding: "12px 16px", color: ok ? "#0f5132" : "#8a1f11", fontWeight: 550 }) as const;
 
 export const headers: HeadersFunction = (headersArgs) => {
   return boundary.headers(headersArgs);

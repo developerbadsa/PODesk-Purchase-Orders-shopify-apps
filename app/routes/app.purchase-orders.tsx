@@ -232,94 +232,119 @@ export default function PurchaseOrdersPage() {
 
       <s-section heading="Create purchase order">
         {suppliers.length === 0 ? (
-          <s-paragraph>
-            <a href="/app/suppliers" style={linkStyle}>Add a supplier</a> before creating a purchase order.
-          </s-paragraph>
+          <div style={{ padding: "20px", background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: "10px" }}>
+            <div style={{ fontWeight: 650, fontSize: "15px", marginBottom: "6px", color: "#202223" }}>No suppliers found</div>
+            <p style={{ margin: "0 0 14px", color: "#6d7175", fontSize: "13px" }}>
+              Add a supplier first before creating a purchase order.
+            </p>
+            <a href="/app/suppliers" style={buttonStyle}>Add Supplier</a>
+          </div>
         ) : variants.length === 0 ? (
-          <s-paragraph>
-            <a href="/app" style={linkStyle}>Sync inventory</a> first to create purchase orders from real SKUs.
-          </s-paragraph>
+          <div style={{ padding: "20px", background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: "10px" }}>
+            <div style={{ fontWeight: 650, fontSize: "15px", marginBottom: "6px", color: "#202223" }}>No Shopify variants synced yet</div>
+            <p style={{ margin: "0 0 14px", color: "#6d7175", fontSize: "13px" }}>
+              Sync inventory first to create purchase orders from real SKUs.
+            </p>
+            <a href="/app" style={buttonStyle}>Sync Inventory</a>
+          </div>
         ) : (
-          <Form method="post" id="create-po-form">
-            <input type="hidden" name="intent" value="create-po" />
-            <div style={formGridStyle}>
-              <label style={fieldLabelStyle}>
-                Supplier
-                <select
-                  name="supplierId"
-                  required
-                  style={inputStyle}
-                  value={selectedSupplierId}
-                  onChange={(e) => handleSupplierChange(e.target.value)}
-                >
-                  <option value="">Select supplier</option>
-                  {suppliers.map((s) => (
-                    <option key={s.id} value={s.id}>{s.name}</option>
-                  ))}
-                </select>
-              </label>
-              <Field label="Expected arrival" name="expectedArrival" type="date" />
-            </div>
-
-            <div style={{ marginBottom: "12px" }}>
-              <div style={{ fontWeight: 600, fontSize: "13px", marginBottom: "8px" }}>Line items</div>
-              {[0, 1, 2, 3, 4].map((i) => (
-                <div key={i} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: "8px", marginBottom: "6px" }}>
+          <div style={formCardStyle}>
+            <Form method="post" id="create-po-form">
+              <input type="hidden" name="intent" value="create-po" />
+              <div style={formGridStyle}>
+                <label style={fieldLabelStyle}>
+                  <span>Supplier <span style={{ color: "#d72c0d" }}>*</span></span>
                   <select
-                    name="lineVariantId"
+                    name="supplierId"
+                    required
                     style={inputStyle}
-                    value={lineVariants[i] ?? ""}
-                    onChange={(e) => handleVariantChange(i, e.target.value)}
+                    value={selectedSupplierId}
+                    onChange={(e) => handleSupplierChange(e.target.value)}
                   >
-                    <option value="">- select variant -</option>
-                    {variants.map((v) => {
-                      const isMapped = mappings.some(
-                        (m) => m.supplierId === selectedSupplierId && m.variantId === v.id
-                      );
-                      return (
-                        <option key={v.id} value={v.id}>
-                          {v.productTitle} - {v.variantTitle} {v.sku ? `(${v.sku})` : ""}
-                          {isMapped ? " [mapped]" : ""}
-                        </option>
-                      );
-                    })}
+                    <option value="">Select supplier</option>
+                    {suppliers.map((s) => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
                   </select>
-                  <input name="lineQuantity" type="number" placeholder="Qty" min="0" style={inputStyle} />
-                  <input
-                    name="lineUnitCost"
-                    type="number"
-                    step="0.01"
-                    placeholder="Cost"
-                    style={inputStyle}
-                    value={lineCosts[i] ?? ""}
-                    onChange={(e) => setLineCosts((prev) => ({ ...prev, [i]: e.target.value }))}
-                  />
-                </div>
-              ))}
-              <div style={mutedStyle}>Fill at least one line. Mapped SKUs show [mapped] and prefill unit cost automatically.</div>
-            </div>
+                </label>
+                <Field label="Expected arrival date" name="expectedArrival" type="date" />
+              </div>
 
-            <label style={fieldLabelStyle}>
-              Notes
-              <textarea name="notes" rows={2} style={textareaStyle} />
-            </label>
-            <button type="submit" disabled={isSubmitting} style={buttonStyle}>
-              Create PO
-            </button>
-          </Form>
+              <div style={{ margin: "20px 0" }}>
+                <div style={{ fontWeight: 650, fontSize: "14px", color: "#202223", marginBottom: "10px" }}>
+                  Line items
+                </div>
+                
+                {/* Line items table header */}
+                <div style={{ display: "grid", gridTemplateColumns: "3fr 1fr 1fr", gap: "12px", marginBottom: "8px", padding: "0 4px" }}>
+                  <div style={{ fontSize: "12px", fontWeight: 650, color: "#5c5f62", textTransform: "uppercase" }}>Variant / Product SKU</div>
+                  <div style={{ fontSize: "12px", fontWeight: 650, color: "#5c5f62", textTransform: "uppercase" }}>Quantity</div>
+                  <div style={{ fontSize: "12px", fontWeight: 650, color: "#5c5f62", textTransform: "uppercase" }}>Unit Cost ($)</div>
+                </div>
+
+                {[0, 1, 2, 3, 4].map((i) => (
+                  <div key={i} style={{ display: "grid", gridTemplateColumns: "3fr 1fr 1fr", gap: "12px", marginBottom: "10px" }}>
+                    <select
+                      name="lineVariantId"
+                      style={inputStyle}
+                      value={lineVariants[i] ?? ""}
+                      onChange={(e) => handleVariantChange(i, e.target.value)}
+                    >
+                      <option value="">- select variant -</option>
+                      {variants.map((v) => {
+                        const isMapped = mappings.some(
+                          (m) => m.supplierId === selectedSupplierId && m.variantId === v.id
+                        );
+                        return (
+                          <option key={v.id} value={v.id}>
+                            {v.productTitle} - {v.variantTitle} {v.sku ? `(${v.sku})` : ""}
+                            {isMapped ? " [mapped]" : ""}
+                          </option>
+                        );
+                      })}
+                    </select>
+                    <input name="lineQuantity" type="number" placeholder="Qty" min="0" style={inputStyle} />
+                    <input
+                      name="lineUnitCost"
+                      type="number"
+                      step="0.01"
+                      placeholder="Cost"
+                      style={inputStyle}
+                      value={lineCosts[i] ?? ""}
+                      onChange={(e) => setLineCosts((prev) => ({ ...prev, [i]: e.target.value }))}
+                    />
+                  </div>
+                ))}
+                <div style={mutedStyle}>
+                  Fill at least one line item. Mapped SKUs show <span style={{ color: "#008060", fontWeight: 600 }}>[mapped]</span> and prefill unit cost automatically.
+                </div>
+              </div>
+
+              <label style={fieldLabelStyle}>
+                <span>Notes / Instructions (Optional)</span>
+                <textarea name="notes" rows={2} placeholder="Add special instructions for supplier..." style={textareaStyle} />
+              </label>
+
+              <div style={{ marginTop: "18px" }}>
+                <button type="submit" disabled={isSubmitting} style={buttonStyle}>
+                  {isSubmitting ? "Creating PO..." : "Create purchase order"}
+                </button>
+              </div>
+            </Form>
+          </div>
         )}
       </s-section>
 
       <s-section heading={`All purchase orders (${purchaseOrders.length})`}>
         {purchaseOrders.length === 0 ? (
-          <div style={{ padding: "18px", background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: "8px" }}>
-            <div style={{ fontWeight: 650, fontSize: "14px", marginBottom: "6px" }}>No purchase orders created yet</div>
-            <p style={{ margin: "0 0 12px", color: "#6d7175", fontSize: "13px" }}>
+          <div style={{ padding: "20px", background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: "10px" }}>
+            <div style={{ fontWeight: 650, fontSize: "15px", marginBottom: "6px", color: "#202223" }}>No purchase orders created yet</div>
+            <p style={{ margin: "0 0 14px", color: "#6d7175", fontSize: "13px" }}>
               Create your first draft purchase order using the form above or review automated reorder suggestions based on your sales velocity.
             </p>
-            <div style={{ display: "flex", gap: "10px" }}>
+            <div style={{ display: "flex", gap: "12px" }}>
               <a href="/app/reorder" style={buttonStyle}>Open Reorder Planning</a>
-              <a href="/app/mappings" style={buttonStyle}>Map Suppliers & SKUs</a>
+              <a href="/app/mappings" style={secondaryButtonStyle}>Map Suppliers & SKUs</a>
             </div>
           </div>
         ) : (
@@ -379,14 +404,14 @@ export default function PurchaseOrdersPage() {
 }
 
 function Field({
-  label, name, type = "text", required = false, defaultValue, step,
+  label, name, type = "text", required = false, defaultValue, step, placeholder,
 }: {
-  label: string; name: string; type?: string; required?: boolean; defaultValue?: string; step?: string;
+  label: string; name: string; type?: string; required?: boolean; defaultValue?: string; step?: string; placeholder?: string;
 }) {
   return (
     <label style={fieldLabelStyle}>
-      {label}
-      <input name={name} type={type} required={required} defaultValue={defaultValue} step={step} style={inputStyle} />
+      <span>{label} {required ? <span style={{ color: "#d72c0d" }}>*</span> : null}</span>
+      <input name={name} type={type} required={required} defaultValue={defaultValue} step={step} placeholder={placeholder} style={inputStyle} />
     </label>
   );
 }
@@ -428,18 +453,20 @@ function statusBadge(status: string) {
 }
 
 // Styles
-const formGridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "12px", marginBottom: "12px" } as const;
-const fieldLabelStyle = { display: "grid", gap: "6px", color: "#202223", fontSize: "13px", fontWeight: 600 } as const;
-const inputStyle = { border: "1px solid #c9cccf", borderRadius: "6px", padding: "9px 10px", fontSize: "14px", width: "100%" } as const;
-const textareaStyle = { ...inputStyle, resize: "vertical" } as const;
-const buttonStyle = { border: "0", borderRadius: "6px", padding: "10px 14px", background: "#008060", color: "#fff", fontWeight: 650, cursor: "pointer" } as const;
-const linkStyle = { color: "#2c6ecb", textDecoration: "none" } as const;
-const mutedStyle = { color: "#6d7175", fontSize: "13px", marginTop: "4px" } as const;
+const formCardStyle = { background: "#ffffff", border: "1px solid #e1e3e5", borderRadius: "10px", padding: "20px 24px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" } as const;
+const formGridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "16px" } as const;
+const fieldLabelStyle = { display: "flex", flexDirection: "column", gap: "6px", color: "#202223", fontSize: "13px", fontWeight: 600 } as const;
+const inputStyle = { height: "40px", border: "1px solid #8c9196", borderRadius: "8px", padding: "0 12px", fontSize: "14px", width: "100%", backgroundColor: "#ffffff", outline: "none", boxSizing: "border-box" } as const;
+const textareaStyle = { ...inputStyle, height: "auto", minHeight: "72px", padding: "10px 12px", resize: "vertical" } as const;
+const buttonStyle = { height: "40px", border: "0", borderRadius: "8px", padding: "0 20px", background: "#008060", color: "#fff", fontWeight: 650, fontSize: "14px", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", textDecoration: "none", boxShadow: "0 1px 2px rgba(0,0,0,0.12)" } as const;
+const secondaryButtonStyle = { height: "40px", border: "1px solid #c9cccf", borderRadius: "8px", padding: "0 20px", background: "#ffffff", color: "#202223", fontWeight: 600, fontSize: "14px", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", textDecoration: "none" } as const;
+const linkStyle = { color: "#2c6ecb", textDecoration: "none", fontWeight: 600 } as const;
+const mutedStyle = { color: "#6d7175", fontSize: "13px", marginTop: "6px" } as const;
 const tableWrapStyle = { overflowX: "auto" } as const;
 const tableStyle = { width: "100%", borderCollapse: "collapse", fontSize: "14px" } as const;
-const thStyle = { textAlign: "left", borderBottom: "1px solid #dfe3e8", padding: "10px 8px", whiteSpace: "nowrap" } as const;
-const tdStyle = { borderBottom: "1px solid #f1f2f3", padding: "10px 8px", verticalAlign: "top" } as const;
-const noticeStyle = (ok: boolean) => ({ border: `1px solid ${ok ? "#95c9b4" : "#e0b3b2"}`, background: ok ? "#effaf5" : "#fff4f4", borderRadius: "8px", marginTop: "12px", marginBottom: "12px", padding: "10px 12px", color: ok ? "#0f5132" : "#8a1f11" }) as const;
+const thStyle = { textAlign: "left", borderBottom: "1px solid #dfe3e8", padding: "12px 10px", whiteSpace: "nowrap", color: "#5c5f62", fontSize: "13px", fontWeight: 650 } as const;
+const tdStyle = { borderBottom: "1px solid #f1f2f3", padding: "12px 10px", verticalAlign: "middle" } as const;
+const noticeStyle = (ok: boolean) => ({ border: `1px solid ${ok ? "#95c9b4" : "#e0b3b2"}`, background: ok ? "#effaf5" : "#fff4f4", borderRadius: "8px", marginTop: "12px", marginBottom: "12px", padding: "12px 16px", color: ok ? "#0f5132" : "#8a1f11", fontWeight: 550 }) as const;
 
 export const headers: HeadersFunction = (headersArgs) => {
   return boundary.headers(headersArgs);

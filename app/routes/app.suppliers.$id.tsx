@@ -130,30 +130,34 @@ export default function SupplierDetailPage() {
       ) : null}
 
       <s-section heading="Edit supplier">
-        <Form method="post">
-          <input type="hidden" name="intent" value="update" />
-          <div style={formGridStyle}>
-            <Field label="Supplier name" name="name" required defaultValue={supplier.name} />
-            <Field label="Email" name="email" type="email" defaultValue={supplier.email ?? ""} />
-            <Field label="Phone" name="phone" defaultValue={supplier.phone ?? ""} />
-            <Field label="Lead time (days)" name="leadTimeDays" type="number" defaultValue={String(supplier.leadTimeDays)} />
-            <Field label="Minimum order" name="minimumOrder" type="number" defaultValue={supplier.minimumOrder != null ? String(supplier.minimumOrder) : ""} />
-            <Field label="Payment terms" name="paymentTerms" defaultValue={supplier.paymentTerms ?? ""} />
-          </div>
-          <label style={fieldLabelStyle}>
-            Notes
-            <textarea name="notes" rows={3} style={textareaStyle} defaultValue={supplier.notes ?? ""} />
-          </label>
-          <div style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
-            <button type="submit" disabled={isSubmitting} style={buttonStyle}>
-              Save changes
-            </button>
-            <Form method="post" style={{ display: "inline" }}>
-              <input type="hidden" name="intent" value="archive" />
-              <button type="submit" style={dangerBtnStyle}>Archive supplier</button>
-            </Form>
-          </div>
-        </Form>
+        <div style={formCardStyle}>
+          <Form method="post">
+            <input type="hidden" name="intent" value="update" />
+            <div style={formGridStyle}>
+              <Field label="Supplier name" name="name" required defaultValue={supplier.name} />
+              <Field label="Email" name="email" type="email" defaultValue={supplier.email ?? ""} />
+              <Field label="Phone" name="phone" defaultValue={supplier.phone ?? ""} />
+              <Field label="Lead time (days)" name="leadTimeDays" type="number" defaultValue={String(supplier.leadTimeDays)} />
+              <Field label="Minimum order" name="minimumOrder" type="number" defaultValue={supplier.minimumOrder != null ? String(supplier.minimumOrder) : ""} />
+              <Field label="Payment terms" name="paymentTerms" defaultValue={supplier.paymentTerms ?? ""} />
+            </div>
+            <div style={{ marginTop: "16px" }}>
+              <label style={fieldLabelStyle}>
+                <span>Notes</span>
+                <textarea name="notes" rows={3} style={textareaStyle} defaultValue={supplier.notes ?? ""} />
+              </label>
+            </div>
+            <div style={{ display: "flex", gap: "10px", marginTop: "18px" }}>
+              <button type="submit" disabled={isSubmitting} style={buttonStyle}>
+                Save changes
+              </button>
+              <Form method="post" style={{ display: "inline" }}>
+                <input type="hidden" name="intent" value="archive" />
+                <button type="submit" style={dangerBtnStyle}>Archive supplier</button>
+              </Form>
+            </div>
+          </Form>
+        </div>
       </s-section>
 
       <s-section heading={`Mapped SKUs (${mappings.length})`}>
@@ -179,7 +183,7 @@ export default function SupplierDetailPage() {
                 {mappings.map((m) => (
                   <tr key={m.id}>
                     <td style={tdStyle}>
-                      {m.productTitle}
+                      <span style={{ fontWeight: 600, color: "#202223" }}>{m.productTitle}</span>
                       <div style={mutedStyle}>{m.variantTitle}</div>
                     </td>
                     <td style={tdStyle}>{m.sku || "-"}</td>
@@ -242,7 +246,7 @@ function Field({
 }) {
   return (
     <label style={fieldLabelStyle}>
-      {label}
+      <span>{label} {required ? <span style={{ color: "#d72c0d" }}>*</span> : null}</span>
       <input name={name} type={type} required={required} defaultValue={defaultValue} step={step} style={inputStyle} />
     </label>
   );
@@ -271,20 +275,21 @@ function formatDate(value: string) {
 }
 
 // Styles
-const formGridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "12px", marginBottom: "12px" } as const;
-const fieldLabelStyle = { display: "grid", gap: "6px", color: "#202223", fontSize: "13px", fontWeight: 600 } as const;
-const inputStyle = { border: "1px solid #c9cccf", borderRadius: "6px", padding: "9px 10px", fontSize: "14px", width: "100%" } as const;
-const textareaStyle = { ...inputStyle, resize: "vertical" } as const;
-const buttonStyle = { border: "0", borderRadius: "6px", padding: "10px 14px", background: "#008060", color: "#fff", fontWeight: 650, cursor: "pointer" } as const;
-const smallBtnStyle = { border: "1px solid #c9cccf", borderRadius: "4px", padding: "4px 10px", background: "#fff", cursor: "pointer", fontSize: "12px" } as const;
-const dangerBtnStyle = { border: "1px solid #d72c0d", borderRadius: "6px", padding: "10px 14px", background: "#fff", color: "#d72c0d", fontWeight: 650, cursor: "pointer" } as const;
-const linkStyle = { color: "#2c6ecb", textDecoration: "none" } as const;
+const formCardStyle = { background: "#ffffff", border: "1px solid #e1e3e5", borderRadius: "10px", padding: "20px 24px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" } as const;
+const formGridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "16px" } as const;
+const fieldLabelStyle = { display: "flex", flexDirection: "column", gap: "6px", color: "#202223", fontSize: "13px", fontWeight: 600 } as const;
+const inputStyle = { height: "40px", border: "1px solid #8c9196", borderRadius: "8px", padding: "0 12px", fontSize: "14px", width: "100%", backgroundColor: "#ffffff", outline: "none", boxSizing: "border-box" } as const;
+const textareaStyle = { ...inputStyle, height: "auto", minHeight: "80px", padding: "10px 12px", resize: "vertical" } as const;
+const buttonStyle = { height: "40px", border: "0", borderRadius: "8px", padding: "0 20px", background: "#008060", color: "#fff", fontWeight: 650, fontSize: "14px", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", boxShadow: "0 1px 2px rgba(0,0,0,0.12)" } as const;
+const smallBtnStyle = { height: "32px", border: "1px solid #c9cccf", borderRadius: "6px", padding: "0 12px", background: "#fff", color: "#202223", cursor: "pointer", fontSize: "13px", fontWeight: 600, display: "inline-flex", alignItems: "center" } as const;
+const dangerBtnStyle = { height: "40px", border: "1px solid #d72c0d", borderRadius: "8px", padding: "0 16px", background: "#fff", color: "#d72c0d", fontWeight: 650, fontSize: "14px", cursor: "pointer", display: "inline-flex", alignItems: "center" } as const;
+const linkStyle = { color: "#2c6ecb", textDecoration: "none", fontWeight: 600 } as const;
 const mutedStyle = { color: "#6d7175", fontSize: "13px", marginTop: "4px" } as const;
 const tableWrapStyle = { overflowX: "auto" } as const;
 const tableStyle = { width: "100%", borderCollapse: "collapse", fontSize: "14px" } as const;
-const thStyle = { textAlign: "left", borderBottom: "1px solid #dfe3e8", padding: "10px 8px", whiteSpace: "nowrap" } as const;
-const tdStyle = { borderBottom: "1px solid #f1f2f3", padding: "10px 8px", verticalAlign: "top" } as const;
-const noticeStyle = (ok: boolean) => ({ border: `1px solid ${ok ? "#95c9b4" : "#e0b3b2"}`, background: ok ? "#effaf5" : "#fff4f4", borderRadius: "8px", marginTop: "12px", marginBottom: "12px", padding: "10px 12px", color: ok ? "#0f5132" : "#8a1f11" }) as const;
+const thStyle = { textAlign: "left", borderBottom: "1px solid #dfe3e8", padding: "12px 10px", whiteSpace: "nowrap", color: "#5c5f62", fontSize: "13px", fontWeight: 650 } as const;
+const tdStyle = { borderBottom: "1px solid #f1f2f3", padding: "12px 10px", verticalAlign: "middle" } as const;
+const noticeStyle = (ok: boolean) => ({ border: `1px solid ${ok ? "#95c9b4" : "#e0b3b2"}`, background: ok ? "#effaf5" : "#fff4f4", borderRadius: "8px", marginTop: "12px", marginBottom: "12px", padding: "12px 16px", color: ok ? "#0f5132" : "#8a1f11", fontWeight: 550 }) as const;
 
 export const headers: HeadersFunction = (headersArgs) => {
   return boundary.headers(headersArgs);

@@ -218,56 +218,62 @@ export default function Index() {
   }
 
   return (
-    <s-page heading="PODesk">
+    <s-page heading="Dashboard">
       <div style={betaBannerStyle}>
         <strong>Free Beta:</strong> All features are unlocked in this development build. No subscription required.
       </div>
 
-      <s-section heading="Inventory buying workspace">
-        <div style={heroGridStyle}>
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "6px" }}>
-              <img
-                src="/brand/podesk-app-icon.png"
-                alt="PODesk"
-                style={{ width: "32px", height: "32px", borderRadius: "6px", flexShrink: 0 }}
-              />
-              <span style={eyebrowStyle}>Connected store</span>
+      {/* Main Hero Card */}
+      <s-section heading="Store Overview">
+        <div style={formCardStyle}>
+          <div style={heroGridStyle}>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
+                <img
+                  src="/brand/podesk-app-icon.png"
+                  alt="PODesk"
+                  style={{ width: "32px", height: "32px", borderRadius: "6px", flexShrink: 0 }}
+                />
+                <span style={badgeStyle}>Connected Store</span>
+              </div>
+              <h2 style={heroTitleStyle}>{data.shop}</h2>
+              <p style={bodyStyle}>
+                Sync Shopify SKUs, manage supplier lead times, map costs, and generate purchase orders automatically.
+              </p>
+              <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+                <Form method="post">
+                  <input type="hidden" name="intent" value="sync" />
+                  <button type="submit" disabled={isSyncing} style={primaryButtonStyle}>
+                    {isSyncing ? "Syncing Inventory..." : "Sync Shopify Inventory"}
+                  </button>
+                </Form>
+                <a href="/app/purchase-orders" style={secondaryButtonStyle}>Create PO</a>
+                <a href="/app/reorder" style={secondaryButtonStyle}>Reorder Planning</a>
+              </div>
             </div>
-            <h2 style={heroTitleStyle}>{data.shop}</h2>
-            <p style={bodyStyle}>
-              Sync Shopify SKUs, connect suppliers, map supplier costs, and create
-              purchase orders from one operations workspace.
-            </p>
-            <Form method="post">
-              <input type="hidden" name="intent" value="sync" />
-              <button type="submit" disabled={isSyncing} style={primaryButtonStyle}>
-                {isSyncing ? "Syncing inventory..." : "Sync Shopify inventory"}
-              </button>
-            </Form>
+            <div style={syncBoxStyle}>
+              <div style={syncLabelStyle}>Last Sync Status</div>
+              <div style={syncValueStyle}>
+                {data.lastSyncAt ? formatDateTime(data.lastSyncAt) : "Never synced"}
+              </div>
+              <div style={mutedStyle}>
+                Read-only inventory & sales velocity sync.
+              </div>
+            </div>
           </div>
-          <div style={syncBoxStyle}>
-            <div style={syncLabelStyle}>Last sync</div>
-            <div style={syncValueStyle}>
-              {data.lastSyncAt ? formatDateTime(data.lastSyncAt) : "Never synced"}
-            </div>
-            <div style={mutedStyle}>
-              Read-only sync. PODesk recommendations do not modify Shopify inventory.
-            </div>
-          </div>
+          {actionData?.message ? (
+            <div style={noticeStyle(actionData.ok)}>{actionData.message}</div>
+          ) : null}
         </div>
-        {actionData?.message ? (
-          <div style={noticeStyle(actionData.ok)}>{actionData.message}</div>
-        ) : null}
       </s-section>
 
-      {/* Dynamic Next Best Action Card */}
-      <s-section heading="Recommended next action">
+      {/* Dynamic Recommended Action */}
+      <s-section heading="Recommended Next Action">
         <div style={nextActionCardStyle}>
           <div>
-            <div style={nextActionLabelStyle}>Next best action</div>
+            <div style={nextActionLabelStyle}>Recommended Step</div>
             <div style={nextActionTitleStyle}>{nextAction.title}</div>
-            <div style={mutedStyle}>{nextAction.text}</div>
+            <div style={{ ...mutedStyle, marginTop: "2px" }}>{nextAction.text}</div>
           </div>
           <div>
             {nextAction.isSync ? (
@@ -286,93 +292,55 @@ export default function Index() {
         </div>
       </s-section>
 
-      <s-section heading="Setup progress">
-        <div style={stepGridStyle}>
-          <SetupStep
-            done={hasInventory}
-            title="1. Sync inventory"
-            text="Pull Shopify variants, stock counts, and sales velocity."
-            href="/app"
-          />
-          <SetupStep
-            done={hasSupplier}
-            title="2. Add suppliers"
-            text="Store supplier lead times, terms, notes, and contacts."
-            href="/app/suppliers"
-          />
-          <SetupStep
-            done={hasMapping}
-            title="3. Map SKUs"
-            text="Connect Shopify SKUs to suppliers and unit costs."
-            href="/app/mappings"
-          />
-          <SetupStep
-            done={hasPo}
-            title="4. Create PO"
-            text="Build purchase orders from mapped SKUs."
-            href="/app/purchase-orders"
-          />
-          <SetupStep
-            done={hasImport}
-            title="5. Import CSV"
-            text="Import suppliers and SKU mappings from CSV."
-            href="/app/imports"
-          />
-          <SetupStep
-            done={hasReceived}
-            title="6. Receive PO"
-            text="Record received quantities and close purchase orders."
-            href="/app/purchase-orders"
-          />
-        </div>
-      </s-section>
-
-      <s-section heading="Operations snapshot">
+      {/* KPI Operations Snapshot */}
+      <s-section heading="Operations Snapshot">
         <div style={metricGridStyle}>
-          <Metric label="Variants synced" value={data.metrics.variantCount} />
-          <Metric label="Inventory units" value={data.metrics.totalInventory} />
-          <Metric label="Units sold, 30d" value={data.metrics.unitsSold30Days} />
-          <Metric label="Suppliers" value={data.metrics.supplierCount} />
-          <Metric label="Mapped SKUs" value={data.metrics.mappedSkuCount} />
-          <Metric label="Open POs" value={data.metrics.openPurchaseOrderCount} />
-          <Metric label="Partially received" value={data.metrics.partiallyReceivedPoCount} />
+          <Metric label="Synced Variants" value={data.metrics.variantCount} sub={`${data.metrics.totalInventory.toLocaleString()} units in stock`} accent="#008060" />
+          <Metric label="30-Day Sales" value={data.metrics.unitsSold30Days} sub="Units sold" accent="#2c6ecb" />
+          <Metric label="Suppliers & SKUs" value={data.metrics.supplierCount} sub={`${data.metrics.mappedSkuCount} mapped SKUs`} accent="#5c5f62" />
+          <Metric label="Open POs" value={data.metrics.openPurchaseOrderCount} sub={`${data.metrics.partiallyReceivedPoCount} receiving`} accent="#8a5a00" />
         </div>
       </s-section>
 
-      <s-section heading="Reorder attention">
+      {/* Stockout Risk & Reorder Planning */}
+      <s-section heading="Reorder Risk Attention">
         {data.atRiskVariants.length === 0 ? (
           <EmptyState
-            title="No reorder risks yet"
-            text="Sync inventory and sales velocity to identify SKUs at risk of stockout based on supplier lead times and daily demand."
+            title="All inventory counts healthy"
+            text="No SKUs currently projected to run out within 14 days based on daily velocity and lead times."
             actionHref="/app/reorder"
-            actionText="Open reorder planning"
+            actionText="Open Reorder Table"
           />
         ) : (
           <div style={tableWrapStyle}>
             <table style={tableStyle}>
               <thead>
                 <tr>
-                  <th style={thStyle}>Product</th>
+                  <th style={thStyle}>Product / Variant</th>
                   <th style={thStyle}>SKU</th>
                   <th style={thStyle}>Stock</th>
-                  <th style={thStyle}>Sold 30d</th>
-                  <th style={thStyle}>Days left</th>
+                  <th style={thStyle}>30d Demand</th>
+                  <th style={thStyle}>Days Remaining</th>
                 </tr>
               </thead>
               <tbody>
                 {data.atRiskVariants.map((variant) => (
                   <tr key={variant.id}>
                     <td style={tdStyle}>
-                      {variant.productTitle}
+                      <span style={{ fontWeight: 600, color: "#202223" }}>{variant.productTitle}</span>
                       <div style={mutedStyle}>{variant.variantTitle}</div>
                     </td>
-                    <td style={tdStyle}>{variant.sku || "No SKU"}</td>
+                    <td style={tdStyle}>{variant.sku || "-"}</td>
                     <td style={tdStyle}>{variant.inventoryQuantity}</td>
                     <td style={tdStyle}>{variant.unitsSold30Days}</td>
                     <td style={tdStyle}>
-                      {variant.daysUntilStockout == null
-                        ? "Unknown"
-                        : `${Math.round(variant.daysUntilStockout)} days`}
+                      {variant.daysUntilStockout == null ? (
+                        "-"
+                      ) : (
+                        <span style={riskBadgeStyle(variant.daysUntilStockout <= 7)}>
+                          {Math.round(variant.daysUntilStockout)} days
+                        </span>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -382,13 +350,14 @@ export default function Index() {
         )}
       </s-section>
 
-      <s-section heading="Recent purchase orders">
+      {/* Recent POs */}
+      <s-section heading="Recent Purchase Orders">
         {data.recentPurchaseOrders.length === 0 ? (
           <EmptyState
-            title="No purchase orders yet"
-            text="Once suppliers and SKU mappings exist, create your first draft purchase order."
+            title="No purchase orders created yet"
+            text="Once suppliers and SKU mappings are set up, draft your first purchase order."
             actionHref="/app/purchase-orders"
-            actionText="Create purchase order"
+            actionText="Create Purchase Order"
           />
         ) : (
           <div style={tableWrapStyle}>
@@ -412,13 +381,15 @@ export default function Index() {
                       </a>
                     </td>
                     <td style={tdStyle}>{po.supplier}</td>
-                    <td style={tdStyle}>{po.status.replaceAll("_", " ")}</td>
+                    <td style={tdStyle}>
+                      <span style={statusBadgeStyle(po.status)}>{po.status.replaceAll("_", " ")}</span>
+                    </td>
                     <td style={tdStyle}>{po.lineCount}</td>
                     <td style={tdStyle}>
-                      {po.totalOrdered > 0 ? `${po.totalReceived} / ${po.totalOrdered} received` : "-"}
+                      {po.totalOrdered > 0 ? `${po.totalReceived} / ${po.totalOrdered}` : "-"}
                     </td>
                     <td style={tdStyle}>
-                      {po.expectedArrival ? formatDate(po.expectedArrival) : "Not set"}
+                      {po.expectedArrival ? formatDate(po.expectedArrival) : "-"}
                     </td>
                   </tr>
                 ))}
@@ -431,32 +402,13 @@ export default function Index() {
   );
 }
 
-function Metric({ label, value }: { label: string; value: number }) {
+function Metric({ label, value, sub, accent }: { label: string; value: number; sub?: string; accent?: string }) {
   return (
-    <div style={metricStyle}>
+    <div style={{ ...metricStyle, borderTop: accent ? `3px solid ${accent}` : "1px solid #dfe3e8" }}>
+      <div style={metricLabelStyle}>{label}</div>
       <div style={metricValueStyle}>{value.toLocaleString()}</div>
-      <div style={mutedStyle}>{label}</div>
+      {sub ? <div style={{ ...mutedStyle, marginTop: "2px", fontSize: "12px" }}>{sub}</div> : null}
     </div>
-  );
-}
-
-function SetupStep({
-  done,
-  title,
-  text,
-  href,
-}: {
-  done: boolean;
-  title: string;
-  text: string;
-  href: string;
-}) {
-  return (
-    <a href={href} style={stepCardStyle}>
-      <div style={stepStatusStyle(done)}>{done ? "Done" : "Next"}</div>
-      <div style={stepTitleStyle}>{title}</div>
-      <div style={mutedStyle}>{text}</div>
-    </a>
   );
 }
 
@@ -942,24 +894,77 @@ const stepTitleStyle = {
   marginBottom: "4px",
 } as const;
 
+const formCardStyle = {
+  background: "#ffffff",
+  border: "1px solid #e1e3e5",
+  borderRadius: "10px",
+  padding: "20px 24px",
+  boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+} as const;
+
+const badgeStyle = {
+  background: "#f1f8f5",
+  color: "#0b5137",
+  border: "1px solid #d6e6df",
+  borderRadius: "999px",
+  padding: "4px 10px",
+  fontSize: "12px",
+  fontWeight: 650,
+  textTransform: "uppercase",
+  letterSpacing: "0.4px",
+} as const;
+
 const metricGridStyle = {
   display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(145px, 1fr))",
-  gap: "12px",
+  gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+  gap: "16px",
 } as const;
 
 const metricStyle = {
-  border: "1px solid #dfe3e8",
-  borderRadius: "8px",
-  padding: "14px",
-  background: "#fff",
+  border: "1px solid #e1e3e5",
+  borderRadius: "10px",
+  padding: "16px 20px",
+  background: "#ffffff",
+  boxShadow: "0 1px 3px rgba(0,0,0,0.03)",
+} as const;
+
+const metricLabelStyle = {
+  fontSize: "13px",
+  fontWeight: 650,
+  color: "#5c5f62",
+  marginBottom: "4px",
 } as const;
 
 const metricValueStyle = {
-  fontSize: "24px",
+  fontSize: "26px",
   fontWeight: 700,
   color: "#202223",
+  lineHeight: 1.1,
 } as const;
+
+const riskBadgeStyle = (urgent: boolean) =>
+  ({
+    background: urgent ? "#fff4f4" : "#fff7ed",
+    color: urgent ? "#d72c0d" : "#9c6d00",
+    border: `1px solid ${urgent ? "#f8b4b4" : "#fcd34d"}`,
+    borderRadius: "6px",
+    padding: "3px 8px",
+    fontSize: "12px",
+    fontWeight: 650,
+  }) as const;
+
+const statusBadgeStyle = (status: string) => {
+  const isOk = status === "RECEIVED" || status === "CONFIRMED";
+  const isPending = status === "DRAFT" || status === "SENT";
+  return {
+    background: isOk ? "#effaf5" : isPending ? "#f4f6f8" : "#fff7ed",
+    color: isOk ? "#0f5132" : isPending ? "#5c5f62" : "#8a5a00",
+    borderRadius: "6px",
+    padding: "3px 8px",
+    fontSize: "12px",
+    fontWeight: 600,
+  } as const;
+};
 
 const mutedStyle = {
   color: "#6d7175",
@@ -972,14 +977,16 @@ const emptyStateStyle = {
   justifyContent: "space-between",
   gap: "16px",
   alignItems: "center",
-  border: "1px solid #dfe3e8",
-  borderRadius: "8px",
-  padding: "14px",
-  background: "#fff",
+  border: "1px solid #e1e3e5",
+  borderRadius: "10px",
+  padding: "20px 24px",
+  background: "#ffffff",
 } as const;
 
 const emptyTitleStyle = {
   fontWeight: 700,
+  fontSize: "15px",
+  color: "#202223",
   marginBottom: "4px",
 } as const;
 
@@ -996,40 +1003,55 @@ const tableStyle = {
 const thStyle = {
   textAlign: "left",
   borderBottom: "1px solid #dfe3e8",
-  padding: "10px 8px",
+  padding: "12px 10px",
   whiteSpace: "nowrap",
+  color: "#5c5f62",
+  fontSize: "13px",
+  fontWeight: 650,
 } as const;
 
 const tdStyle = {
   borderBottom: "1px solid #f1f2f3",
-  padding: "10px 8px",
-  verticalAlign: "top",
+  padding: "12px 10px",
+  verticalAlign: "middle",
 } as const;
 
 const primaryButtonStyle = {
+  height: "40px",
   border: "0",
-  borderRadius: "6px",
-  padding: "10px 14px",
+  borderRadius: "8px",
+  padding: "0 20px",
   background: "#008060",
   color: "#fff",
   fontWeight: 650,
+  fontSize: "14px",
   cursor: "pointer",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  boxShadow: "0 1px 2px rgba(0,0,0,0.12)",
 } as const;
 
 const secondaryButtonStyle = {
-  border: "1px solid #babfc3",
-  borderRadius: "6px",
-  padding: "9px 12px",
-  background: "#fff",
+  height: "40px",
+  border: "1px solid #c9cccf",
+  borderRadius: "8px",
+  padding: "0 16px",
+  background: "#ffffff",
   color: "#202223",
-  fontWeight: 650,
+  fontWeight: 600,
+  fontSize: "14px",
   textDecoration: "none",
   whiteSpace: "nowrap",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
 } as const;
 
 const linkStyle = {
   color: "#2c6ecb",
   textDecoration: "none",
+  fontWeight: 600,
 } as const;
 
 const noticeStyle = (ok: boolean) =>
@@ -1038,8 +1060,9 @@ const noticeStyle = (ok: boolean) =>
     background: ok ? "#effaf5" : "#fff4f4",
     borderRadius: "8px",
     marginTop: "12px",
-    padding: "10px 12px",
+    padding: "12px 16px",
     color: ok ? "#0f5132" : "#8a1f11",
+    fontWeight: 550,
   }) as const;
 
 export const headers: HeadersFunction = (headersArgs) => {

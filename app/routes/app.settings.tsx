@@ -149,57 +149,69 @@ export default function SettingsPage() {
         <input type="hidden" name="intent" value="save-settings" />
 
         <s-section heading="Business identity">
-          <div style={formGridStyle}>
-            <Field label="Company name" name="companyName" defaultValue={settings?.companyName ?? ""} />
-            <Field label="Contact email" name="contactEmail" type="email" defaultValue={settings?.contactEmail ?? ""} />
-            <Field label="Phone" name="phone" defaultValue={settings?.phone ?? ""} />
-            <Field label="Address line 1" name="addressLine1" defaultValue={settings?.addressLine1 ?? ""} />
-            <Field label="Address line 2" name="addressLine2" defaultValue={settings?.addressLine2 ?? ""} />
-            <Field label="City" name="city" defaultValue={settings?.city ?? ""} />
-            <Field label="State / Region" name="region" defaultValue={settings?.region ?? ""} />
-            <Field label="Postal code" name="postalCode" defaultValue={settings?.postalCode ?? ""} />
-            <Field label="Country" name="country" defaultValue={settings?.country ?? ""} />
+          <div style={formCardStyle}>
+            <div style={formGridStyle}>
+              <Field label="Company name" name="companyName" defaultValue={settings?.companyName ?? ""} placeholder="e.g. Acme Retail Ltd." />
+              <Field label="Contact email" name="contactEmail" type="email" defaultValue={settings?.contactEmail ?? ""} placeholder="purchasing@acmeretail.com" />
+              <Field label="Phone" name="phone" defaultValue={settings?.phone ?? ""} placeholder="+1 (555) 019-2834" />
+              <Field label="Address line 1" name="addressLine1" defaultValue={settings?.addressLine1 ?? ""} placeholder="123 Commerce Way" />
+              <Field label="Address line 2" name="addressLine2" defaultValue={settings?.addressLine2 ?? ""} placeholder="Suite 400" />
+              <Field label="City" name="city" defaultValue={settings?.city ?? ""} placeholder="New York" />
+              <Field label="State / Region" name="region" defaultValue={settings?.region ?? ""} placeholder="NY" />
+              <Field label="Postal code" name="postalCode" defaultValue={settings?.postalCode ?? ""} placeholder="10001" />
+              <Field label="Country" name="country" defaultValue={settings?.country ?? ""} placeholder="United States" />
+            </div>
           </div>
         </s-section>
 
         <s-section heading="Purchase order defaults">
-          <div style={formGridStyle}>
-            <Field
-              label="PO reference prefix"
-              name="poNumberPrefix"
-              defaultValue={settings?.poNumberPrefix ?? "PO"}
-            />
-            <Field
-              label="Default payment terms"
-              name="defaultPaymentTerms"
-              defaultValue={settings?.defaultPaymentTerms ?? ""}
-            />
+          <div style={formCardStyle}>
+            <div style={formGridStyle}>
+              <Field
+                label="PO reference prefix"
+                name="poNumberPrefix"
+                defaultValue={settings?.poNumberPrefix ?? "PO"}
+                placeholder="PO"
+              />
+              <Field
+                label="Default payment terms"
+                name="defaultPaymentTerms"
+                defaultValue={settings?.defaultPaymentTerms ?? ""}
+                placeholder="e.g. Net 30"
+              />
+            </div>
+            <div style={{ marginTop: "16px" }}>
+              <label style={fieldLabelStyle}>
+                <span>Default PO notes</span>
+                <textarea
+                  name="defaultPoNotes"
+                  rows={3}
+                  placeholder="Standard notes printed on all purchase orders..."
+                  style={textareaStyle}
+                  defaultValue={settings?.defaultPoNotes ?? ""}
+                />
+              </label>
+            </div>
           </div>
-          <label style={fieldLabelStyle}>
-            Default PO notes
-            <textarea
-              name="defaultPoNotes"
-              rows={3}
-              style={textareaStyle}
-              defaultValue={settings?.defaultPoNotes ?? ""}
-            />
-          </label>
         </s-section>
 
         <s-section heading="Localization">
-          <div style={formGridStyle}>
-            <Field
-              label="Currency code (e.g. USD, CAD, EUR, GBP)"
-              name="currencyCode"
-              defaultValue={settings?.currencyCode ?? "USD"}
-              required
-            />
+          <div style={formCardStyle}>
+            <div style={formGridStyle}>
+              <Field
+                label="Currency code (e.g. USD, CAD, EUR, GBP)"
+                name="currencyCode"
+                defaultValue={settings?.currencyCode ?? "USD"}
+                required
+                placeholder="USD"
+              />
+            </div>
           </div>
         </s-section>
 
-        <div style={{ marginTop: "16px", marginBottom: "32px" }}>
+        <div style={{ marginTop: "20px", marginBottom: "32px" }}>
           <button type="submit" disabled={isSubmitting} style={buttonStyle}>
-            {isSubmitting ? "Saving..." : "Save settings"}
+            {isSubmitting ? "Saving settings..." : "Save settings"}
           </button>
         </div>
       </Form>
@@ -213,21 +225,24 @@ function Field({
   type = "text",
   required = false,
   defaultValue,
+  placeholder,
 }: {
   label: string;
   name: string;
   type?: string;
   required?: boolean;
   defaultValue?: string;
+  placeholder?: string;
 }) {
   return (
     <label style={fieldLabelStyle}>
-      {label}
+      <span>{label} {required ? <span style={{ color: "#d72c0d" }}>*</span> : null}</span>
       <input
         name={name}
         type={type}
         required={required}
         defaultValue={defaultValue}
+        placeholder={placeholder}
         style={inputStyle}
       />
     </label>
@@ -240,35 +255,58 @@ function optionalString(value: FormDataEntryValue | null) {
 }
 
 // Styles
+const formCardStyle = {
+  background: "#ffffff",
+  border: "1px solid #e1e3e5",
+  borderRadius: "10px",
+  padding: "20px 24px",
+  boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+} as const;
 const formGridStyle = {
   display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-  gap: "12px",
-  marginBottom: "12px",
+  gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+  gap: "16px",
 } as const;
 const fieldLabelStyle = {
-  display: "grid",
+  display: "flex",
+  flexDirection: "column",
   gap: "6px",
   color: "#202223",
   fontSize: "13px",
   fontWeight: 600,
 } as const;
 const inputStyle = {
-  border: "1px solid #c9cccf",
-  borderRadius: "6px",
-  padding: "9px 10px",
+  height: "40px",
+  border: "1px solid #8c9196",
+  borderRadius: "8px",
+  padding: "0 12px",
   fontSize: "14px",
   width: "100%",
+  backgroundColor: "#ffffff",
+  outline: "none",
+  boxSizing: "border-box",
 } as const;
-const textareaStyle = { ...inputStyle, resize: "vertical" } as const;
+const textareaStyle = {
+  ...inputStyle,
+  height: "auto",
+  minHeight: "80px",
+  padding: "10px 12px",
+  resize: "vertical",
+} as const;
 const buttonStyle = {
+  height: "40px",
   border: "0",
-  borderRadius: "6px",
-  padding: "10px 18px",
+  borderRadius: "8px",
+  padding: "0 24px",
   background: "#008060",
   color: "#fff",
   fontWeight: 650,
+  fontSize: "14px",
   cursor: "pointer",
+  boxShadow: "0 1px 2px rgba(0,0,0,0.12)",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
 } as const;
 const noticeStyle = (ok: boolean) =>
   ({
@@ -277,8 +315,9 @@ const noticeStyle = (ok: boolean) =>
     borderRadius: "8px",
     marginTop: "12px",
     marginBottom: "12px",
-    padding: "10px 12px",
+    padding: "12px 16px",
     color: ok ? "#0f5132" : "#8a1f11",
+    fontWeight: 550,
   }) as const;
 
 export const headers: HeadersFunction = (headersArgs) => {
