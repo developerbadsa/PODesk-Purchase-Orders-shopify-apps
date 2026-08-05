@@ -7,7 +7,7 @@ import type {
 import { Form, useActionData, useLoaderData, useNavigation, redirect } from "react-router";
 import type { PurchaseOrderStatus } from "@prisma/client";
 import { boundary } from "@shopify/shopify-app-react-router/server";
-import { authenticate } from "../shopify.server";
+import { authenticateAdmin } from "../authenticate-admin.server";
 import prisma from "../db.server";
 import { createUniquePoReference } from "../po.server";
 import { formatCurrency } from "../utils";
@@ -26,7 +26,7 @@ const ALLOWED_STATUS_TRANSITIONS: Record<string, string[]> = {
 };
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
+  const { session } = await authenticateAdmin(request, "purchase-order-detail-loader");
   const store = await prisma.store.findUnique({ where: { shop: session.shop } });
   if (!store) throw new Response("Store not found", { status: 404 });
 
@@ -169,7 +169,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
 };
 
 export const action = async ({ request, params }: ActionFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
+  const { session } = await authenticateAdmin(request, "purchase-order-detail-action");
   const store = await prisma.store.findUnique({ where: { shop: session.shop } });
   if (!store) return { ok: false, message: "Store not found." } satisfies ActionData;
 

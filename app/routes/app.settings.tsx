@@ -5,13 +5,13 @@ import type {
 } from "react-router";
 import { Form, useActionData, useLoaderData, useNavigation } from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
-import { authenticate } from "../shopify.server";
+import { authenticateAdmin } from "../authenticate-admin.server";
 import prisma from "../db.server";
 
 type ActionData = { ok: boolean; message: string };
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
+  const { session } = await authenticateAdmin(request, "settings-loader");
   let store = await prisma.store.findUnique({
     where: { shop: session.shop },
     include: { settings: true },
@@ -40,7 +40,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
+  const { session } = await authenticateAdmin(request, "settings-action");
   const store = await prisma.store.upsert({
     where: { shop: session.shop },
     update: {},

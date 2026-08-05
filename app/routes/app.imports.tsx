@@ -5,7 +5,7 @@ import type {
 } from "react-router";
 import { Form, useActionData, useLoaderData, useNavigation } from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
-import { authenticate } from "../shopify.server";
+import { authenticateAdmin } from "../authenticate-admin.server";
 import prisma from "../db.server";
 import { createImportPreview, executeImportJob, remapImportPreview } from "../imports.server";
 import {
@@ -54,7 +54,7 @@ SKU-SHIRT-M,Acme Wholesale,ACME-101,12.50,14,Net 30,500,Main apparel supplier
 SKU-HAT-RED,North Supply,NS-99,8.00,21,Prepaid,250,Headwear supplier`;
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
+  const { session } = await authenticateAdmin(request, "imports-loader");
   const store = await prisma.store.findUnique({ where: { shop: session.shop } });
   if (!store) {
     return {
@@ -98,7 +98,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
+  const { session } = await authenticateAdmin(request, "imports-action");
   const store = await prisma.store.upsert({
     where: { shop: session.shop },
     update: {},

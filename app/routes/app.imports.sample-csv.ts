@@ -1,8 +1,8 @@
 import type { LoaderFunctionArgs } from "react-router";
-import { authenticate } from "../shopify.server";
+import { authenticateAdmin } from "../authenticate-admin.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  await authenticate.admin(request);
+  await authenticateAdmin(request, "sample-csv-loader");
 
   const sampleCsvContent = [
     "sku,supplierName,supplierSku,supplierCost,leadTimeDays,paymentTerms,minimumOrder,notes",

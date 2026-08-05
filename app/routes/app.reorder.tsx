@@ -6,7 +6,7 @@ import type {
 } from "react-router";
 import { Form, useActionData, useLoaderData, useNavigation, useSearchParams, redirect } from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
-import { authenticate } from "../shopify.server";
+import { authenticateAdmin } from "../authenticate-admin.server";
 import prisma from "../db.server";
 import {
   calculateReorderRecommendation,
@@ -20,7 +20,7 @@ const DEFAULT_TARGET_DAYS = 30;
 type ActionData = { ok: boolean; message: string };
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
+  const { session } = await authenticateAdmin(request, "reorder-loader");
   const store = await prisma.store.findUnique({ where: { shop: session.shop } });
   if (!store) {
     return {
@@ -139,7 +139,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
+  const { session } = await authenticateAdmin(request, "reorder-action");
   const store = await prisma.store.findUnique({ where: { shop: session.shop } });
   if (!store) return { ok: false, message: "Store not found. Open the dashboard first." } satisfies ActionData;
 

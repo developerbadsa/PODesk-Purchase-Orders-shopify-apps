@@ -1,5 +1,5 @@
 import type { LoaderFunctionArgs } from "react-router";
-import { authenticate } from "../shopify.server";
+import { authenticateAdmin } from "../authenticate-admin.server";
 import prisma from "../db.server";
 
 function escapeCsvField(val: unknown): string {
@@ -12,7 +12,7 @@ function escapeCsvField(val: unknown): string {
 }
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
+  const { session } = await authenticateAdmin(request, "invalid-csv-loader");
   const store = await prisma.store.findUnique({ where: { shop: session.shop } });
   if (!store) throw new Response("Store not found", { status: 404 });
 

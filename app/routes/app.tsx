@@ -7,34 +7,14 @@ import {
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { AppProvider } from "@shopify/shopify-app-react-router/react";
 
-import { recoverFromInvalidEmbeddedSession } from "../auth-recovery.server";
-import {
-  logAuthFailure,
-  logAuthRequest,
-  logAuthSuccess,
-} from "../auth-diagnostics.server";
-import { authenticate } from "../shopify.server";
+import { authenticateAdmin } from "../authenticate-admin.server";
 
 function cleanEnv(value?: string) {
   return value?.trim().replace(/^["']|["']$/g, "");
 }
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  logAuthRequest("app-loader:start", request);
-
-  try {
-    const { session } = await authenticate.admin(request);
-    logAuthSuccess("app-loader:success", request, session.shop);
-  } catch (error) {
-    logAuthFailure("app-loader:thrown", request, error);
-    const recoveryResponse = recoverFromInvalidEmbeddedSession(request, error);
-
-    if (recoveryResponse) {
-      throw recoveryResponse;
-    }
-
-    throw error;
-  }
+  await authenticateAdmin(request, "app-loader");
 
   // eslint-disable-next-line no-undef
   return { apiKey: cleanEnv(process.env.SHOPIFY_API_KEY) || "" };

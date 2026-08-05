@@ -5,10 +5,10 @@ import type {
 } from "react-router";
 import { Form, useActionData, useLoaderData, useNavigation } from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
-import { authenticate } from "../shopify.server";
+import { authenticateAdmin, type AdminAuthResult } from "../authenticate-admin.server";
 import prisma from "../db.server";
 
-type AdminClient = Awaited<ReturnType<typeof authenticate.admin>>["admin"];
+type AdminClient = AdminAuthResult["admin"];
 
 type ActionData = {
   ok: boolean;
@@ -25,7 +25,7 @@ const MAX_VARIANT_PAGES = 200;
 const MAX_ORDER_PAGES = 10;
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
+  const { session } = await authenticateAdmin(request, "dashboard-loader");
   const store = await getOrCreateStore(session.shop);
 
   const [
@@ -127,7 +127,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const { admin, session } = await authenticate.admin(request);
+  const { admin, session } = await authenticateAdmin(request, "dashboard-action");
   const store = await getOrCreateStore(session.shop);
   const formData = await request.formData();
   const intent = String(formData.get("intent") || "");

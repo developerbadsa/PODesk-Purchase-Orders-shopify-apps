@@ -5,13 +5,13 @@ import type {
 } from "react-router";
 import { Form, useActionData, useLoaderData, useNavigation, redirect } from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
-import { authenticate } from "../shopify.server";
+import { authenticateAdmin } from "../authenticate-admin.server";
 import prisma from "../db.server";
 
 type ActionData = { ok: boolean; message: string };
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
+  const { session } = await authenticateAdmin(request, "supplier-detail-loader");
   const store = await prisma.store.findUnique({ where: { shop: session.shop } });
   if (!store) throw new Response("Store not found", { status: 404 });
 
@@ -72,7 +72,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
 };
 
 export const action = async ({ request, params }: ActionFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
+  const { session } = await authenticateAdmin(request, "supplier-detail-action");
   const store = await prisma.store.findUnique({ where: { shop: session.shop } });
   if (!store) return { ok: false, message: "Store not found." } satisfies ActionData;
 

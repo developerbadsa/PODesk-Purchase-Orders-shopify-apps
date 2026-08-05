@@ -6,7 +6,7 @@ import type {
 } from "react-router";
 import { Form, useActionData, useLoaderData, useNavigation } from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
-import { authenticate } from "../shopify.server";
+import { authenticateAdmin } from "../authenticate-admin.server";
 import prisma from "../db.server";
 import { createUniquePoReference } from "../po.server";
 import { formatCurrency } from "../utils";
@@ -14,7 +14,7 @@ import { formatCurrency } from "../utils";
 type ActionData = { ok: boolean; message: string };
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
+  const { session } = await authenticateAdmin(request, "purchase-orders-loader");
   const store = await prisma.store.findUnique({ where: { shop: session.shop } });
   if (!store) return { purchaseOrders: [], suppliers: [], variants: [], mappings: [], currencyCode: "USD" };
 
@@ -91,7 +91,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
+  const { session } = await authenticateAdmin(request, "purchase-orders-action");
   const store = await prisma.store.upsert({
     where: { shop: session.shop },
     update: {},
