@@ -140,6 +140,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     defaultSubject,
     defaultMessage,
     supplierEmail,
+    automationMode: settings?.supplierEmailAutomationMode ?? "REVIEW_BEFORE_SEND",
     po: {
       id: po.id,
       reference: po.reference,
@@ -182,7 +183,10 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
 
 export const action = async ({ request, params }: ActionFunctionArgs) => {
   const { session } = await authenticateAdmin(request, "purchase-order-detail-action");
-  const store = await prisma.store.findUnique({ where: { shop: session.shop } });
+  const store = await prisma.store.findUnique({ 
+    where: { shop: session.shop },
+    include: { settings: true }
+  });
   if (!store) return { ok: false, message: "Store not found." } satisfies ActionData;
 
   const po = await prisma.purchaseOrder.findFirst({
@@ -345,6 +349,73 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
       ok: true,
       message: `Purchase order marked as sent${nextStatus === "SENT" && po.status === "DRAFT" ? " (status moved to SENT)" : ""}.`,
     } satisfies ActionData;
+  }
+
+  if (intent === "auto-send") {
+    if (!["DRAFT", "SENT", "CONFIRMED"].includes(po.status)) {
+      return { ok: false, message: `Auto-send is not available for ${po.status.replaceAll("_", " ")} purchase orders.` } satisfies ActionData;
+    }
+
+    const emailInput = String(formData.get("supplierEmail") || "").trim();
+    if (!emailInput || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailInput)) {
+      return { ok: false, message: "Please enter a valid supplier email address to auto-send." } satisfies ActionData;
+    }
+
+    const poWithLines = await prisma.purchaseOrder.findFirst({
+      where: { id: po.id, storeId: store.id },
+      include: { supplier: true, lines: { include: { variant: { include: { product: true } } } } },
+    });
+    if (!poWithLines) return { ok: false, message: "Purchase order not found." } satisfies ActionData;
+
+    try {
+      const { generatePurchaseOrderEmailHtml, sendPurchaseOrderEmail } = await import("../email.server");
+      const currencyCode = store.settings?.currencyCode || "USD";
+      
+      const htmlContent = generatePurchaseOrderEmailHtml({
+        reference: poWithLines.reference,
+        expectedArrival: poWithLines.expectedArrival?.toISOString().slice(0, 10) || "",
+        notes: poWithLines.notes,
+        totalCost: poWithLines.lines.reduce((sum, l) => sum + ((l.unitCost ?? 0) * l.quantity), 0),
+        currencyCode,
+        supplierName: poWithLines.supplier.name,
+        storeName: store.settings?.companyName || store.name || store.shop,
+        lines: poWithLines.lines.map((l) => ({
+          sku: l.variant.sku || "",
+          productTitle: l.variant.product.title,
+          variantTitle: l.variant.title,
+          quantity: l.quantity,
+          unitCost: l.unitCost,
+          subtotal: (l.unitCost ?? 0) * l.quantity,
+        })),
+      });
+
+      const subject = String(formData.get("subject") || `Purchase Order ${poWithLines.reference} from ${store.name || store.shop}`);
+
+      await sendPurchaseOrderEmail({
+        recipientEmail: emailInput,
+        subject,
+        htmlContent,
+      });
+
+      const nextStatus = po.status === "DRAFT" ? "SENT" : po.status;
+      await prisma.purchaseOrder.update({
+        where: { id: po.id },
+        data: {
+          status: nextStatus as PurchaseOrderStatus,
+          lastSentAt: new Date(),
+          sentCount: { increment: 1 },
+          supplierEmailSnapshot: emailInput,
+        },
+      });
+
+      return {
+        ok: true,
+        message: `Email sent to ${emailInput} via Resend. PO marked as sent.`,
+      } satisfies ActionData;
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      return { ok: false, message: `Failed to send email: ${msg}` } satisfies ActionData;
+    }
   }
 
   if (intent === "update-status") {
@@ -886,12 +957,23 @@ export default function PurchaseOrderDetailPage() {
         </div>
 
         <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center", paddingTop: "12px", borderTop: "1px solid #dfe3e8" }}>
-          <a
-            href={mailtoUrl}
-            style={secondaryBtnLinkStyle}
-          >
-            Open email draft
-          </a>
+          {automationMode === "AUTO_SEND_AFTER_REVIEW" ? (
+            <Form method="post" style={{ display: "inline-flex" }}>
+              <input type="hidden" name="intent" value="auto-send" />
+              <input type="hidden" name="supplierEmail" value={recipientEmail} />
+              <input type="hidden" name="subject" value={emailSubject} />
+              <button type="submit" disabled={isSubmitting} style={buttonStyle}>
+                Send PO via Email (Auto)
+              </button>
+            </Form>
+          ) : (
+            <a
+              href={mailtoUrl}
+              style={secondaryBtnLinkStyle}
+            >
+              Open email draft
+            </a>
+          )}
 
           <Link
             to={`/app/purchase-orders/${po.id}/print`}
@@ -899,7 +981,6 @@ export default function PurchaseOrderDetailPage() {
           >
             Open printable PO
           </Link>
-
           {canMarkSent && (
             <Form method="post" style={{ display: "inline" }}>
               <input type="hidden" name="intent" value="mark-sent" />
