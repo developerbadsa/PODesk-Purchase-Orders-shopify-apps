@@ -126,16 +126,20 @@ export async function sendPurchaseOrderEmail({
   recipientEmail,
   subject,
   htmlContent,
-  fromEmail = "orders@podesk.com", // Fallback sender if not verified
+  fromEmail,
+  apiKey,
 }: {
   recipientEmail: string;
   subject: string;
   htmlContent: string;
-  fromEmail?: string;
+  fromEmail: string;
+  apiKey: string;
 }) {
-  const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
-    throw new Error("RESEND_API_KEY environment variable is not set.");
+    throw new Error("Resend API Key is missing. Please configure it in Settings.");
+  }
+  if (!fromEmail) {
+    throw new Error("Verified Sender Email is missing. Please configure it in Settings.");
   }
 
   const resend = new Resend(apiKey);

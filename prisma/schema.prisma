@@ -73,6 +73,8 @@ model StoreSettings {
   defaultPoNotes              String?
   poNumberPrefix              String                      @default("PO")
   supplierEmailAutomationMode SupplierEmailAutomationMode @default(REVIEW_BEFORE_SEND)
+  resendApiKey                String?
+  resendFromEmail             String?
   createdAt                   DateTime                    @default(now())
   updatedAt                   DateTime                    @updatedAt
 

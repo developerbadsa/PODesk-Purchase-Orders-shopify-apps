@@ -367,9 +367,13 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
     });
     if (!poWithLines) return { ok: false, message: "Purchase order not found." } satisfies ActionData;
 
+    if (!store.settings?.resendApiKey || !store.settings?.resendFromEmail) {
+      return { ok: false, message: "Resend is not configured. Please add your Resend API Key and Verified Sender Email in Settings." } satisfies ActionData;
+    }
+
     try {
       const { generatePurchaseOrderEmailHtml, sendPurchaseOrderEmail } = await import("../email.server");
-      const currencyCode = store.settings?.currencyCode || "USD";
+      const currencyCode = store.settings.currencyCode || "USD";
       
       const htmlContent = generatePurchaseOrderEmailHtml({
         reference: poWithLines.reference,
@@ -395,6 +399,8 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
         recipientEmail: emailInput,
         subject,
         htmlContent,
+        apiKey: store.settings.resendApiKey,
+        fromEmail: store.settings.resendFromEmail,
       });
 
       const nextStatus = po.status === "DRAFT" ? "SENT" : po.status;

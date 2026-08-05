@@ -55,26 +55,22 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const intent = String(formData.get("intent") || "");
 
   if (intent === "save-settings") {
-    const companyName = optionalString(formData.get("companyName"));
-    const contactEmail = optionalString(formData.get("contactEmail"));
-    const phone = optionalString(formData.get("phone"));
-    const addressLine1 = optionalString(formData.get("addressLine1"));
-    const addressLine2 = optionalString(formData.get("addressLine2"));
-    const city = optionalString(formData.get("city"));
-    const region = optionalString(formData.get("region"));
-    const postalCode = optionalString(formData.get("postalCode"));
-    const country = optionalString(formData.get("country"));
+    const companyName = String(formData.get("companyName") || "").trim();
+    const contactEmail = String(formData.get("contactEmail") || "").trim();
+    const phone = String(formData.get("phone") || "").trim();
+    const addressLine1 = String(formData.get("addressLine1") || "").trim();
+    const addressLine2 = String(formData.get("addressLine2") || "").trim();
+    const city = String(formData.get("city") || "").trim();
+    const region = String(formData.get("region") || "").trim();
+    const postalCode = String(formData.get("postalCode") || "").trim();
+    const country = String(formData.get("country") || "").trim();
     const currencyCode = String(formData.get("currencyCode") || "USD").trim().toUpperCase();
-    const defaultPaymentTerms = optionalString(formData.get("defaultPaymentTerms"));
-    const defaultPoNotes = optionalString(formData.get("defaultPoNotes"));
+    const defaultPaymentTerms = String(formData.get("defaultPaymentTerms") || "").trim();
+    const defaultPoNotes = String(formData.get("defaultPoNotes") || "").trim();
     let poNumberPrefix = String(formData.get("poNumberPrefix") || "PO").trim().toUpperCase();
-    const supplierEmailAutomationModeInput = String(
-      formData.get("supplierEmailAutomationMode") || "REVIEW_BEFORE_SEND",
-    );
-    const supplierEmailAutomationMode =
-      supplierEmailAutomationModeInput === "AUTO_SEND_AFTER_REVIEW"
-        ? "AUTO_SEND_AFTER_REVIEW"
-        : "REVIEW_BEFORE_SEND";
+    const supplierEmailAutomationMode = String(formData.get("supplierEmailAutomationMode") || "REVIEW_BEFORE_SEND");
+    const resendApiKey = String(formData.get("resendApiKey") || "").trim();
+    const resendFromEmail = String(formData.get("resendFromEmail") || "").trim();
 
     // Validation 1: currencyCode must be uppercase 3-letter code
     if (!/^[A-Z]{3}$/.test(currencyCode)) {
@@ -120,6 +116,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         defaultPoNotes,
         poNumberPrefix,
         supplierEmailAutomationMode,
+        resendApiKey: resendApiKey || null,
+        resendFromEmail: resendFromEmail || null,
       },
       create: {
         storeId: store.id,
@@ -137,6 +135,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         defaultPoNotes,
         poNumberPrefix,
         supplierEmailAutomationMode,
+        resendApiKey: resendApiKey || null,
+        resendFromEmail: resendFromEmail || null,
       },
     });
 
@@ -264,6 +264,29 @@ export default function SettingsPage() {
                   </span>
                 </span>
               </label>
+            </div>
+
+            <div style={{ marginTop: "24px", paddingTop: "24px", borderTop: "1px solid #dfe3e8" }}>
+              <div style={{ ...sectionTitleStyle, fontSize: "14px", marginBottom: "16px" }}>Resend Configuration</div>
+              <p style={{ ...sectionTextStyle, marginBottom: "16px" }}>
+                To enable auto-sending, you must provide your own API key from <a href="https://resend.com" target="_blank" rel="noreferrer" style={{color: "#005bd3", textDecoration: "none"}}>Resend.com</a> and a verified sender email address.
+              </p>
+              <div style={formGridStyle}>
+                <Field
+                  label="Resend API Key"
+                  name="resendApiKey"
+                  type="password"
+                  defaultValue={settings?.resendApiKey ?? ""}
+                  placeholder="re_..."
+                />
+                <Field
+                  label="Verified Sender Email"
+                  name="resendFromEmail"
+                  type="email"
+                  defaultValue={settings?.resendFromEmail ?? ""}
+                  placeholder="orders@yourdomain.com"
+                />
+              </div>
             </div>
           </div>
         </s-section>
