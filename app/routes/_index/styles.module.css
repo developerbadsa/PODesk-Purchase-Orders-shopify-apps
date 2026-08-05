@@ -99,21 +99,33 @@
   line-height: 1.6;
 }
 
-.points {
-  display: flex;
-  flex-wrap: wrap;
+.assuranceList {
+  display: grid;
   gap: 10px;
-  margin-top: 30px;
+  margin: 30px 0 0;
+  padding: 0;
+  list-style: none;
 }
 
-.points span {
-  border: 1px solid #d6ddd8;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.72);
+.assuranceList li {
+  position: relative;
+  padding-left: 24px;
   color: #314139;
-  padding: 8px 12px;
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 15px;
+  line-height: 1.45;
+  font-weight: 650;
+}
+
+.assuranceList li::before {
+  content: "";
+  position: absolute;
+  top: 8px;
+  left: 0;
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: #008060;
+  box-shadow: 0 0 0 4px rgba(0, 128, 96, 0.12);
 }
 
 .panel {
@@ -230,30 +242,30 @@
   transform: translateY(0);
 }
 
-.preview {
+.securityNote {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   margin-top: 24px;
   padding-top: 22px;
   border-top: 1px solid #edf0ee;
 }
 
-.previewRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  border: 1px solid #edf0ee;
-  border-radius: 6px;
-  background: #fafbfa;
-  padding: 12px 14px;
-  color: #516057;
+.securityTitle {
+  color: #26352d;
   font-size: 14px;
+  font-weight: 760;
 }
 
-.previewRow strong {
-  color: #111814;
-  font-size: 18px;
+.securityNote p {
+  margin: 0;
+  color: #637067;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.securityNote span {
+  color: #26352d;
+  font-weight: 700;
 }
 
 .footer {
