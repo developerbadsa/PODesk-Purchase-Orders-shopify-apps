@@ -73,8 +73,13 @@ model StoreSettings {
   defaultPoNotes              String?
   poNumberPrefix              String                      @default("PO")
   supplierEmailAutomationMode SupplierEmailAutomationMode @default(REVIEW_BEFORE_SEND)
+  emailProvider               EmailProvider               @default(SMTP)
   resendApiKey                String?
   resendFromEmail             String?
+  smtpHost                    String?
+  smtpPort                    Int?
+  smtpUser                    String?
+  smtpPassword                String?
   createdAt                   DateTime                    @default(now())
   updatedAt                   DateTime                    @updatedAt
 
@@ -84,6 +89,11 @@ model StoreSettings {
 enum SupplierEmailAutomationMode {
   REVIEW_BEFORE_SEND
   AUTO_SEND_AFTER_REVIEW
+}
+
+enum EmailProvider {
+  SMTP
+  RESEND
 }
 
 model ShopifyProduct {

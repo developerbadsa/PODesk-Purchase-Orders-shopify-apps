@@ -367,8 +367,15 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
     });
     if (!poWithLines) return { ok: false, message: "Purchase order not found." } satisfies ActionData;
 
-    if (!store.settings?.resendApiKey || !store.settings?.resendFromEmail) {
-      return { ok: false, message: "Resend is not configured. Please add your Resend API Key and Verified Sender Email in Settings." } satisfies ActionData;
+    const provider = store.settings?.emailProvider || "SMTP";
+    if (provider === "RESEND") {
+      if (!store.settings?.resendApiKey || !store.settings?.resendFromEmail) {
+        return { ok: false, message: "Resend is not configured. Please add your Resend API Key and Verified Sender Email in Settings." } satisfies ActionData;
+      }
+    } else {
+      if (!store.settings?.smtpHost || !store.settings?.smtpPort || !store.settings?.smtpUser || !store.settings?.smtpPassword) {
+        return { ok: false, message: "SMTP is not configured. Please add your SMTP credentials in Settings." } satisfies ActionData;
+      }
     }
 
     try {
@@ -399,8 +406,13 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
         recipientEmail: emailInput,
         subject,
         htmlContent,
+        provider,
         apiKey: store.settings.resendApiKey,
         fromEmail: store.settings.resendFromEmail,
+        smtpHost: store.settings.smtpHost,
+        smtpPort: store.settings.smtpPort,
+        smtpUser: store.settings.smtpUser,
+        smtpPassword: store.settings.smtpPassword,
       });
 
       const nextStatus = po.status === "DRAFT" ? "SENT" : po.status;

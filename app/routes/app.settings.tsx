@@ -3,7 +3,8 @@ import type {
   HeadersFunction,
   LoaderFunctionArgs,
 } from "react-router";
-import { Form, useActionData, useLoaderData, useNavigation , useRouteError } from "react-router";
+import { Form, useActionData, useLoaderData, useNavigation, useRouteError } from "react-router";
+import { useState } from "react";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticateAdmin } from "../authenticate-admin.server";
 import prisma from "../db.server";
@@ -68,9 +69,17 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const defaultPaymentTerms = String(formData.get("defaultPaymentTerms") || "").trim();
     const defaultPoNotes = String(formData.get("defaultPoNotes") || "").trim();
     let poNumberPrefix = String(formData.get("poNumberPrefix") || "PO").trim().toUpperCase();
-    const supplierEmailAutomationMode = String(formData.get("supplierEmailAutomationMode") || "REVIEW_BEFORE_SEND");
+    const supplierEmailAutomationMode = String(formData.get("supplierEmailAutomationMode") || "REVIEW_BEFORE_SEND") as any;
+    const emailProvider = String(formData.get("emailProvider") || "SMTP") as any;
+    
     const resendApiKey = String(formData.get("resendApiKey") || "").trim();
     const resendFromEmail = String(formData.get("resendFromEmail") || "").trim();
+    
+    const smtpHost = String(formData.get("smtpHost") || "").trim();
+    const smtpPortRaw = String(formData.get("smtpPort") || "").trim();
+    const smtpPort = smtpPortRaw ? parseInt(smtpPortRaw, 10) : null;
+    const smtpUser = String(formData.get("smtpUser") || "").trim();
+    const smtpPassword = String(formData.get("smtpPassword") || "").trim();
 
     // Validation 1: currencyCode must be uppercase 3-letter code
     if (!/^[A-Z]{3}$/.test(currencyCode)) {
@@ -116,8 +125,13 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         defaultPoNotes,
         poNumberPrefix,
         supplierEmailAutomationMode,
+        emailProvider,
         resendApiKey: resendApiKey || null,
         resendFromEmail: resendFromEmail || null,
+        smtpHost: smtpHost || null,
+        smtpPort,
+        smtpUser: smtpUser || null,
+        smtpPassword: smtpPassword || null,
       },
       create: {
         storeId: store.id,
@@ -135,8 +149,13 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         defaultPoNotes,
         poNumberPrefix,
         supplierEmailAutomationMode,
+        emailProvider,
         resendApiKey: resendApiKey || null,
         resendFromEmail: resendFromEmail || null,
+        smtpHost: smtpHost || null,
+        smtpPort,
+        smtpUser: smtpUser || null,
+        smtpPassword: smtpPassword || null,
       },
     });
 
@@ -151,6 +170,8 @@ export default function SettingsPage() {
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";
+  
+  const [provider, setProvider] = useState(settings?.emailProvider || "SMTP");
 
   return (
     <s-page heading="Settings">
@@ -267,26 +288,82 @@ export default function SettingsPage() {
             </div>
 
             <div style={{ marginTop: "24px", paddingTop: "24px", borderTop: "1px solid #dfe3e8" }}>
-              <div style={{ ...sectionTitleStyle, fontSize: "14px", marginBottom: "16px" }}>Resend Configuration</div>
-              <p style={{ ...sectionTextStyle, marginBottom: "16px" }}>
-                To enable auto-sending, you must provide your own API key from <a href="https://resend.com" target="_blank" rel="noreferrer" style={{color: "#005bd3", textDecoration: "none"}}>Resend.com</a> and a verified sender email address.
-              </p>
-              <div style={formGridStyle}>
-                <Field
-                  label="Resend API Key"
-                  name="resendApiKey"
-                  type="password"
-                  defaultValue={settings?.resendApiKey ?? ""}
-                  placeholder="re_..."
-                />
-                <Field
-                  label="Verified Sender Email"
-                  name="resendFromEmail"
-                  type="email"
-                  defaultValue={settings?.resendFromEmail ?? ""}
-                  placeholder="orders@yourdomain.com"
-                />
+              <div style={{ ...sectionTitleStyle, fontSize: "14px", marginBottom: "16px" }}>Email Delivery Configuration</div>
+              
+              <div style={{ marginBottom: "20px" }}>
+                <label style={fieldLabelStyle}>
+                  Email Provider
+                  <select
+                    name="emailProvider"
+                    value={provider}
+                    onChange={(e) => setProvider(e.target.value)}
+                    style={inputStyle}
+                  >
+                    <option value="SMTP">Custom SMTP (Easy - Gmail, Outlook, cPanel)</option>
+                    <option value="RESEND">Resend.com (Advanced)</option>
+                  </select>
+                </label>
               </div>
+
+              {provider === "SMTP" ? (
+                <>
+                  <p style={{ ...sectionTextStyle, marginBottom: "16px" }}>
+                    Enter your custom SMTP credentials to send emails directly from your own email account. 
+                    If using Gmail, use an <a href="https://support.google.com/accounts/answer/185833?hl=en" target="_blank" rel="noreferrer" style={{color: "#005bd3", textDecoration: "none"}}>App Password</a>.
+                  </p>
+                  <div style={formGridStyle}>
+                    <Field
+                      label="SMTP Host (e.g. smtp.gmail.com)"
+                      name="smtpHost"
+                      defaultValue={settings?.smtpHost ?? ""}
+                      placeholder="smtp.gmail.com"
+                    />
+                    <Field
+                      label="SMTP Port (e.g. 465 or 587)"
+                      name="smtpPort"
+                      type="number"
+                      defaultValue={settings?.smtpPort?.toString() ?? ""}
+                      placeholder="465"
+                    />
+                    <Field
+                      label="SMTP Username (Your Email)"
+                      name="smtpUser"
+                      type="email"
+                      defaultValue={settings?.smtpUser ?? ""}
+                      placeholder="you@gmail.com"
+                    />
+                    <Field
+                      label="SMTP Password / App Password"
+                      name="smtpPassword"
+                      type="password"
+                      defaultValue={settings?.smtpPassword ?? ""}
+                      placeholder="••••••••"
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p style={{ ...sectionTextStyle, marginBottom: "16px" }}>
+                    To enable auto-sending, you must provide your own API key from <a href="https://resend.com" target="_blank" rel="noreferrer" style={{color: "#005bd3", textDecoration: "none"}}>Resend.com</a> and a verified sender email address.
+                  </p>
+                  <div style={formGridStyle}>
+                    <Field
+                      label="Resend API Key"
+                      name="resendApiKey"
+                      type="password"
+                      defaultValue={settings?.resendApiKey ?? ""}
+                      placeholder="re_..."
+                    />
+                    <Field
+                      label="Verified Sender Email"
+                      name="resendFromEmail"
+                      type="email"
+                      defaultValue={settings?.resendFromEmail ?? ""}
+                      placeholder="orders@yourdomain.com"
+                    />
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </s-section>

@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import nodemailer from "nodemailer";
 
 export type PurchaseOrderForEmail = {
   reference: string;
@@ -126,34 +127,72 @@ export async function sendPurchaseOrderEmail({
   recipientEmail,
   subject,
   htmlContent,
+  provider,
   fromEmail,
   apiKey,
+  smtpHost,
+  smtpPort,
+  smtpUser,
+  smtpPassword,
 }: {
   recipientEmail: string;
   subject: string;
   htmlContent: string;
-  fromEmail: string;
-  apiKey: string;
+  provider: "SMTP" | "RESEND";
+  fromEmail?: string | null;
+  apiKey?: string | null;
+  smtpHost?: string | null;
+  smtpPort?: number | null;
+  smtpUser?: string | null;
+  smtpPassword?: string | null;
 }) {
-  if (!apiKey) {
-    throw new Error("Resend API Key is missing. Please configure it in Settings.");
+  if (provider === "SMTP") {
+    if (!smtpHost || !smtpPort || !smtpUser || !smtpPassword) {
+      throw new Error("SMTP credentials are incomplete. Please configure them in Settings.");
+    }
+    
+    const transporter = nodemailer.createTransport({
+      host: smtpHost,
+      port: smtpPort,
+      secure: smtpPort === 465,
+      auth: {
+        user: smtpUser,
+        pass: smtpPassword,
+      },
+    });
+
+    try {
+      await transporter.sendMail({
+        from: smtpUser,
+        to: recipientEmail,
+        subject: subject,
+        html: htmlContent,
+      });
+    } catch (error: any) {
+      throw new Error(`SMTP Error: ${error.message}`);
+    }
+  } else {
+    // RESEND
+    if (!apiKey) {
+      throw new Error("Resend API Key is missing. Please configure it in Settings.");
+    }
+    if (!fromEmail) {
+      throw new Error("Verified Sender Email is missing. Please configure it in Settings.");
+    }
+
+    const resend = new Resend(apiKey);
+
+    const data = await resend.emails.send({
+      from: fromEmail,
+      to: recipientEmail,
+      subject: subject,
+      html: htmlContent,
+    });
+
+    if (data.error) {
+      throw new Error(data.error.message);
+    }
+    
+    return data;
   }
-  if (!fromEmail) {
-    throw new Error("Verified Sender Email is missing. Please configure it in Settings.");
-  }
-
-  const resend = new Resend(apiKey);
-
-  const data = await resend.emails.send({
-    from: fromEmail,
-    to: recipientEmail,
-    subject: subject,
-    html: htmlContent,
-  });
-
-  if (data.error) {
-    throw new Error(`Resend API Error: ${data.error.message}`);
-  }
-
-  return data;
 }
