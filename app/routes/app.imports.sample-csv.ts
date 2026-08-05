@@ -1,9 +1,4 @@
-import type { LoaderFunctionArgs } from "react-router";
-import { authenticateAdmin } from "../authenticate-admin.server";
-
-export const loader = async ({ request }: LoaderFunctionArgs) => {
-  await authenticateAdmin(request, "sample-csv-loader");
-
+export const loader = async () => {
   const sampleCsvContent = [
     "sku,supplierName,supplierSku,supplierCost,leadTimeDays,paymentTerms,minimumOrder,notes",
     "SKU-SHIRT-M,Acme Wholesale,ACME-101,12.50,14,Net 30,500,Main apparel supplier",
