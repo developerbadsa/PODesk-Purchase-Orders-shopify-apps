@@ -2,8 +2,11 @@ import type { HeadersFunction } from "react-router";
 import {
   Outlet,
   useLoaderData,
+  useNavigation,
   useRouteError,
 } from "react-router";
+import { useEffect, useState } from "react";
+import BarLoader from "react-spinners/BarLoader";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { AppProvider } from "@shopify/shopify-app-react-router/react";
 
@@ -18,9 +21,12 @@ export const loader = async () => {
 
 export default function App() {
   const { apiKey } = useLoaderData<typeof loader>();
+  const navigation = useNavigation();
+  const isBusy = navigation.state !== "idle";
 
   return (
     <AppProvider embedded apiKey={apiKey}>
+      <GlobalRouteLoader isBusy={isBusy} state={navigation.state} />
       <s-app-nav>
         <s-link href="/app">Dashboard</s-link>
         <s-link href="/app/suppliers">Suppliers</s-link>
@@ -33,6 +39,82 @@ export default function App() {
       </s-app-nav>
       <Outlet />
     </AppProvider>
+  );
+}
+
+function GlobalRouteLoader({
+  isBusy,
+  state,
+}: {
+  isBusy: boolean;
+  state: "idle" | "loading" | "submitting";
+}) {
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const delay = isBusy ? 250 : 0;
+    const timeoutId = window.setTimeout(() => setIsVisible(isBusy), delay);
+    return () => window.clearTimeout(timeoutId);
+  }, [isBusy]);
+
+  if (!isVisible) {
+    return null;
+  }
+
+  const message =
+    state === "submitting" ? "Saving changes..." : "Loading store data...";
+
+  return (
+    <div
+      aria-live="polite"
+      aria-busy="true"
+      role="status"
+      style={{
+        position: "fixed",
+        insetBlockStart: 0,
+        insetInline: 0,
+        zIndex: 2147483647,
+        pointerEvents: "none",
+      }}
+    >
+      <BarLoader
+        color="#008060"
+        height={3}
+        speedMultiplier={0.9}
+        width="100%"
+        cssOverride={{ display: "block" }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          insetBlockStart: 14,
+          insetInlineEnd: 18,
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          border: "1px solid #d8dbdf",
+          borderRadius: 8,
+          background: "#ffffff",
+          boxShadow: "0 8px 24px rgba(0, 0, 0, 0.12)",
+          color: "#202223",
+          fontSize: 13,
+          fontWeight: 600,
+          lineHeight: "20px",
+          padding: "10px 14px",
+        }}
+      >
+        <span
+          style={{
+            width: 8,
+            height: 8,
+            borderRadius: 999,
+            background: "#008060",
+            boxShadow: "0 0 0 4px rgba(0, 128, 96, 0.14)",
+          }}
+        />
+        {message}
+      </div>
+    </div>
   );
 }
 
