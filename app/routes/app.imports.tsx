@@ -818,8 +818,32 @@ const noticeStyle = (ok: boolean) =>
 // so that thrown 200/401 responses (App Bridge re-auth) are handled correctly.
 export function ErrorBoundary() {
   const error = useRouteError();
-  return boundary.error(error);
+  const boundaryError = boundary.error(error);
+  if (error instanceof Response && (error.status === 200 || error.status === 401)) {
+    return boundaryError;
+  }
+  let msg = "Unknown error";
+  let stack = "";
+  if (error instanceof Error) {
+    msg = error.message;
+    stack = error.stack || "";
+  } else if (error instanceof Response) {
+    msg = `${error.status} ${error.statusText}`;
+  } else {
+    msg = JSON.stringify(error);
+  }
+  return (
+    <div style={{ padding: "20px", color: "#8a1f11", background: "#fff4f4", margin: "20px", borderRadius: "8px", border: "1px solid #e0b3b2", fontFamily: "monospace", overflowX: "auto" }}>
+      <h2 style={{ margin: "0 0 10px 0" }}>Runtime Error</h2>
+      <div style={{ fontWeight: "bold", marginBottom: "10px" }}>{msg}</div>
+      <pre style={{ whiteSpace: "pre-wrap", fontSize: "12px", background: "#f9e5e5", padding: "10px", borderRadius: "4px" }}>
+        {stack || JSON.stringify(error, null, 2)}
+      </pre>
+    </div>
+  );
 }
 export const headers: HeadersFunction = (headersArgs) => {
   return boundary.headers(headersArgs);
 };
+
+
