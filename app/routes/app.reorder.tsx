@@ -663,8 +663,8 @@ export default function ReorderPage() {
             </p>
             {data.totalCount === 0 ? (
               <div style={{ display: "flex", gap: "10px" }}>
-                <a href="/app" style={actionBtnStyle}>Go to Dashboard to Sync</a>
-                <a href="/app/mappings" style={secondaryLinkBtnStyle}>Map SKUs</a>
+                <Link to="/app" style={actionBtnStyle}>Go to Dashboard to Sync</Link>
+                <Link to="/app/mappings" style={secondaryLinkBtnStyle}>Map SKUs</Link>
               </div>
             ) : null}
           </div>
@@ -797,7 +797,7 @@ export default function ReorderPage() {
                             </button>
                           </Form>
                         ) : !v.supplierId ? (
-                          <a href="/app/mappings" style={{ ...linkStyle, fontSize: "12px" }}>Map supplier</a>
+                          <Link to="/app/mappings" style={{ ...linkStyle, fontSize: "12px" }}>Map supplier</Link>
                         ) : v.avgDailySales === 0 ? (
                           <span style={{ ...mutedStyle, fontSize: "12px" }}>No recent sales</span>
                         ) : (

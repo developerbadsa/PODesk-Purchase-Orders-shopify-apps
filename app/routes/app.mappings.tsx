@@ -195,17 +195,17 @@ export default function MappingsPage() {
           <div style={{ padding: "20px", background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: "10px" }}>
             <div style={{ fontWeight: 650, fontSize: "15px", marginBottom: "6px", color: "#202223" }}>No suppliers found</div>
             <p style={{ margin: "0 0 14px", color: "#6d7175", fontSize: "13px" }}>
-              Add a supplier first before mapping products and SKUs.
+              Add a supplier first before mapping SKUs.
             </p>
-            <a href="/app/suppliers" style={buttonStyle}>Add Supplier</a>
+            <Link to="/app/suppliers" style={buttonStyle}>Add Supplier</Link>
           </div>
         ) : variants.length === 0 ? (
           <div style={{ padding: "20px", background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: "10px" }}>
             <div style={{ fontWeight: 650, fontSize: "15px", marginBottom: "6px", color: "#202223" }}>No Shopify variants synced yet</div>
             <p style={{ margin: "0 0 14px", color: "#6d7175", fontSize: "13px" }}>
-              Run inventory sync from the dashboard to pull your Shopify variants into PODesk.
+              Sync inventory first to get your products into PODesk.
             </p>
-            <a href="/app" style={buttonStyle}>Go to Dashboard to Sync</a>
+            <Link to="/app" style={buttonStyle}>Go to Dashboard to Sync</Link>
           </div>
         ) : (
           <div style={formCardStyle}>
@@ -258,7 +258,7 @@ export default function MappingsPage() {
             <p style={{ margin: "0 0 14px", color: "#6d7175", fontSize: "13px" }}>
               Map your variants using the form above or import existing supplier mappings from Stocky / spreadsheets via CSV.
             </p>
-            <a href="/app/imports" style={buttonStyle}>Import Mappings via CSV</a>
+            <Link to="/app/imports" style={buttonStyle}>Import Mappings via CSV</Link>
           </div>
         ) : (
           <div style={tableWrapStyle}>

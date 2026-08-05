@@ -250,7 +250,7 @@ export default function PurchaseOrdersPage() {
             <p style={{ margin: "0 0 14px", color: "#6d7175", fontSize: "13px" }}>
               Add a supplier first before creating a purchase order.
             </p>
-            <a href="/app/suppliers" style={buttonStyle}>Add Supplier</a>
+            <Link to="/app/suppliers" style={buttonStyle}>Add Supplier</Link>
           </div>
         ) : variants.length === 0 ? (
           <div style={{ padding: "20px", background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: "10px" }}>
@@ -258,7 +258,7 @@ export default function PurchaseOrdersPage() {
             <p style={{ margin: "0 0 14px", color: "#6d7175", fontSize: "13px" }}>
               Sync inventory first to create purchase orders from real SKUs.
             </p>
-            <a href="/app" style={buttonStyle}>Sync Inventory</a>
+            <Link to="/app" style={buttonStyle}>Sync Inventory</Link>
           </div>
         ) : (
           <div style={formCardStyle}>
@@ -355,9 +355,9 @@ export default function PurchaseOrdersPage() {
             <p style={{ margin: "0 0 14px", color: "#6d7175", fontSize: "13px" }}>
               Create your first draft purchase order using the form above or review automated reorder suggestions based on your sales velocity.
             </p>
-            <div style={{ display: "flex", gap: "12px" }}>
-              <a href="/app/reorder" style={buttonStyle}>Open Reorder Planning</a>
-              <a href="/app/mappings" style={secondaryButtonStyle}>Map Suppliers & SKUs</a>
+            <div style={{ display: "flex", gap: "10px" }}>
+              <Link to="/app/reorder" style={buttonStyle}>Open Reorder Planning</Link>
+              <Link to="/app/mappings" style={secondaryButtonStyle}>Map Suppliers & SKUs</Link>
             </div>
           </div>
         ) : (

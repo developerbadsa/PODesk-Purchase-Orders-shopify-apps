@@ -164,7 +164,7 @@ export default function SupplierDetailPage() {
         {mappings.length === 0 ? (
           <s-paragraph>
             No SKUs mapped to this supplier yet. Go to{" "}
-            <a href="/app/mappings" style={linkStyle}>SKU mappings</a> to assign products.
+            <Link to="/app/mappings" style={linkStyle}>SKU mappings</Link> to assign products.
           </s-paragraph>
         ) : (
           <div style={tableWrapStyle}>
