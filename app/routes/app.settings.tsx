@@ -9,6 +9,10 @@ import { authenticateAdmin } from "../authenticate-admin.server";
 import prisma from "../db.server";
 
 type ActionData = { ok: boolean; message: string };
+const SUPPLIER_EMAIL_AUTOMATION_MODES = [
+  "REVIEW_BEFORE_SEND",
+  "AUTO_SEND_AFTER_REVIEW",
+] as const;
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticateAdmin(request, "settings-loader");
@@ -64,6 +68,13 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const defaultPaymentTerms = optionalString(formData.get("defaultPaymentTerms"));
     const defaultPoNotes = optionalString(formData.get("defaultPoNotes"));
     let poNumberPrefix = String(formData.get("poNumberPrefix") || "PO").trim().toUpperCase();
+    const supplierEmailAutomationModeInput = String(
+      formData.get("supplierEmailAutomationMode") || "REVIEW_BEFORE_SEND",
+    );
+    const supplierEmailAutomationMode =
+      supplierEmailAutomationModeInput === "AUTO_SEND_AFTER_REVIEW"
+        ? "AUTO_SEND_AFTER_REVIEW"
+        : "REVIEW_BEFORE_SEND";
 
     // Validation 1: currencyCode must be uppercase 3-letter code
     if (!/^[A-Z]{3}$/.test(currencyCode)) {
@@ -108,6 +119,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         defaultPaymentTerms,
         defaultPoNotes,
         poNumberPrefix,
+        supplierEmailAutomationMode,
       },
       create: {
         storeId: store.id,
@@ -124,6 +136,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         defaultPaymentTerms,
         defaultPoNotes,
         poNumberPrefix,
+        supplierEmailAutomationMode,
       },
     });
 
@@ -190,6 +203,66 @@ export default function SettingsPage() {
                   style={textareaStyle}
                   defaultValue={settings?.defaultPoNotes ?? ""}
                 />
+              </label>
+            </div>
+          </div>
+        </s-section>
+
+        <s-section heading="Supplier email automation">
+          <div style={formCardStyle}>
+            <div style={sectionIntroStyle}>
+              <div style={sectionTitleStyle}>Email sending workflow</div>
+              <p style={sectionTextStyle}>
+                Choose how PODesk should handle supplier emails after a purchase
+                order is reviewed. PODesk will not send supplier emails just
+                because a draft PO was created.
+              </p>
+            </div>
+
+            <div style={radioGridStyle}>
+              <label htmlFor="supplier-email-review" style={radioCardStyle}>
+                <input
+                  id="supplier-email-review"
+                  type="radio"
+                  name="supplierEmailAutomationMode"
+                  value={SUPPLIER_EMAIL_AUTOMATION_MODES[0]}
+                  aria-label="Review before sending supplier emails"
+                  defaultChecked={
+                    (settings?.supplierEmailAutomationMode ??
+                      "REVIEW_BEFORE_SEND") === "REVIEW_BEFORE_SEND"
+                  }
+                  style={radioInputStyle}
+                />
+                <span>
+                  <span style={radioTitleStyle}>Review before sending</span>
+                  <span style={radioTextStyle}>
+                    PODesk prepares the email draft. The merchant opens the
+                    email, reviews it, sends it, then marks the PO as sent.
+                  </span>
+                </span>
+              </label>
+
+              <label htmlFor="supplier-email-auto-send" style={radioCardStyle}>
+                <input
+                  id="supplier-email-auto-send"
+                  type="radio"
+                  name="supplierEmailAutomationMode"
+                  value={SUPPLIER_EMAIL_AUTOMATION_MODES[1]}
+                  aria-label="Auto-send supplier emails after review"
+                  defaultChecked={
+                    settings?.supplierEmailAutomationMode ===
+                    "AUTO_SEND_AFTER_REVIEW"
+                  }
+                  style={radioInputStyle}
+                />
+                <span>
+                  <span style={radioTitleStyle}>Auto-send after review</span>
+                  <span style={radioTextStyle}>
+                    The merchant still reviews the PO first. After confirmation,
+                    PODesk can send the supplier email automatically when email
+                    delivery is connected.
+                  </span>
+                </span>
               </label>
             </div>
           </div>
@@ -266,6 +339,59 @@ const formGridStyle = {
   display: "grid",
   gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
   gap: "16px",
+} as const;
+const sectionIntroStyle = {
+  borderBottom: "1px solid #e1e3e5",
+  paddingBottom: "14px",
+  marginBottom: "16px",
+} as const;
+const sectionTitleStyle = {
+  color: "#202223",
+  fontSize: "15px",
+  fontWeight: 700,
+} as const;
+const sectionTextStyle = {
+  margin: "4px 0 0",
+  color: "#616161",
+  fontSize: "13px",
+  lineHeight: 1.45,
+  maxWidth: "720px",
+} as const;
+const radioGridStyle = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+  gap: "12px",
+} as const;
+const radioCardStyle = {
+  display: "grid",
+  gridTemplateColumns: "auto minmax(0, 1fr)",
+  gap: "10px",
+  alignItems: "start",
+  border: "1px solid #dfe3e8",
+  borderRadius: "8px",
+  background: "#ffffff",
+  padding: "14px",
+  cursor: "pointer",
+} as const;
+const radioInputStyle = {
+  width: "16px",
+  height: "16px",
+  marginTop: "2px",
+  accentColor: "#008060",
+} as const;
+const radioTitleStyle = {
+  display: "block",
+  color: "#202223",
+  fontSize: "14px",
+  fontWeight: 700,
+  lineHeight: 1.35,
+} as const;
+const radioTextStyle = {
+  display: "block",
+  color: "#6d7175",
+  fontSize: "13px",
+  lineHeight: 1.45,
+  marginTop: "4px",
 } as const;
 const fieldLabelStyle = {
   display: "flex",

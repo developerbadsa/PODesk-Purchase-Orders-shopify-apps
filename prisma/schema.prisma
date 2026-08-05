@@ -14,21 +14,21 @@ datasource db {
 }
 
 model Session {
-  id            String    @id
-  shop          String
-  state         String
-  isOnline      Boolean   @default(false)
-  scope         String?
-  expires       DateTime?
-  accessToken   String
-  userId        BigInt?
-  firstName     String?
-  lastName      String?
-  email         String?
-  accountOwner  Boolean   @default(false)
-  locale        String?
-  collaborator  Boolean?  @default(false)
-  emailVerified Boolean?  @default(false)
+  id                  String    @id
+  shop                String
+  state               String
+  isOnline            Boolean   @default(false)
+  scope               String?
+  expires             DateTime?
+  accessToken         String
+  userId              BigInt?
+  firstName           String?
+  lastName            String?
+  email               String?
+  accountOwner        Boolean   @default(false)
+  locale              String?
+  collaborator        Boolean?  @default(false)
+  emailVerified       Boolean?  @default(false)
   refreshToken        String?
   refreshTokenExpires DateTime?
 
@@ -36,12 +36,12 @@ model Session {
 }
 
 model Store {
-  id         String   @id @default(cuid())
-  shop       String   @unique
+  id         String    @id @default(cuid())
+  shop       String    @unique
   name       String?
   lastSyncAt DateTime?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
   products            ShopifyProduct[]
   variants            ShopifyVariant[]
@@ -57,25 +57,31 @@ model Store {
 }
 
 model StoreSettings {
-  id                  String   @id @default(cuid())
-  storeId             String   @unique
-  companyName         String?
-  contactEmail        String?
-  phone               String?
-  addressLine1        String?
-  addressLine2        String?
-  city                String?
-  region              String?
-  postalCode          String?
-  country             String?
-  currencyCode        String   @default("USD")
-  defaultPaymentTerms String?
-  defaultPoNotes      String?
-  poNumberPrefix      String   @default("PO")
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  id                          String                      @id @default(cuid())
+  storeId                     String                      @unique
+  companyName                 String?
+  contactEmail                String?
+  phone                       String?
+  addressLine1                String?
+  addressLine2                String?
+  city                        String?
+  region                      String?
+  postalCode                  String?
+  country                     String?
+  currencyCode                String                      @default("USD")
+  defaultPaymentTerms         String?
+  defaultPoNotes              String?
+  poNumberPrefix              String                      @default("PO")
+  supplierEmailAutomationMode SupplierEmailAutomationMode @default(REVIEW_BEFORE_SEND)
+  createdAt                   DateTime                    @default(now())
+  updatedAt                   DateTime                    @updatedAt
 
   store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+}
+
+enum SupplierEmailAutomationMode {
+  REVIEW_BEFORE_SEND
+  AUTO_SEND_AFTER_REVIEW
 }
 
 model ShopifyProduct {
@@ -97,27 +103,27 @@ model ShopifyProduct {
 }
 
 model ShopifyVariant {
-  id                  String   @id @default(cuid())
-  storeId             String
-  productId           String
-  shopifyVariantId    String
-  shopifyInventoryId  String?
-  title               String
-  sku                 String?
-  barcode             String?
-  tracked             Boolean  @default(true)
-  unitCostAmount      Float?
-  unitCostCurrency    String?
-  inventoryQuantity   Int      @default(0)
-  unitsSold30Days     Int      @default(0)
-  averageDailySales   Float    @default(0)
-  daysUntilStockout   Float?
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  id                 String   @id @default(cuid())
+  storeId            String
+  productId          String
+  shopifyVariantId   String
+  shopifyInventoryId String?
+  title              String
+  sku                String?
+  barcode            String?
+  tracked            Boolean  @default(true)
+  unitCostAmount     Float?
+  unitCostCurrency   String?
+  inventoryQuantity  Int      @default(0)
+  unitsSold30Days    Int      @default(0)
+  averageDailySales  Float    @default(0)
+  daysUntilStockout  Float?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   store            Store                    @relation(fields: [storeId], references: [id], onDelete: Cascade)
   product          ShopifyProduct           @relation(fields: [productId], references: [id], onDelete: Cascade)
-  inventoryLevels   InventoryLevel[]
+  inventoryLevels  InventoryLevel[]
   poLines          PurchaseOrderLine[]
   supplierMappings SupplierVariantMapping[]
   reorderOverrides ReorderOverride[]
@@ -146,12 +152,12 @@ model InventoryLocation {
 
 model InventoryLevel {
   id         String   @id @default(cuid())
-  variantId String
+  variantId  String
   locationId String
-  available Int      @default(0)
-  updatedAt DateTime @updatedAt
+  available  Int      @default(0)
+  updatedAt  DateTime @updatedAt
 
-  variant  ShopifyVariant   @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  variant  ShopifyVariant    @relation(fields: [variantId], references: [id], onDelete: Cascade)
   location InventoryLocation @relation(fields: [locationId], references: [id], onDelete: Cascade)
 
   @@unique([variantId, locationId])
@@ -172,24 +178,24 @@ model Supplier {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  store            Store                    @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  purchaseOrders   PurchaseOrder[]
-  variantMappings  SupplierVariantMapping[]
+  store           Store                    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  purchaseOrders  PurchaseOrder[]
+  variantMappings SupplierVariantMapping[]
 
   @@index([storeId])
 }
 
 model SupplierVariantMapping {
-  id                  String   @id @default(cuid())
-  storeId             String
-  supplierId          String
-  variantId           String
-  supplierSku         String?
-  supplierCost        Float?
+  id                   String   @id @default(cuid())
+  storeId              String
+  supplierId           String
+  variantId            String
+  supplierSku          String?
+  supplierCost         Float?
   supplierLeadTimeDays Int?
-  isPrimary           Boolean  @default(true)
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  isPrimary            Boolean  @default(true)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
   store    Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
   supplier Supplier       @relation(fields: [supplierId], references: [id], onDelete: Cascade)
@@ -225,15 +231,15 @@ model PurchaseOrder {
 }
 
 model PurchaseOrderLine {
-  id              String @id @default(cuid())
+  id              String   @id @default(cuid())
   purchaseOrderId String
   variantId       String
   quantity        Int
   unitCost        Float?
   createdAt       DateTime @default(now())
 
-  purchaseOrder PurchaseOrder            @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
-  variant       ShopifyVariant           @relation(fields: [variantId], references: [id], onDelete: Restrict)
+  purchaseOrder PurchaseOrder              @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  variant       ShopifyVariant             @relation(fields: [variantId], references: [id], onDelete: Restrict)
   receiptLines  PurchaseOrderReceiptLine[]
 
   @@index([purchaseOrderId])
@@ -249,8 +255,8 @@ model PurchaseOrderReceipt {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  store         Store                    @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  purchaseOrder PurchaseOrder            @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  store         Store                      @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  purchaseOrder PurchaseOrder              @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
   lines         PurchaseOrderReceiptLine[]
 
   @@index([storeId])
@@ -282,21 +288,21 @@ enum PurchaseOrderStatus {
 }
 
 model ImportJob {
-  id                String         @id @default(cuid())
+  id                String   @id @default(cuid())
   storeId           String
-  type              String         @default("SUPPLIER_MAPPINGS")
-  status            String         @default("PREVIEW")
+  type              String   @default("SUPPLIER_MAPPINGS")
+  status            String   @default("PREVIEW")
   filename          String?
   originalHeaders   String?
   detectedMapping   String?
-  totalRows         Int            @default(0)
-  validRows         Int            @default(0)
-  invalidRows       Int            @default(0)
-  importedSuppliers Int            @default(0)
-  importedMappings  Int            @default(0)
+  totalRows         Int      @default(0)
+  validRows         Int      @default(0)
+  invalidRows       Int      @default(0)
+  importedSuppliers Int      @default(0)
+  importedMappings  Int      @default(0)
   errorMessage      String?
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   store Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
   rows  ImportJobRow[]
@@ -326,7 +332,7 @@ model BillingSubscription {
   status           String    @default("ACTIVE")
   trialEndsAt      DateTime?
   currentPeriodEnd DateTime?
-  shopifyChargeId String?
+  shopifyChargeId  String?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
@@ -334,14 +340,14 @@ model BillingSubscription {
 }
 
 model ReorderOverride {
-  id               String         @id @default(cuid())
+  id               String   @id @default(cuid())
   storeId          String
   variantId        String
   overrideQuantity Int?
   reason           String?
   notes            String?
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   store   Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
   variant ShopifyVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
