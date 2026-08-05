@@ -142,23 +142,95 @@ export default function SuppliersPage() {
       ) : null}
 
       <s-section heading="Add supplier">
-        <Form method="post">
+        <Form method="post" style={supplierFormStyle}>
           <input type="hidden" name="intent" value="create" />
-          <div style={formGridStyle}>
-            <Field label="Supplier name" name="name" required />
-            <Field label="Email" name="email" type="email" />
-            <Field label="Phone" name="phone" />
-            <Field label="Lead time (days)" name="leadTimeDays" type="number" defaultValue="14" />
-            <Field label="Minimum order" name="minimumOrder" type="number" />
-            <Field label="Payment terms" name="paymentTerms" />
+          <div style={formIntroStyle}>
+            <div>
+              <div style={formTitleStyle}>Supplier details</div>
+              <p style={formDescriptionStyle}>
+                Add the supplier contact and buying terms used for purchase orders.
+              </p>
+            </div>
+            <span style={requiredHintStyle}>Supplier name required</span>
           </div>
-          <label style={fieldLabelStyle}>
-            Notes
-            <textarea name="notes" rows={2} style={textareaStyle} />
-          </label>
-          <button type="submit" disabled={isSubmitting} style={buttonStyle}>
-            Save supplier
-          </button>
+
+          <div style={formGroupStyle}>
+            <div style={groupHeadingStyle}>Contact</div>
+            <div style={formGridStyle}>
+              <Field
+                label="Supplier name"
+                name="name"
+                required
+                placeholder="Acme Supply Co."
+                helpText="The name shown on supplier lists and purchase orders."
+              />
+              <Field
+                label="Email"
+                name="email"
+                type="email"
+                placeholder="orders@example.com"
+                helpText="Used as the primary order contact."
+              />
+              <Field
+                label="Phone"
+                name="phone"
+                type="tel"
+                placeholder="+1 555 0100"
+                helpText="Optional contact number for urgent order issues."
+              />
+            </div>
+          </div>
+
+          <div style={formGroupStyle}>
+            <div style={groupHeadingStyle}>Ordering terms</div>
+            <div style={formGridStyle}>
+              <Field
+                label="Lead time"
+                name="leadTimeDays"
+                type="number"
+                defaultValue="14"
+                min="0"
+                inputMode="numeric"
+                suffix="days"
+                helpText="Typical time from placing a PO to receiving stock."
+              />
+              <Field
+                label="Minimum order"
+                name="minimumOrder"
+                type="number"
+                min="0"
+                step="0.01"
+                inputMode="decimal"
+                placeholder="500"
+                helpText="Leave blank if the supplier has no minimum."
+              />
+              <Field
+                label="Payment terms"
+                name="paymentTerms"
+                placeholder="Net 30"
+                helpText="Examples: Due on receipt, Net 15, Net 30."
+              />
+            </div>
+          </div>
+
+          <div style={formGroupStyle}>
+            <label style={fieldLabelStyle}>
+              <span style={labelTextStyle}>Internal notes</span>
+              <textarea
+                name="notes"
+                rows={3}
+                placeholder="Packaging rules, ordering cutoff, account number, or contact notes"
+                style={textareaStyle}
+              />
+              <span style={helpTextStyle}>Visible only inside PODesk.</span>
+            </label>
+          </div>
+
+          <div style={formActionsStyle}>
+            <button type="submit" disabled={isSubmitting} style={buttonStyle(isSubmitting)}>
+              {isSubmitting ? "Saving..." : "Save supplier"}
+            </button>
+          </div>
         </Form>
       </s-section>
 
@@ -252,14 +324,51 @@ export default function SuppliersPage() {
 }
 
 function Field({
-  label, name, type = "text", required = false, defaultValue, step,
+  label,
+  name,
+  type = "text",
+  required = false,
+  defaultValue,
+  step,
+  min,
+  inputMode,
+  placeholder,
+  helpText,
+  suffix,
 }: {
-  label: string; name: string; type?: string; required?: boolean; defaultValue?: string; step?: string;
+  label: string;
+  name: string;
+  type?: string;
+  required?: boolean;
+  defaultValue?: string;
+  step?: string;
+  min?: string;
+  inputMode?: "decimal" | "numeric";
+  placeholder?: string;
+  helpText?: string;
+  suffix?: string;
 }) {
   return (
     <label style={fieldLabelStyle}>
-      {label}
-      <input name={name} type={type} required={required} defaultValue={defaultValue} step={step} style={inputStyle} />
+      <span style={labelTextStyle}>
+        {label}
+        {required ? <span style={requiredMarkStyle}>*</span> : null}
+      </span>
+      <span style={inputWrapStyle}>
+        <input
+          name={name}
+          type={type}
+          required={required}
+          defaultValue={defaultValue}
+          step={step}
+          min={min}
+          inputMode={inputMode}
+          placeholder={placeholder}
+          style={suffix ? inputWithSuffixStyle : inputStyle}
+        />
+        {suffix ? <span style={suffixStyle}>{suffix}</span> : null}
+      </span>
+      {helpText ? <span style={helpTextStyle}>{helpText}</span> : null}
     </label>
   );
 }
@@ -283,11 +392,107 @@ function optionalNumber(value: FormDataEntryValue | null) {
 }
 
 // Styles
-const formGridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "12px", marginBottom: "12px" } as const;
-const fieldLabelStyle = { display: "grid", gap: "6px", color: "#202223", fontSize: "13px", fontWeight: 600 } as const;
-const inputStyle = { border: "1px solid #c9cccf", borderRadius: "6px", padding: "9px 10px", fontSize: "14px", width: "100%" } as const;
-const textareaStyle = { ...inputStyle, resize: "vertical" } as const;
-const buttonStyle = { border: "0", borderRadius: "6px", padding: "10px 14px", background: "#008060", color: "#fff", fontWeight: 650, cursor: "pointer" } as const;
+const supplierFormStyle = { display: "grid", gap: "18px" } as const;
+const formIntroStyle = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "flex-start",
+  gap: "16px",
+  paddingBottom: "14px",
+  borderBottom: "1px solid #ebebeb",
+} as const;
+const formTitleStyle = { color: "#202223", fontSize: "15px", fontWeight: 700 } as const;
+const formDescriptionStyle = {
+  margin: "4px 0 0",
+  color: "#616161",
+  fontSize: "13px",
+  lineHeight: 1.45,
+} as const;
+const requiredHintStyle = {
+  flex: "0 0 auto",
+  border: "1px solid #d6e6df",
+  borderRadius: "999px",
+  padding: "5px 10px",
+  background: "#f1f8f5",
+  color: "#0b5137",
+  fontSize: "12px",
+  fontWeight: 650,
+} as const;
+const formGroupStyle = { display: "grid", gap: "10px" } as const;
+const groupHeadingStyle = {
+  color: "#303030",
+  fontSize: "13px",
+  fontWeight: 700,
+  letterSpacing: 0,
+} as const;
+const formGridStyle = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+  gap: "14px 16px",
+} as const;
+const fieldLabelStyle = {
+  display: "grid",
+  alignContent: "start",
+  gap: "6px",
+  color: "#202223",
+  fontSize: "13px",
+  fontWeight: 600,
+} as const;
+const labelTextStyle = { display: "inline-flex", alignItems: "center", gap: "3px" } as const;
+const requiredMarkStyle = { color: "#d72c0d", fontWeight: 700 } as const;
+const inputWrapStyle = { position: "relative", display: "block" } as const;
+const inputBaseStyle = {
+  boxSizing: "border-box",
+  border: "1px solid #c9cccf",
+  borderRadius: "6px",
+  padding: "10px 12px",
+  minHeight: "40px",
+  fontSize: "14px",
+  lineHeight: "20px",
+  width: "100%",
+  background: "#ffffff",
+  color: "#202223",
+  outlineColor: "#008060",
+} as const;
+const inputStyle = inputBaseStyle;
+const inputWithSuffixStyle = { ...inputBaseStyle, paddingRight: "56px" } as const;
+const suffixStyle = {
+  position: "absolute",
+  top: "50%",
+  right: "12px",
+  transform: "translateY(-50%)",
+  color: "#616161",
+  fontSize: "13px",
+  pointerEvents: "none",
+} as const;
+const textareaStyle = {
+  ...inputBaseStyle,
+  resize: "vertical",
+  minHeight: "86px",
+  fontFamily: "inherit",
+} as const;
+const helpTextStyle = {
+  color: "#6d7175",
+  fontSize: "12px",
+  fontWeight: 400,
+  lineHeight: 1.35,
+} as const;
+const formActionsStyle = {
+  display: "flex",
+  justifyContent: "flex-start",
+  paddingTop: "4px",
+} as const;
+const buttonStyle = (disabled: boolean) =>
+  ({
+    border: "0",
+    borderRadius: "6px",
+    padding: "10px 16px",
+    minHeight: "40px",
+    background: disabled ? "#8bbbab" : "#008060",
+    color: "#fff",
+    fontWeight: 650,
+    cursor: disabled ? "default" : "pointer",
+  }) as const;
 const smallBtnStyle = { border: "1px solid #c9cccf", borderRadius: "4px", padding: "4px 10px", background: "#fff", cursor: "pointer", fontSize: "12px" } as const;
 const dangerBtnStyle = { ...smallBtnStyle, color: "#d72c0d", borderColor: "#d72c0d" } as const;
 const linkStyle = { color: "#2c6ecb", textDecoration: "none" } as const;

@@ -39,7 +39,6 @@ export function recoverFromInvalidEmbeddedSession(
     }
   }
 
-  const isEmbedded = url.searchParams.get("embedded") === "1" || Boolean(host);
   const alreadyRetried = url.searchParams.get(RECOVERY_PARAM) === "1";
 
   if (!shop || !host || alreadyRetried) {

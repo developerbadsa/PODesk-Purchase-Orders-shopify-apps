@@ -50,13 +50,16 @@ export default function BillingPage() {
             </div>
             <div style={freeTrialStyle}>Free forever</div>
             <p style={descriptionStyle}>
-              Essential purchase order workflow and inventory reorder planning for small growing stores.
+              Full-featured purchase order workflow and replenishment planning for growing Shopify stores.
             </p>
             <ul style={featureListStyle}>
-              <li>Shopify product & variant sync</li>
-              <li>Supplier management & contacts</li>
-              <li>Basic purchase orders & printable POs</li>
-              <li>Reorder planning table & alerts</li>
+              <li>Shopify product, variant & inventory sync</li>
+              <li>Unlimited supplier management & contacts</li>
+              <li>Unlimited purchase orders & printable PO PDFs</li>
+              <li>SKU-to-supplier cost & lead time mapping</li>
+              <li>Reorder velocity planning table & stockout alerts</li>
+              <li>Interactive PO sharing & supplier email tools</li>
+              <li>CSV sample templates & basic import preview</li>
             </ul>
             <button type="button" disabled style={disabledButtonStyle}>
               Included
@@ -72,14 +75,15 @@ export default function BillingPage() {
             </div>
             <div style={trialStyle}>14-day free trial</div>
             <p style={descriptionStyle}>
-              Complete replenishment, receiving, SKU cost mappings, and supplier export tools.
+              Complete replenishment, partial receiving workflows, custom branding, and velocity customization.
             </p>
             <ul style={featureListStyle}>
               <li>Everything in Free</li>
-              <li>SKU-to-supplier cost & lead time mapping</li>
-              <li>PO receiving workflow & partial receipts</li>
-              <li>Interactive PO sharing & supplier email tools</li>
+              <li>PO receiving workflow & partial receipt tracking</li>
               <li>Configurable reorder velocity windows (7-90d)</li>
+              <li>Custom PO reference prefix & company branding</li>
+              <li>Stocky CSV bulk supplier & SKU mapping import</li>
+              <li>Historical receiving logs & cost analysis</li>
             </ul>
             <button type="button" disabled style={disabledButtonStyle}>
               Coming soon
@@ -98,9 +102,9 @@ export default function BillingPage() {
             </p>
             <ul style={featureListStyle}>
               <li>Everything in Pro</li>
-              <li>Stocky CSV supplier & SKU mapping import</li>
-              <li>Multi-location inventory tracking</li>
-              <li>Priority support & setup assistance</li>
+              <li>Multi-location inventory tracking & location filters</li>
+              <li>Auto-reorder suggestions & bulk PO generator</li>
+              <li>Priority 1-on-1 support & setup assistance</li>
             </ul>
             <button type="button" disabled style={disabledButtonStyle}>
               Coming soon
