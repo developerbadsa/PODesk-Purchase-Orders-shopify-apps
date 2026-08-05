@@ -17,7 +17,7 @@ export function recoverFromInvalidEmbeddedSession(
 ): Response | null {
   if (
     !(error instanceof Response) ||
-    (error.status !== 401 && error.status !== 200)
+    error.status !== 401
   ) {
     return null;
   }

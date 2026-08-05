@@ -4,7 +4,7 @@ import type {
   HeadersFunction,
   LoaderFunctionArgs,
 } from "react-router";
-import { Form, useActionData, useLoaderData, useNavigation, redirect } from "react-router";
+import { Form, useActionData, useLoaderData, useNavigation, redirect, useRouteError } from "react-router";
 import type { PurchaseOrderStatus } from "@prisma/client";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticateAdmin } from "../authenticate-admin.server";
@@ -1043,6 +1043,13 @@ const progressTrackStyle = { width: "100%", background: "#dfe3e8", borderRadius:
 const progressBarFillStyle = { background: "#008060", height: "100%", transition: "width 0.3s ease" } as const;
 const mutedBannerStyle = { border: "1px solid #dfe3e8", background: "#f6f6f7", color: "#5c5f62", padding: "12px", borderRadius: "6px", fontSize: "13px", fontWeight: 500, marginTop: "8px" } as const;
 const completeBadgeStyle = { background: "#effaf5", color: "#0f5132", padding: "2px 8px", borderRadius: "4px", fontSize: "12px", fontWeight: 600, display: "inline-block" } as const;
+
+// Shopify requires ErrorBoundary on every route that calls authenticate.admin
+// so that thrown 200/401 responses (App Bridge re-auth) are handled correctly.
+export function ErrorBoundary() {
+  const error = useRouteError();
+  return boundary.error(error);
+}
 
 export const headers: HeadersFunction = (headersArgs) => {
   return boundary.headers(headersArgs);
