@@ -1,90 +1,329 @@
-.index {
-  align-items: center;
-  display: flex;
-  justify-content: center;
-  height: 100%;
+.page {
+  min-height: 100vh;
   width: 100%;
-  text-align: center;
-  padding: 1rem;
-}
-
-.heading,
-.text {
-  padding: 0;
-  margin: 0;
-}
-
-.text {
-  font-size: 1.2rem;
-  padding-bottom: 2rem;
-}
-
-.content {
+  color: #17211c;
+  background:
+    linear-gradient(135deg, rgba(0, 128, 96, 0.08), rgba(44, 110, 203, 0.08)),
+    #f7f8f7;
   display: grid;
-  gap: 1.5rem;
-  max-width: 32rem;
-  padding: 2.5rem;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.85);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  grid-template-rows: auto 1fr auto;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
 }
 
-.logoContainer {
+.header,
+.hero,
+.footer {
+  width: min(1120px, calc(100% - 40px));
+  margin: 0 auto;
+}
+
+.header {
   display: flex;
-  justify-content: center;
   align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 24px 0;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
 }
 
 .logo {
-  max-height: 48px;
-  width: auto;
-  object-fit: contain;
+  width: 172px;
+  max-width: 48vw;
+  height: auto;
+  display: block;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.nav a {
+  color: #42534a;
+  text-decoration: none;
+}
+
+.nav a:hover {
+  color: #008060;
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 440px);
+  align-items: center;
+  gap: 56px;
+  padding: 42px 0 64px;
+}
+
+.copy {
+  max-width: 620px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 6px 11px;
+  border: 1px solid rgba(0, 128, 96, 0.18);
+  border-radius: 999px;
+  background: rgba(239, 250, 245, 0.92);
+  color: #006c50;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.heading {
+  margin: 18px 0 0;
+  max-width: 760px;
+  color: #111814;
+  font-size: 56px;
+  line-height: 1.02;
+  font-weight: 780;
+}
+
+.text {
+  margin: 22px 0 0;
+  max-width: 610px;
+  color: #4d5c54;
+  font-size: 19px;
+  line-height: 1.6;
+}
+
+.points {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 30px;
+}
+
+.points span {
+  border: 1px solid #d6ddd8;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  color: #314139;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.panel {
+  border: 1px solid rgba(23, 33, 28, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow:
+    0 24px 64px rgba(22, 38, 31, 0.12),
+    0 1px 0 rgba(255, 255, 255, 0.9) inset;
+  padding: 28px;
+}
+
+.panelHeader {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #edf0ee;
+}
+
+.appIcon {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex: 0 0 auto;
+  box-shadow: 0 1px 5px rgba(23, 33, 28, 0.12);
+}
+
+.panelTitle {
+  color: #111814;
+  font-size: 18px;
+  line-height: 1.2;
+  font-weight: 760;
+}
+
+.panelText {
+  margin-top: 4px;
+  color: #637067;
+  font-size: 14px;
+  line-height: 1.45;
 }
 
 .form {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  margin: 0 auto;
-  gap: 1rem;
+  margin-top: 22px;
 }
 
 .label {
+  display: block;
+  margin-bottom: 8px;
+  color: #26352d;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.inputRow {
   display: grid;
-  gap: 0.2rem;
-  max-width: 20rem;
-  text-align: left;
-  font-size: 1rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
 }
 
 .input {
-  padding: 0.4rem;
+  min-width: 0;
+  width: 100%;
+  height: 46px;
+  border: 1px solid #bfc9c3;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #111814;
+  font: inherit;
+  font-size: 15px;
+  padding: 0 13px;
+  outline: none;
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.input:focus {
+  border-color: #008060;
+  box-shadow: 0 0 0 3px rgba(0, 128, 96, 0.16);
+}
+
+.input::placeholder {
+  color: #7d8a82;
 }
 
 .button {
-  padding: 0.4rem;
+  height: 46px;
+  border: 0;
+  border-radius: 6px;
+  background: #008060;
+  color: #ffffff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 760;
+  padding: 0 18px;
+  white-space: nowrap;
+  box-shadow: 0 8px 18px rgba(0, 128, 96, 0.2);
+  transition:
+    background 140ms ease,
+    transform 140ms ease,
+    box-shadow 140ms ease;
 }
 
-.list {
-  list-style: none;
-  padding: 0;
-  padding-top: 3rem;
-  margin: 0;
+.button:hover {
+  background: #006e52;
+  box-shadow: 0 10px 22px rgba(0, 128, 96, 0.26);
+  transform: translateY(-1px);
+}
+
+.button:active {
+  transform: translateY(0);
+}
+
+.preview {
+  display: grid;
+  gap: 10px;
+  margin-top: 24px;
+  padding-top: 22px;
+  border-top: 1px solid #edf0ee;
+}
+
+.previewRow {
   display: flex;
-  gap: 2rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border: 1px solid #edf0ee;
+  border-radius: 6px;
+  background: #fafbfa;
+  padding: 12px 14px;
+  color: #516057;
+  font-size: 14px;
 }
 
-.list > li {
-  max-width: 20rem;
-  text-align: left;
+.previewRow strong {
+  color: #111814;
+  font-size: 18px;
 }
 
-@media only screen and (max-width: 50rem) {
-  .list {
-    display: block;
+.footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 0 28px;
+  color: #6b776f;
+  font-size: 13px;
+}
+
+@media only screen and (max-width: 860px) {
+  .header,
+  .hero,
+  .footer {
+    width: min(100% - 28px, 680px);
   }
 
-  .list > li {
-    padding-bottom: 1rem;
+  .header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .nav {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .hero {
+    grid-template-columns: 1fr;
+    gap: 28px;
+    padding: 20px 0 42px;
+  }
+
+  .heading {
+    font-size: 40px;
+  }
+
+  .text {
+    font-size: 17px;
+  }
+}
+
+@media only screen and (max-width: 520px) {
+  .header,
+  .hero,
+  .footer {
+    width: calc(100% - 24px);
+  }
+
+  .logo {
+    width: 148px;
+  }
+
+  .heading {
+    font-size: 34px;
+  }
+
+  .panel {
+    padding: 20px;
+  }
+
+  .inputRow,
+  .footer {
+    grid-template-columns: 1fr;
+    display: grid;
+  }
+
+  .button {
+    width: 100%;
   }
 }
