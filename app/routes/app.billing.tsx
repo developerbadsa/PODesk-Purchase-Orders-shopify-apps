@@ -42,13 +42,13 @@ export default function BillingPage() {
 
       <s-section heading="Subscription Tiers & Pricing">
         <div style={gridStyle}>
-          {/* Starter Plan */}
+          {/* Free Starter Plan */}
           <div style={planCardStyle}>
-            <div style={badgeStyle}>Starter</div>
+            <div style={badgeStyle}>Free / Starter</div>
             <div style={priceStyle}>
-              $39<span style={periodStyle}>/month</span>
+              $0<span style={periodStyle}>/month</span>
             </div>
-            <div style={trialStyle}>14-day free trial</div>
+            <div style={freeTrialStyle}>Free forever</div>
             <p style={descriptionStyle}>
               Essential purchase order workflow and inventory reorder planning for small growing stores.
             </p>
@@ -59,7 +59,7 @@ export default function BillingPage() {
               <li>Reorder planning table & alerts</li>
             </ul>
             <button type="button" disabled style={disabledButtonStyle}>
-              Coming soon
+              Included
             </button>
           </div>
 
@@ -68,14 +68,14 @@ export default function BillingPage() {
             <div style={recommendedBadgeStyle}>Recommended</div>
             <div style={badgeStyle}>Pro</div>
             <div style={priceStyle}>
-              $79<span style={periodStyle}>/month</span>
+              $19<span style={periodStyle}>/month</span>
             </div>
             <div style={trialStyle}>14-day free trial</div>
             <p style={descriptionStyle}>
               Complete replenishment, receiving, SKU cost mappings, and supplier export tools.
             </p>
             <ul style={featureListStyle}>
-              <li>Everything in Starter</li>
+              <li>Everything in Free</li>
               <li>SKU-to-supplier cost & lead time mapping</li>
               <li>PO receiving workflow & partial receipts</li>
               <li>Interactive PO sharing & supplier email tools</li>
@@ -90,7 +90,7 @@ export default function BillingPage() {
           <div style={planCardStyle}>
             <div style={badgeStyle}>Business</div>
             <div style={priceStyle}>
-              $149<span style={periodStyle}>/month</span>
+              $39<span style={periodStyle}>/month</span>
             </div>
             <div style={trialStyle}>14-day free trial</div>
             <p style={descriptionStyle}>
@@ -111,7 +111,7 @@ export default function BillingPage() {
           <div style={{ ...planCardStyle, background: "#fafbfb" }}>
             <div style={badgeStyle}>Migration Service</div>
             <div style={priceStyle}>
-              $299 - $999<span style={periodStyle}> one-time</span>
+              $79<span style={periodStyle}> one-time</span>
             </div>
             <div style={trialStyle}>Managed setup</div>
             <p style={descriptionStyle}>
@@ -223,6 +223,11 @@ const trialStyle = {
   fontWeight: 600,
   color: "#008060",
   marginBottom: "12px",
+} as const;
+
+const freeTrialStyle = {
+  ...trialStyle,
+  color: "#108043",
 } as const;
 
 const descriptionStyle = {
