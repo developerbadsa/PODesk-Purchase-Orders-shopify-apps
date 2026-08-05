@@ -8,6 +8,7 @@ import styles from "./styles.module.css";
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
   const params = url.searchParams.toString();
+  const isAdminAppEntry = url.searchParams.has("appLoadId");
 
   if (
     url.searchParams.has("shop") ||
@@ -18,11 +19,15 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     throw redirect(`/app${params ? `?${params}` : ""}`);
   }
 
-  return { showForm: Boolean(login) };
+  return { mode: isAdminAppEntry ? "admin-entry" : "public", showForm: Boolean(login) };
 };
 
 export default function IndexRoute() {
-  const { showForm } = useLoaderData<typeof loader>();
+  const { mode, showForm } = useLoaderData<typeof loader>();
+
+  if (mode === "admin-entry") {
+    return <AdminEntryRoute />;
+  }
 
   return (
     <main className={styles.page}>
@@ -108,6 +113,58 @@ export default function IndexRoute() {
         <span>PODesk: Purchase Orders</span>
         <span>Support: podeskapp@gmail.com</span>
       </footer>
+    </main>
+  );
+}
+
+function AdminEntryRoute() {
+  return (
+    <main className={`${styles.page} ${styles.adminEntryPage}`}>
+      <section className={styles.adminEntry}>
+        <div className={styles.adminEntryHeader}>
+          <img
+            src="/brand/podesk-app-icon-small.png"
+            alt=""
+            className={styles.adminEntryIcon}
+          />
+          <div>
+            <div className={styles.adminEntryEyebrow}>PODesk workspace</div>
+            <h1 className={styles.adminEntryTitle}>Choose a purchasing workflow</h1>
+            <p className={styles.adminEntryText}>
+              Use the PODesk menu in the Shopify sidebar to manage suppliers,
+              map SKUs, plan reorders, and create purchase orders.
+            </p>
+          </div>
+        </div>
+
+        <div className={styles.workflowGrid} aria-label="PODesk workflows">
+          <div className={styles.workflowCard}>
+            <span className={styles.workflowStep}>1</span>
+            <h2>Dashboard</h2>
+            <p>Review sync status, inventory coverage, and the next setup step.</p>
+          </div>
+          <div className={styles.workflowCard}>
+            <span className={styles.workflowStep}>2</span>
+            <h2>Suppliers</h2>
+            <p>Add supplier records with lead times, terms, contacts, and notes.</p>
+          </div>
+          <div className={styles.workflowCard}>
+            <span className={styles.workflowStep}>3</span>
+            <h2>SKU mappings</h2>
+            <p>Connect Shopify variants to supplier SKUs and unit costs.</p>
+          </div>
+          <div className={styles.workflowCard}>
+            <span className={styles.workflowStep}>4</span>
+            <h2>Purchase orders</h2>
+            <p>Create clean purchase orders from mapped supplier items.</p>
+          </div>
+        </div>
+
+        <div className={styles.adminEntryNote}>
+          <strong>Tip:</strong> Start with <span>Dashboard</span> in the app menu if
+          you want the recommended next action for this store.
+        </div>
+      </section>
     </main>
   );
 }
