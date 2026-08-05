@@ -190,11 +190,17 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
       unitCostAmount: v.unitCostAmount,
     })),
     mappings: mappings.map((m) => ({
-      supplierId: m.supplierId,
+      supplierId: po.supplierId,
       variantId: m.variantId,
       supplierCost: m.supplierCost,
     })),
-    duplicateLines,
+    duplicateLines: duplicateLines.map((line) => ({
+      id: line.id,
+      variantTitle: line.variant.title,
+      purchaseOrderReference: line.purchaseOrder.reference,
+      purchaseOrderStatus: line.purchaseOrder.status,
+      supplierName: line.purchaseOrder.supplier.name,
+    })),
     isDraft: po.status === "DRAFT",
     canMarkSent: ["DRAFT", "SENT", "CONFIRMED"].includes(po.status),
   };
@@ -668,9 +674,9 @@ export default function PurchaseOrderDetailPage() {
         <div style={{ ...noticeStyle(false), backgroundColor: "#fff5ea", color: "#8a6116", border: "1px solid #ffd399", marginBottom: "20px", display: "flex", flexDirection: "column", gap: "8px" }}>
           <strong>Duplicate Alert</strong>
           <ul style={{ margin: 0, paddingLeft: "20px" }}>
-            {duplicateLines.map((dl: any) => (
+            {duplicateLines.map((dl) => (
               <li key={dl.id}>
-                {dl.variant.title} is already in {dl.purchaseOrder.status.toLowerCase()} PO <strong>{dl.purchaseOrder.reference}</strong> ({dl.purchaseOrder.supplier.name})
+                {dl.variantTitle} is already in {dl.purchaseOrderStatus.toLowerCase()} PO <strong>{dl.purchaseOrderReference}</strong> ({dl.supplierName})
               </li>
             ))}
           </ul>
