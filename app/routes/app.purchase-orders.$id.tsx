@@ -30,7 +30,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   const store = await prisma.store.findUnique({ where: { shop: session.shop } });
   if (!store) throw new Response("Store not found", { status: 404 });
 
-  const [settings, po, variants, mappings] = await Promise.all([
+  const [settings, po, variants] = await Promise.all([
     prisma.storeSettings.findUnique({ where: { storeId: store.id } }),
     prisma.purchaseOrder.findFirst({
       where: { id: params.id, storeId: store.id },
@@ -59,7 +59,6 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
       },
     }),
     // Only load variants with mappings for the add-line-item picker.
-    // Using select instead of include avoids over-fetching product data.
     prisma.shopifyVariant.findMany({
       where: {
         storeId: store.id,
@@ -75,13 +74,31 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
       orderBy: [{ product: { title: "asc" } }, { title: "asc" }],
       take: 1000,
     }),
-    prisma.supplierVariantMapping.findMany({
-      where: { storeId: store.id },
-      select: { supplierId: true, variantId: true, supplierCost: true },
-    }),
   ]);
 
   if (!po) throw new Response("Purchase order not found", { status: 404 });
+
+  const variantIds = po.lines.map(l => l.variantId);
+  const [mappings, duplicateLines] = await Promise.all([
+    prisma.supplierVariantMapping.findMany({
+      where: { storeId: store.id, supplierId: po.supplierId, variantId: { in: variantIds } },
+      select: { supplierId: true, variantId: true, supplierCost: true },
+    }),
+    prisma.purchaseOrderLine.findMany({
+      where: {
+        variantId: { in: variantIds },
+        purchaseOrder: {
+          storeId: store.id,
+          id: { not: po.id },
+          status: { in: ["DRAFT", "SENT", "CONFIRMED", "PARTIALLY_RECEIVED", "DELAYED"] },
+        },
+      },
+      include: {
+        purchaseOrder: { select: { id: true, reference: true, status: true, supplier: { select: { name: true } } } },
+        variant: { select: { title: true, sku: true, product: { select: { title: true } } } },
+      },
+    }),
+  ]);
 
   const currencyCode = settings?.currencyCode || "USD";
   const companyName = settings?.companyName || store.name || store.shop;
@@ -109,6 +126,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
       receivedQuantity: calc.receivedQuantity,
       remainingQuantity: calc.remainingQuantity,
       receivingStatus: calc.receivingStatus,
+      expectedCost: mappings.find((m) => m.variantId === l.variantId)?.supplierCost ?? null,
     };
   });
 
@@ -176,6 +194,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
       variantId: m.variantId,
       supplierCost: m.supplierCost,
     })),
+    duplicateLines,
     isDraft: po.status === "DRAFT",
     canMarkSent: ["DRAFT", "SENT", "CONFIRMED"].includes(po.status),
   };
@@ -587,8 +606,10 @@ export default function PurchaseOrderDetailPage() {
     receiptHistory,
     variants,
     mappings,
+    duplicateLines,
     isDraft,
     canMarkSent,
+    automationMode,
   } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
@@ -642,6 +663,19 @@ export default function PurchaseOrderDetailPage() {
       {actionData?.message ? (
         <div style={noticeStyle(actionData.ok)}>{actionData.message}</div>
       ) : null}
+
+      {isDraft && duplicateLines && duplicateLines.length > 0 && (
+        <div style={{ ...noticeStyle(false), backgroundColor: "#fff5ea", color: "#8a6116", border: "1px solid #ffd399", marginBottom: "20px", display: "flex", flexDirection: "column", gap: "8px" }}>
+          <strong>Duplicate Alert</strong>
+          <ul style={{ margin: 0, paddingLeft: "20px" }}>
+            {duplicateLines.map((dl: any) => (
+              <li key={dl.id}>
+                {dl.variant.title} is already in {dl.purchaseOrder.status.toLowerCase()} PO <strong>{dl.purchaseOrder.reference}</strong> ({dl.purchaseOrder.supplier.name})
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <s-section heading="Details">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px" }}>
@@ -841,7 +875,18 @@ export default function PurchaseOrderDetailPage() {
                   <td style={tdStyle}>{line.orderedQuantity}</td>
                   <td style={tdStyle}>{line.receivedQuantity}</td>
                   <td style={tdStyle}>{line.remainingQuantity}</td>
-                  <td style={tdStyle}>{line.unitCost != null ? formatCurrency(line.unitCost, currencyCode) : "-"}</td>
+                  <td style={tdStyle}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      {line.unitCost != null ? formatCurrency(line.unitCost, currencyCode) : "-"}
+                      {line.expectedCost != null && line.unitCost != null && line.unitCost > line.expectedCost && (
+                        <span style={{ color: "#d82c0d", fontSize: "12px", display: "flex", alignItems: "center" }} title={`Expected cost is ${formatCurrency(line.expectedCost, currencyCode)}`}>
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
+                            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                          </svg>
+                        </span>
+                      )}
+                    </div>
+                  </td>
                   <td style={tdStyle}>{line.subtotal > 0 ? formatCurrency(line.subtotal, currencyCode) : "-"}</td>
                   {isDraft && (
                     <td style={tdStyle}>

@@ -442,7 +442,7 @@ async function getOrCreateStore(shop: string) {
 }
 
 async function syncShopifyInventory(admin: AdminClient, storeId: string) {
-  const locationResult = await tryShopifyGraphql(admin, LOCATIONS_QUERY, {});
+  const locationResult = await tryShopifyGraphql<LocationsQueryData>(admin, LOCATIONS_QUERY, {});
   const locationAccessDenied = !locationResult.ok;
   const locationNodes = locationResult.ok ? locationResult.data.locations?.nodes ?? [] : [];
   const syncedLocationIds = new Set<string>();
@@ -473,11 +473,11 @@ async function syncShopifyInventory(admin: AdminClient, storeId: string) {
     };
     if (variantCursor) variables.after = variantCursor;
 
-    const variantData = await shopifyGraphql(admin, PRODUCT_VARIANTS_QUERY, variables);
+    const variantData = await shopifyGraphql<ProductVariantsQueryData>(admin, PRODUCT_VARIANTS_QUERY, variables);
     const variants = variantData.productVariants;
     if (!variants) break;
 
-    for (const variant of variants.nodes as ProductVariantNode[]) {
+    for (const variant of variants.nodes) {
       const product = variant.product;
       const productRecord = await prisma.shopifyProduct.upsert({
         where: { storeId_shopifyProductId: { storeId, shopifyProductId: product.id } },
@@ -533,7 +533,7 @@ async function syncShopifyInventory(admin: AdminClient, storeId: string) {
     pageCount += 1;
   }
 
-  const ordersResult = await tryShopifyGraphql(admin, ORDERS_QUERY, {
+  const ordersResult = await tryShopifyGraphql<OrdersQueryData>(admin, ORDERS_QUERY, {
     first: ORDERS_PER_PAGE,
     lineItemsFirst: ORDER_LINE_ITEMS_PER_ORDER_LIMIT,
     orderQuery: `created_at:>=${thirtyDaysAgoIsoDate()}`,
@@ -558,7 +558,7 @@ async function syncShopifyInventory(admin: AdminClient, storeId: string) {
       }
 
       if (!hasNextOrderPage || orderPageCount + 1 >= MAX_ORDER_PAGES) break;
-      const nextOrderData = await shopifyGraphql(admin, ORDERS_QUERY, {
+      const nextOrderData = await shopifyGraphql<OrdersQueryData>(admin, ORDERS_QUERY, {
         first: ORDERS_PER_PAGE,
         lineItemsFirst: ORDER_LINE_ITEMS_PER_ORDER_LIMIT,
         after: orderCursor,
@@ -602,7 +602,7 @@ async function syncShopifyInventory(admin: AdminClient, storeId: string) {
   };
 }
 
-async function shopifyGraphql(
+async function shopifyGraphql<TData extends Record<string, unknown>>(
   admin: AdminClient,
   query: string,
   variables: Record<string, unknown>,
@@ -622,17 +622,16 @@ async function shopifyGraphql(
     throw new Error("Shopify returned empty data. Reinstall the app and approve the requested scopes.");
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return payload.data as any;
+  return payload.data as TData;
 }
 
-async function tryShopifyGraphql(
+async function tryShopifyGraphql<TData extends Record<string, unknown>>(
   admin: AdminClient,
   query: string,
   variables: Record<string, unknown>,
 ) {
   try {
-    return { ok: true as const, data: await shopifyGraphql(admin, query, variables) };
+    return { ok: true as const, data: await shopifyGraphql<TData>(admin, query, variables) };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     if (message.toLowerCase().includes("access denied")) {
@@ -737,6 +736,43 @@ type ProductVariantNode = {
     status: string | null;
     vendor: string | null;
   };
+};
+
+type PageInfo = {
+  hasNextPage: boolean;
+  endCursor: string | null;
+};
+
+type LocationsQueryData = {
+  locations?: {
+    nodes: Array<{
+      id: string;
+      name: string;
+      isActive: boolean;
+    }>;
+  } | null;
+};
+
+type ProductVariantsQueryData = {
+  productVariants?: {
+    pageInfo: PageInfo;
+    nodes: ProductVariantNode[];
+  } | null;
+};
+
+type OrdersQueryData = {
+  orders?: {
+    pageInfo: PageInfo;
+    nodes: Array<{
+      id: string;
+      lineItems: {
+        nodes: Array<{
+          quantity: number;
+          variant: { id: string } | null;
+        }>;
+      };
+    }>;
+  } | null;
 };
 
 function optionalFloat(value: string | null | undefined) {

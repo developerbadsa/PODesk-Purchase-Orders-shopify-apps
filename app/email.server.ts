@@ -1,5 +1,7 @@
 import { Resend } from "resend";
 import nodemailer from "nodemailer";
+import type SMTPTransport from "nodemailer/lib/smtp-transport";
+import { decryptSecret } from "./secrets.server";
 
 export type PurchaseOrderForEmail = {
   reference: string;
@@ -150,16 +152,21 @@ export async function sendPurchaseOrderEmail({
     if (!smtpHost || !smtpPort || !smtpUser || !smtpPassword) {
       throw new Error("SMTP credentials are incomplete. Please configure them in Settings.");
     }
+    const decryptedSmtpPassword = decryptSecret(smtpPassword);
+    if (!decryptedSmtpPassword) {
+      throw new Error("SMTP password could not be decrypted. Please re-save email settings.");
+    }
     
-    const transporter = nodemailer.createTransport({
+    const transportOptions: SMTPTransport.Options = {
       host: smtpHost,
       port: smtpPort,
       secure: smtpPort === 465,
       auth: {
         user: smtpUser,
-        pass: smtpPassword,
+        pass: decryptedSmtpPassword,
       },
-    });
+    };
+    const transporter = nodemailer.createTransport(transportOptions);
 
     try {
       await transporter.sendMail({
@@ -168,8 +175,9 @@ export async function sendPurchaseOrderEmail({
         subject: subject,
         html: htmlContent,
       });
-    } catch (error: any) {
-      throw new Error(`SMTP Error: ${error.message}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown SMTP delivery error";
+      throw new Error(`SMTP Error: ${message}`);
     }
   } else {
     // RESEND
@@ -180,7 +188,7 @@ export async function sendPurchaseOrderEmail({
       throw new Error("Verified Sender Email is missing. Please configure it in Settings.");
     }
 
-    const resend = new Resend(apiKey);
+    const resend = new Resend(decryptSecret(apiKey) ?? "");
 
     const data = await resend.emails.send({
       from: fromEmail,

@@ -8,12 +8,25 @@ import { useState } from "react";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticateAdmin } from "../authenticate-admin.server";
 import prisma from "../db.server";
+import { encryptSecret } from "../secrets.server";
 
 type ActionData = { ok: boolean; message: string };
 const SUPPLIER_EMAIL_AUTOMATION_MODES = [
   "REVIEW_BEFORE_SEND",
   "AUTO_SEND_AFTER_REVIEW",
 ] as const;
+const EMAIL_PROVIDERS = ["SMTP", "RESEND"] as const;
+
+type SupplierEmailAutomationMode = (typeof SUPPLIER_EMAIL_AUTOMATION_MODES)[number];
+type EmailProvider = (typeof EMAIL_PROVIDERS)[number];
+
+function parseSupplierEmailAutomationMode(value: FormDataEntryValue | null): SupplierEmailAutomationMode {
+  return value === "AUTO_SEND_AFTER_REVIEW" ? "AUTO_SEND_AFTER_REVIEW" : "REVIEW_BEFORE_SEND";
+}
+
+function parseEmailProvider(value: FormDataEntryValue | null): EmailProvider {
+  return EMAIL_PROVIDERS.includes(value as EmailProvider) ? (value as EmailProvider) : "SMTP";
+}
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticateAdmin(request, "settings-loader");
@@ -41,7 +54,19 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     });
   }
 
-  return { settings };
+  const publicSettings = settings
+    ? {
+        ...settings,
+        resendApiKey: "",
+        smtpPassword: "",
+      }
+    : settings;
+
+  return {
+    settings: publicSettings,
+    hasResendApiKey: Boolean(settings?.resendApiKey),
+    hasSmtpPassword: Boolean(settings?.smtpPassword),
+  };
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -50,6 +75,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     where: { shop: session.shop },
     update: {},
     create: { shop: session.shop },
+  });
+  const existingSettings = await prisma.storeSettings.findUnique({
+    where: { storeId: store.id },
   });
 
   const formData = await request.formData();
@@ -69,17 +97,42 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const defaultPaymentTerms = String(formData.get("defaultPaymentTerms") || "").trim();
     const defaultPoNotes = String(formData.get("defaultPoNotes") || "").trim();
     let poNumberPrefix = String(formData.get("poNumberPrefix") || "PO").trim().toUpperCase();
-    const supplierEmailAutomationMode = String(formData.get("supplierEmailAutomationMode") || "REVIEW_BEFORE_SEND") as any;
-    const emailProvider = String(formData.get("emailProvider") || "SMTP") as any;
+    const supplierEmailAutomationMode = parseSupplierEmailAutomationMode(
+      formData.get("supplierEmailAutomationMode")
+    );
+    const hasEmailDeliveryFields = formData.has("emailProvider");
+    const emailProvider = hasEmailDeliveryFields
+      ? parseEmailProvider(formData.get("emailProvider"))
+      : existingSettings?.emailProvider ?? "SMTP";
     
-    const resendApiKey = String(formData.get("resendApiKey") || "").trim();
-    const resendFromEmail = String(formData.get("resendFromEmail") || "").trim();
+    const resendApiKeyInput = optionalString(formData.get("resendApiKey"));
+    const resendApiKey = hasEmailDeliveryFields
+      ? resendApiKeyInput
+        ? encryptSecret(resendApiKeyInput)
+        : existingSettings?.resendApiKey ?? null
+      : existingSettings?.resendApiKey ?? null;
+    const resendFromEmail = hasEmailDeliveryFields
+      ? optionalString(formData.get("resendFromEmail"))
+      : existingSettings?.resendFromEmail ?? null;
     
-    const smtpHost = String(formData.get("smtpHost") || "").trim();
+    const smtpHost = hasEmailDeliveryFields
+      ? optionalString(formData.get("smtpHost"))
+      : existingSettings?.smtpHost ?? null;
     const smtpPortRaw = String(formData.get("smtpPort") || "").trim();
-    const smtpPort = smtpPortRaw ? parseInt(smtpPortRaw, 10) : null;
-    const smtpUser = String(formData.get("smtpUser") || "").trim();
-    const smtpPassword = String(formData.get("smtpPassword") || "").trim();
+    const smtpPort = hasEmailDeliveryFields
+      ? smtpPortRaw
+        ? Number.parseInt(smtpPortRaw, 10)
+        : null
+      : existingSettings?.smtpPort ?? null;
+    const smtpUser = hasEmailDeliveryFields
+      ? optionalString(formData.get("smtpUser"))
+      : existingSettings?.smtpUser ?? null;
+    const smtpPasswordInput = optionalString(formData.get("smtpPassword"));
+    const smtpPassword = hasEmailDeliveryFields
+      ? smtpPasswordInput
+        ? encryptSecret(smtpPasswordInput)
+        : existingSettings?.smtpPassword ?? null
+      : existingSettings?.smtpPassword ?? null;
 
     // Validation 1: currencyCode must be uppercase 3-letter code
     if (!/^[A-Z]{3}$/.test(currencyCode)) {
@@ -94,6 +147,17 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       return {
         ok: false,
         message: "Contact email must be a valid email address.",
+      } satisfies ActionData;
+    }
+
+    if (
+      hasEmailDeliveryFields &&
+      smtpPortRaw &&
+      (smtpPort == null || !Number.isInteger(smtpPort) || smtpPort <= 0)
+    ) {
+      return {
+        ok: false,
+        message: "SMTP port must be a valid positive number.",
       } satisfies ActionData;
     }
 
@@ -126,12 +190,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         poNumberPrefix,
         supplierEmailAutomationMode,
         emailProvider,
-        resendApiKey: resendApiKey || null,
-        resendFromEmail: resendFromEmail || null,
-        smtpHost: smtpHost || null,
+        resendApiKey,
+        resendFromEmail,
+        smtpHost,
         smtpPort,
-        smtpUser: smtpUser || null,
-        smtpPassword: smtpPassword || null,
+        smtpUser,
+        smtpPassword,
       },
       create: {
         storeId: store.id,
@@ -150,12 +214,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         poNumberPrefix,
         supplierEmailAutomationMode,
         emailProvider,
-        resendApiKey: resendApiKey || null,
-        resendFromEmail: resendFromEmail || null,
-        smtpHost: smtpHost || null,
+        resendApiKey,
+        resendFromEmail,
+        smtpHost,
         smtpPort,
-        smtpUser: smtpUser || null,
-        smtpPassword: smtpPassword || null,
+        smtpUser,
+        smtpPassword,
       },
     });
 
@@ -166,13 +230,13 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function SettingsPage() {
-  const { settings } = useLoaderData<typeof loader>();
+  const { settings, hasResendApiKey, hasSmtpPassword } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";
   
-  const [provider, setProvider] = useState(settings?.emailProvider || "SMTP");
-  const [automationMode, setAutomationMode] = useState(
+  const [provider, setProvider] = useState<EmailProvider>(settings?.emailProvider || "SMTP");
+  const [automationMode, setAutomationMode] = useState<SupplierEmailAutomationMode>(
     settings?.supplierEmailAutomationMode || "REVIEW_BEFORE_SEND"
   );
 
@@ -296,7 +360,7 @@ export default function SettingsPage() {
                   <select
                     name="emailProvider"
                     value={provider}
-                    onChange={(e) => setProvider(e.target.value)}
+                    onChange={(e) => setProvider(parseEmailProvider(e.target.value))}
                     style={inputStyle}
                   >
                     <option value="SMTP">Custom SMTP (Easy - Gmail, Outlook, cPanel)</option>
@@ -336,8 +400,8 @@ export default function SettingsPage() {
                       label="SMTP Password / App Password"
                       name="smtpPassword"
                       type="password"
-                      defaultValue={settings?.smtpPassword ?? ""}
-                      placeholder="••••••••"
+                      defaultValue=""
+                      placeholder={hasSmtpPassword ? "Saved password configured" : "Enter password or app password"}
                     />
                   </div>
                 </>
@@ -351,8 +415,8 @@ export default function SettingsPage() {
                       label="Resend API Key"
                       name="resendApiKey"
                       type="password"
-                      defaultValue={settings?.resendApiKey ?? ""}
-                      placeholder="re_..."
+                      defaultValue=""
+                      placeholder={hasResendApiKey ? "Saved API key configured" : "re_..."}
                     />
                     <Field
                       label="Verified Sender Email"
