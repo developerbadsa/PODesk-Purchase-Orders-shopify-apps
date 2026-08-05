@@ -172,6 +172,9 @@ export default function SettingsPage() {
   const isSubmitting = navigation.state === "submitting";
   
   const [provider, setProvider] = useState(settings?.emailProvider || "SMTP");
+  const [automationMode, setAutomationMode] = useState(
+    settings?.supplierEmailAutomationMode || "REVIEW_BEFORE_SEND"
+  );
 
   return (
     <s-page heading="Settings">
@@ -248,10 +251,8 @@ export default function SettingsPage() {
                   name="supplierEmailAutomationMode"
                   value={SUPPLIER_EMAIL_AUTOMATION_MODES[0]}
                   aria-label="Review before sending supplier emails"
-                  defaultChecked={
-                    (settings?.supplierEmailAutomationMode ??
-                      "REVIEW_BEFORE_SEND") === "REVIEW_BEFORE_SEND"
-                  }
+                  checked={automationMode === "REVIEW_BEFORE_SEND"}
+                  onChange={() => setAutomationMode("REVIEW_BEFORE_SEND")}
                   style={radioInputStyle}
                 />
                 <span>
@@ -270,10 +271,8 @@ export default function SettingsPage() {
                   name="supplierEmailAutomationMode"
                   value={SUPPLIER_EMAIL_AUTOMATION_MODES[1]}
                   aria-label="Auto-send supplier emails after review"
-                  defaultChecked={
-                    settings?.supplierEmailAutomationMode ===
-                    "AUTO_SEND_AFTER_REVIEW"
-                  }
+                  checked={automationMode === "AUTO_SEND_AFTER_REVIEW"}
+                  onChange={() => setAutomationMode("AUTO_SEND_AFTER_REVIEW")}
                   style={radioInputStyle}
                 />
                 <span>
@@ -287,8 +286,9 @@ export default function SettingsPage() {
               </label>
             </div>
 
-            <div style={{ marginTop: "24px", paddingTop: "24px", borderTop: "1px solid #dfe3e8" }}>
-              <div style={{ ...sectionTitleStyle, fontSize: "14px", marginBottom: "16px" }}>Email Delivery Configuration</div>
+            {automationMode === "AUTO_SEND_AFTER_REVIEW" && (
+              <div style={{ marginTop: "24px", paddingTop: "24px", borderTop: "1px solid #dfe3e8" }}>
+                <div style={{ ...sectionTitleStyle, fontSize: "14px", marginBottom: "16px" }}>Email Delivery Configuration</div>
               
               <div style={{ marginBottom: "20px" }}>
                 <label style={fieldLabelStyle}>
@@ -365,6 +365,7 @@ export default function SettingsPage() {
                 </>
               )}
             </div>
+            )}
           </div>
         </s-section>
 
