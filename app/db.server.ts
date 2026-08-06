@@ -19,11 +19,14 @@ function withServerlessPoolConfig(databaseUrl?: string) {
 
   try {
     const url = new URL(sanitized);
+    // Increase serverless pool limits slightly to avoid quick exhaustion during
+    // occasional parallel queries (e.g., multiple Prisma calls in Promise.all).
+    // Keep pgbouncer enabled if not already present.
     if (!url.searchParams.has("connection_limit")) {
-      url.searchParams.set("connection_limit", "1");
+      url.searchParams.set("connection_limit", "3");
     }
     if (!url.searchParams.has("pool_timeout")) {
-      url.searchParams.set("pool_timeout", "10");
+      url.searchParams.set("pool_timeout", "30");
     }
     if (!url.searchParams.has("pgbouncer")) {
       url.searchParams.set("pgbouncer", "true");
