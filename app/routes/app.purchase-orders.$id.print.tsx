@@ -556,11 +556,8 @@ const tableStyle = {
 } as const;
 
 const thStyle = {
-  borderBottom: "2px solid #374151",
-  padding: "8px 10px",
-  fontWeight: 700,
   padding: "8px",
-  textAlign: "left",
+  textAlign: "left" as const,
   borderBottom: "1px solid #e5e7eb",
   color: "#4b5563",
   fontSize: "12px",
@@ -578,6 +575,9 @@ const tdStyle = {
 const tfStyle = {
   padding: "10px 8px",
   fontSize: "13px",
+  fontWeight: 700,
+  borderTop: "2px solid #374151",
+  borderBottom: "2px solid #374151",
 };
 
 const subTitleStyle = {

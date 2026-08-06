@@ -13,6 +13,15 @@ export default function App() {
           rel="stylesheet"
           href="https://cdn.shopify.com/static/fonts/inter/v4/styles.css"
         />
+        <style dangerouslySetInnerHTML={{ __html: `
+          s-page {
+            max-width: 100% !important;
+            --p-page-max-width: 100% !important;
+          }
+          .Polaris-Page {
+            max-width: 100% !important;
+          }
+        ` }} />
         <Meta />
         <Links />
       </head>
