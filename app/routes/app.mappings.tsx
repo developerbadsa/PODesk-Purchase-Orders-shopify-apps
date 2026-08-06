@@ -8,6 +8,7 @@ import { Form, Link, useActionData, useLoaderData, useNavigation, useRouteError 
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticateAdmin } from "../authenticate-admin.server";
 import prisma from "../db.server";
+import { SearchableSelect } from "../components/SearchableSelect";
 
 type ActionData = { ok: boolean; message: string };
 
@@ -179,6 +180,7 @@ export default function MappingsPage() {
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [selectedSupplierId, setSelectedSupplierId] = useState<string>("");
   const isSubmitting = navigation.state === "submitting";
 
   const mappedVariantIds = new Set(mappings.map((m) => m.variantId));
@@ -214,12 +216,14 @@ export default function MappingsPage() {
               <div style={formGridStyle}>
                 <label style={fieldLabelStyle}>
                   <span>Supplier <span style={{ color: "#d72c0d" }}>*</span></span>
-                  <select name="supplierId" required style={inputStyle}>
-                    <option value="">Select supplier</option>
-                    {suppliers.map((s) => (
-                      <option key={s.id} value={s.id}>{s.name}</option>
-                    ))}
-                  </select>
+                  <SearchableSelect
+                    name="supplierId"
+                    required
+                    placeholder="Select supplier..."
+                    value={selectedSupplierId}
+                    onChange={setSelectedSupplierId}
+                    options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
+                  />
                 </label>
                 <VariantPicker variants={variants} mappedVariantIds={mappedVariantIds} />
                 <Field label="Supplier SKU (Optional)" name="supplierSku" placeholder="e.g. SUP-SKU-101" />
@@ -359,115 +363,29 @@ function VariantPicker({
   }>;
   mappedVariantIds: Set<string>;
 }) {
-  const [query, setQuery] = useState("");
-  const [isOpen, setIsOpen] = useState(false);
   const [selectedVariantId, setSelectedVariantId] = useState("");
-  const selectedVariant = variants.find((variant) => variant.id === selectedVariantId);
 
-  const filteredVariants = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
-    const matchingVariants = normalizedQuery
-      ? variants.filter((variant) => {
-          const searchableText = [
-            variant.productTitle,
-            variant.variantTitle,
-            variant.sku,
-            variant.shopifyVariantId,
-          ]
-            .filter(Boolean)
-            .join(" ")
-            .toLowerCase();
-          return searchableText.includes(normalizedQuery);
-        })
-      : variants;
-
-    return matchingVariants.slice(0, 8);
-  }, [query, variants]);
+  const options = variants.map((v) => {
+    const isMapped = mappedVariantIds.has(v.id);
+    return {
+      value: v.id,
+      label: `${v.productTitle} - ${v.variantTitle} ${v.sku ? `(${v.sku})` : ""}${isMapped ? " [Mapped]" : ""}`,
+    };
+  });
 
   return (
-    <div
-      style={variantPickerStyle}
-      onBlur={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget)) {
-          setIsOpen(false);
-        }
-      }}
-    >
+    <div style={variantPickerStyle}>
       <label style={fieldLabelStyle}>
         <span>Variant / SKU <span style={{ color: "#d72c0d" }}>*</span></span>
-        <input type="hidden" name="variantId" value={selectedVariantId} />
-        <input
-          type="search"
-          value={query}
-          onFocus={() => setIsOpen(true)}
-          onChange={(event) => {
-            setQuery(event.target.value);
-            setIsOpen(true);
-          }}
-          placeholder="Search product, variant, SKU, or Shopify ID"
-          style={inputStyle}
+        <SearchableSelect
+          name="variantId"
+          required
+          placeholder="Search product, variant, SKU, or Shopify ID..."
+          value={selectedVariantId}
+          onChange={setSelectedVariantId}
+          options={options}
         />
       </label>
-
-      {selectedVariant ? (
-        <div style={selectedVariantStyle}>
-          <div>
-            <div style={selectedVariantTitleStyle}>
-              {selectedVariant.productTitle}
-            </div>
-            <div style={selectedVariantMetaStyle}>
-              {selectedVariant.variantTitle}
-              {selectedVariant.sku ? ` - SKU ${selectedVariant.sku}` : " - No SKU"}
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              setSelectedVariantId("");
-              setIsOpen(true);
-            }}
-            style={clearSelectionButtonStyle}
-          >
-            Change
-          </button>
-        </div>
-      ) : null}
-
-      {isOpen ? (
-      <div style={variantResultsStyle} role="listbox" aria-label="Available variants">
-        {filteredVariants.length === 0 ? (
-          <div style={variantEmptyStyle}>No variants match this search.</div>
-        ) : (
-          filteredVariants.map((variant) => {
-            const isSelected = variant.id === selectedVariantId;
-            const isMapped = mappedVariantIds.has(variant.id);
-            return (
-              <button
-                key={variant.id}
-                type="button"
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => {
-                  setSelectedVariantId(variant.id);
-                  setQuery("");
-                  setIsOpen(false);
-                }}
-                style={variantOptionStyle(isSelected)}
-                aria-pressed={isSelected}
-              >
-                <span style={{ minWidth: 0 }}>
-                  <span style={variantOptionTitleStyle}>{variant.productTitle}</span>
-                  <span style={variantOptionMetaStyle}>
-                    {variant.variantTitle}
-                    {variant.sku ? ` - SKU ${variant.sku}` : " - No SKU"}
-                  </span>
-                </span>
-                {isMapped ? <span style={mappedBadgeStyle}>Mapped</span> : null}
-              </button>
-            );
-          })
-        )}
-      </div>
-      ) : null}
       <div style={helpTextStyle}>Select the exact Shopify variant that this supplier can fulfill.</div>
     </div>
   );

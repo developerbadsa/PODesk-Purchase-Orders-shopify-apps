@@ -52,9 +52,7 @@ function GlobalRouteLoader({
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    const delay = isBusy ? 250 : 0;
-    const timeoutId = window.setTimeout(() => setIsVisible(isBusy), delay);
-    return () => window.clearTimeout(timeoutId);
+    setIsVisible(isBusy);
   }, [isBusy]);
 
   if (!isVisible) {
@@ -62,7 +60,7 @@ function GlobalRouteLoader({
   }
 
   const message =
-    state === "submitting" ? "Saving changes..." : "Loading store data...";
+    state === "submitting" ? "Saving changes..." : "Loading page data...";
 
   return (
     <div
@@ -77,42 +75,56 @@ function GlobalRouteLoader({
         pointerEvents: "none",
       }}
     >
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+          @keyframes spinSlow {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `,
+        }}
+      />
+      {/* Dynamic Animated BarLoader Progress Line */}
       <BarLoader
         color="#008060"
-        height={3}
-        speedMultiplier={0.9}
+        height={4}
+        speedMultiplier={1.3}
         width="100%"
-        cssOverride={{ display: "block" }}
+        cssOverride={{ display: "block", boxShadow: "0 0 10px rgba(0, 128, 96, 0.4)" }}
       />
+      {/* Centered Glassmorphic Loading Pill Badge */}
       <div
         style={{
-          position: "absolute",
-          insetBlockStart: 14,
-          insetInlineEnd: 18,
+          position: "fixed",
+          top: "16px",
+          left: "50%",
+          transform: "translateX(-50%)",
           display: "flex",
           alignItems: "center",
-          gap: 10,
-          border: "1px solid #d8dbdf",
-          borderRadius: 8,
-          background: "#ffffff",
-          boxShadow: "0 8px 24px rgba(0, 0, 0, 0.12)",
-          color: "#202223",
-          fontSize: 13,
-          fontWeight: 600,
-          lineHeight: "20px",
-          padding: "10px 14px",
+          gap: "10px",
+          borderRadius: "999px",
+          background: "rgba(255, 255, 255, 0.95)",
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
+          border: "1px solid rgba(0, 128, 96, 0.25)",
+          boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.04)",
+          color: "#111827",
+          fontSize: "13px",
+          fontWeight: 650,
+          padding: "8px 18px",
         }}
       >
-        <span
-          style={{
-            width: 8,
-            height: 8,
-            borderRadius: 999,
-            background: "#008060",
-            boxShadow: "0 0 0 4px rgba(0, 128, 96, 0.14)",
-          }}
-        />
-        {message}
+        <svg
+          style={{ animation: "spinSlow 0.9s linear infinite", width: "16px", height: "16px", color: "#008060" }}
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
+          <circle style={{ opacity: 0.25 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <path style={{ opacity: 0.85 }} fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+        </svg>
+        <span>{message}</span>
       </div>
     </div>
   );

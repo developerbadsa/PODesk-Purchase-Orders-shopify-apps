@@ -26,10 +26,10 @@ export function SearchableSelect({ options, value, onChange, name, required, ...
   const customStyles = {
     control: (provided: any, state: any) => ({
       ...provided,
-      borderColor: state.isFocused ? "#008060" : "#c9cccf",
+      borderColor: state.isFocused ? "#008060" : "#d1d5db",
       boxShadow: state.isFocused ? "0 0 0 1px #008060" : "none",
       "&:hover": {
-        borderColor: state.isFocused ? "#008060" : "#8c9196",
+        borderColor: state.isFocused ? "#008060" : "#9ca3af",
       },
       borderRadius: "8px",
       minHeight: "42px",
@@ -42,7 +42,7 @@ export function SearchableSelect({ options, value, onChange, name, required, ...
         : state.isFocused
         ? "#f4f6f8"
         : "transparent",
-      color: state.isSelected ? "white" : "#202223",
+      color: state.isSelected ? "white" : "#111827",
       "&:active": {
         backgroundColor: state.isSelected ? "#008060" : "#f4f6f8",
       },

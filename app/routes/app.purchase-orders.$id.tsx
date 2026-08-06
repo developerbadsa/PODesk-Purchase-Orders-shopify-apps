@@ -4,7 +4,17 @@ import type {
   HeadersFunction,
   LoaderFunctionArgs,
 } from "react-router";
-import { Form, Link, useActionData, useLoaderData, useNavigation, redirect, useRouteError } from "react-router";
+import {
+  redirect,
+  isRouteErrorResponse,
+  Link,
+  useActionData,
+  useLoaderData,
+  useNavigation,
+  useRouteError,
+  Form,
+  useSubmit,
+} from "react-router";
 import type { PurchaseOrderStatus } from "@prisma/client";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticateAdmin } from "../authenticate-admin.server";
@@ -13,6 +23,13 @@ import { createUniquePoReference } from "../po.server";
 import { formatCurrency } from "../utils";
 import { calculateLineReceiving, getPoReceivingSummary } from "../receiving.server";
 import { SearchableSelect } from "../components/SearchableSelect";
+import {
+  Button,
+  buttonPrimaryStyle,
+  buttonSecondaryStyle,
+  buttonDangerStyle,
+  buttonSmallStyle,
+} from "../components/Button";
 
 type ActionData = { ok: boolean; message: string };
 
@@ -649,6 +666,7 @@ export default function PurchaseOrderDetailPage() {
   const isSubmitting = navigation.state === "submitting";
   const [unitCost, setUnitCost] = useState("");
   const [selectedVariantId, setSelectedVariantId] = useState("");
+  const variantOptions = variants.map(v => ({ value: v.id, label: v.productTitle + " - " + v.variantTitle + (v.sku ? " (" + v.sku + ")" : "") }));
 
   const [recipientEmail, setRecipientEmail] = useState(po.supplierEmailSnapshot || supplierEmail || "");
   const [emailSubject, setEmailSubject] = useState(defaultSubject);
@@ -693,7 +711,9 @@ export default function PurchaseOrderDetailPage() {
   const todayIso = new Date().toISOString().slice(0, 10);
 
   return (
-    <s-page heading={po.reference}>
+    <>
+      <ui-title-bar title={po.reference}></ui-title-bar>
+      <div className="po-detail-container" style={pageContainerStyle}>
       {actionData?.message ? (
         <div style={noticeStyle(actionData.ok)}>{actionData.message}</div>
       ) : null}
@@ -712,8 +732,8 @@ export default function PurchaseOrderDetailPage() {
       )}
 
       
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)', gap: '24px', alignItems: 'start', marginTop: '24px' }}>
-        <div style={{ display: 'grid', gap: '24px' }}>
+      <div style={mainGridStyle}>
+        <div style={colStyle}>
           <div style={cardStyle}>
   <h2 style={cardHeaderStyle}>{`Line items (${po.lines.length})`}</h2>
   <div style={cardContentStyle}>
@@ -969,8 +989,7 @@ export default function PurchaseOrderDetailPage() {
   </div>
 </div>
         </div>
-        
-        <div style={{ display: 'grid', gap: '24px' }}>
+        <div style={colStyle}>
           <div style={cardStyle}>
   <h2 style={cardHeaderStyle}>Details</h2>
   <div style={cardContentStyle}>
@@ -1143,88 +1162,93 @@ export default function PurchaseOrderDetailPage() {
   </div>
 </div>
           <div style={cardStyle}>
-  <h2 style={cardHeaderStyle}>Edit</h2>
-  <div style={cardContentStyle}>
-    <Form method="post">
-            <input type="hidden" name="intent" value="update-po" />
-            <div style={formGridStyle}>
-              <Field label="PO reference" name="reference" type="text" required defaultValue={po.reference} />
-              <Field label="Expected arrival" name="expectedArrival" type="date" defaultValue={po.expectedArrival} />
+            <h2 style={cardHeaderStyle}>Edit</h2>
+            <div style={cardContentStyle}>
+              <Form method="post" style={{ display: "grid", gap: "16px" }}>
+                <input type="hidden" name="intent" value="update-po" />
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                  <Field label="PO reference" name="reference" type="text" required defaultValue={po.reference} />
+                  <Field label="Expected arrival" name="expectedArrival" type="date" defaultValue={po.expectedArrival} />
+                </div>
+                <label style={fieldLabelStyle}>
+                  Notes
+                  <textarea name="notes" rows={3} style={textareaStyle} defaultValue={po.notes ?? ""} />
+                </label>
+                <div>
+                  <button type="submit" disabled={isSubmitting} style={buttonStyle}>
+                    Save changes
+                  </button>
+                </div>
+              </Form>
             </div>
-            <label style={fieldLabelStyle}>
-              Notes
-              <textarea name="notes" rows={3} style={textareaStyle} defaultValue={po.notes ?? ""} />
-            </label>
-            <button type="submit" disabled={isSubmitting} style={buttonStyle}>
-              Save changes
-            </button>
-          </Form>
-  </div>
-</div>
-          <div style={cardStyle}>
-  <h2 style={cardHeaderStyle}>Recurring Settings</h2>
-  <div style={cardContentStyle}>
-    <Form method="post">
-          <input type="hidden" name="intent" value="set-recurring" />
-          <div style={{ display: "flex", gap: "12px", alignItems: "center", marginBottom: "12px" }}>
-            <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", fontWeight: 500 }}>
-              <input 
-                type="checkbox" 
-                name="isRecurring" 
-                value="true"
-                defaultChecked={po.isRecurring} 
-              />
-              Make this PO recurring
-            </label>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", maxWidth: "500px" }}>
-            <label style={fieldLabelStyle}>
-              Interval (Days)
-              <input 
-                type="number" 
-                name="recurringIntervalDays" 
-                defaultValue={po.recurringIntervalDays?.toString() ?? ""} 
-                placeholder="e.g. 30" 
-                style={inputStyle} 
-              />
-            </label>
-            <label style={fieldLabelStyle}>
-              Next Generation Date
-              <input 
-                type="date" 
-                name="nextRecurringDate" 
-                defaultValue={po.nextRecurringDate ?? ""} 
-                style={inputStyle} 
-              />
-            </label>
-          </div>
-          <button type="submit" disabled={isSubmitting} style={{ ...buttonStyle, marginTop: "12px" }}>
-            Save recurring settings
-          </button>
-        </Form>
-  </div>
-</div>
           <div style={cardStyle}>
-  <h2 style={cardHeaderStyle}>Actions</h2>
-  <div style={cardContentStyle}>
-    <div style={{ display: "flex", gap: "8px" }}>
-          <Link to={`/app/purchase-orders/${po.id}/print`} style={smallBtnStyle}>Print PO</Link>
-          <Form method="post" style={{ display: "inline" }}>
-            <input type="hidden" name="intent" value="duplicate" />
-            <button type="submit" disabled={isSubmitting} style={smallBtnStyle}>Duplicate PO</button>
-          </Form>
-          {isDraft && (
-            <Form method="post" style={{ display: "inline" }}>
-              <input type="hidden" name="intent" value="delete" />
-              <button type="submit" disabled={isSubmitting} style={dangerBtnStyle}>Delete PO</button>
-            </Form>
-          )}
-        </div>
-  </div>
-</div>
+            <h2 style={cardHeaderStyle}>Recurring Settings</h2>
+            <div style={cardContentStyle}>
+              <Form method="post" style={{ display: "grid", gap: "16px" }}>
+                <input type="hidden" name="intent" value="set-recurring" />
+                <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", fontWeight: 500 }}>
+                    <input 
+                      type="checkbox" 
+                      name="isRecurring" 
+                      value="true"
+                      defaultChecked={po.isRecurring} 
+                    />
+                    Make this PO recurring
+                  </label>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                  <label style={fieldLabelStyle}>
+                    Interval (Days)
+                    <input 
+                      type="number" 
+                      name="recurringIntervalDays" 
+                      defaultValue={po.recurringIntervalDays?.toString() ?? ""} 
+                      placeholder="e.g. 30" 
+                      style={inputStyle} 
+                    />
+                  </label>
+                  <label style={fieldLabelStyle}>
+                    Next Generation Date
+                    <input 
+                      type="date" 
+                      name="nextRecurringDate" 
+                      defaultValue={po.nextRecurringDate ?? ""} 
+                      style={inputStyle} 
+                    />
+                  </label>
+                </div>
+                <div>
+                  <button type="submit" disabled={isSubmitting} style={buttonStyle}>
+                    Save recurring settings
+                  </button>
+                </div>
+              </Form>
+            </div>
+          </div>
+          <div style={cardStyle}>
+            <h2 style={cardHeaderStyle}>Actions</h2>
+            <div style={cardContentStyle}>
+              <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", alignItems: "center" }}>
+                <Link to={`/app/purchase-orders/${po.id}/print`} style={buttonSecondaryStyle}>Print PO</Link>
+                <Form method="post" style={{ display: "inline-flex" }}>
+                  <input type="hidden" name="intent" value="duplicate" />
+                  <button type="submit" disabled={isSubmitting} style={buttonSecondaryStyle}>Duplicate PO</button>
+                </Form>
+                {isDraft && (
+                  <Form method="post" style={{ display: "inline-flex" }}>
+                    <input type="hidden" name="intent" value="delete" />
+                    <button type="submit" disabled={isSubmitting} style={dangerBtnStyle}>Delete PO</button>
+                  </Form>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-    </s-page>
+      </div>
+    </>
   );
 }
 
@@ -1270,41 +1294,64 @@ function statusBadge(status: string) {
 }
 
 
-// Styles
-const pageLayoutGrid = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "24px", alignItems: "start", marginTop: "24px" } as const;
-const mainColStyle = { display: "grid", gap: "24px", gridColumn: "1 / -1", '@media (min-width: 768px)': { gridColumn: "span 2" } } as any;
-const sidebarColStyle = { display: "grid", gap: "24px", gridColumn: "1 / -1", '@media (min-width: 768px)': { gridColumn: "span 1" } } as any;
-const cardStyle = { background: "#ffffff", border: "1px solid #dfe3e8", borderRadius: "12px", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05), 0 1px 3px -1px rgba(0,0,0,0.02)", overflow: "hidden" } as const;
-const cardHeaderStyle = { margin: 0, padding: "16px 20px", fontSize: "15px", fontWeight: 650, color: "#202223", borderBottom: "1px solid #f1f2f3", backgroundColor: "#fcfcfd" } as const;
-const cardContentStyle = { padding: "20px" } as const;
+// Modern Premium Styles
+const pageContainerStyle = { padding: "32px", maxWidth: "1600px", margin: "0 auto", width: "100%", boxSizing: "border-box" } as const;
+const mainGridStyle = { display: "grid", gridTemplateColumns: "minmax(0, 2fr) minmax(0, 1.3fr)", gap: "32px", alignItems: "start" } as const;
+const colStyle = { display: "grid", gap: "24px" } as const;
 
-const metaGridStyle = { display: "grid", gridTemplateColumns: "1fr", gap: "10px", marginBottom: "8px" } as const;
-const formGridStyle = { display: "grid", gridTemplateColumns: "1fr", gap: "16px", marginBottom: "16px" } as const;
-const fieldLabelStyle = { display: "grid", gap: "6px", color: "#202223", fontSize: "13px", fontWeight: 600 } as const;
-const inputStyle = { border: "1px solid #c9cccf", borderRadius: "8px", padding: "10px 12px", fontSize: "14px", width: "100%", outline: "none", transition: "border-color 0.2s" } as const;
+const cardStyle = { background: "#ffffff", border: "1px solid #e5e7eb", borderRadius: "16px", boxShadow: "0 10px 15px -3px rgba(0,0,0,0.05), 0 4px 6px -2px rgba(0,0,0,0.025)", overflow: "hidden", transition: "box-shadow 0.3s ease" } as const;
+const cardHeaderStyle = { margin: 0, padding: "20px 24px", fontSize: "16px", fontWeight: 700, color: "#111827", borderBottom: "1px solid #f3f4f6", backgroundColor: "#f9fafb" } as const;
+const cardContentStyle = { padding: "24px" } as const;
+
+const metaGridStyle = { display: "grid", gridTemplateColumns: "1fr", gap: "12px", marginBottom: "12px" } as const;
+const fieldLabelStyle = { display: "grid", gap: "8px", color: "#374151", fontSize: "14px", fontWeight: 600 } as const;
+const inputStyle = { border: "1px solid #d1d5db", borderRadius: "8px", padding: "10px 14px", fontSize: "14px", width: "100%", boxSizing: "border-box", outline: "none", transition: "border-color 0.2s, box-shadow 0.2s" } as const;
 const textareaStyle = { ...inputStyle, resize: "vertical" } as const;
-const buttonStyle = { display: "inline-flex", justifyContent: "center", alignItems: "center", border: "0", borderRadius: "8px", padding: "10px 16px", background: "#008060", color: "#fff", fontWeight: 650, cursor: "pointer", transition: "background 0.2s" } as const;
-const smallBtnStyle = { border: "1px solid #c9cccf", borderRadius: "6px", padding: "6px 12px", background: "#fff", cursor: "pointer", fontSize: "13px", fontWeight: 500, transition: "background 0.2s" } as const;
-const dangerBtnStyle = { ...smallBtnStyle, border: "1px solid #d72c0d", color: "#d72c0d" } as const;
-const statusBtn = { ...smallBtnStyle } as const;
-const linkStyle = { color: "#2c6ecb", textDecoration: "none", fontWeight: 500 } as const;
-const printBtnLinkStyle = { ...buttonStyle, textDecoration: "none" } as const;
-const secondaryBtnLinkStyle = { display: "inline-flex", justifyContent: "center", alignItems: "center", border: "1px solid #c9cccf", borderRadius: "8px", padding: "10px 16px", background: "#ffffff", color: "#202223", fontWeight: 650, textDecoration: "none", fontSize: "13px" } as const;
-const mutedStyle = { color: "#6d7175", fontSize: "13px", marginTop: "4px" } as const;
-const tableWrapStyle = { overflowX: "auto" } as const;
-const tableStyle = { width: "100%", borderCollapse: "collapse", fontSize: "14px" } as const;
-const thStyle = { textAlign: "left", borderBottom: "1px solid #dfe3e8", padding: "12px 10px", whiteSpace: "nowrap", color: "#5c5f62", fontSize: "13px", fontWeight: 650 } as const;
-const tdStyle = { borderBottom: "1px solid #f1f2f3", padding: "12px 10px", verticalAlign: "middle" } as const;
-const noticeStyle = (ok: boolean) => ({ border: `1px solid ${ok ? "#95c9b4" : "#e0b3b2"}`, background: ok ? "#effaf5" : "#fff4f4", borderRadius: "8px", marginTop: "16px", marginBottom: "16px", padding: "12px 16px", color: ok ? "#0f5132" : "#8a1f11", fontWeight: 500 }) as const;
 
-const receivingGridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: "16px", marginBottom: "16px" } as const;
-const cardMetricStyle = { border: "1px solid #dfe3e8", borderRadius: "10px", padding: "16px", background: "#f9fafb" } as const;
-const metricLabelStyle = { color: "#6d7175", fontSize: "13px", fontWeight: 600 } as const;
-const metricValueStyle = { marginTop: "6px", fontSize: "20px", fontWeight: 700, color: "#202223" } as const;
-const progressTrackStyle = { width: "100%", background: "#dfe3e8", borderRadius: "999px", height: "8px", marginTop: "12px", overflow: "hidden" } as const;
-const progressBarFillStyle = { background: "#008060", height: "100%", transition: "width 0.5s ease" } as const;
-const mutedBannerStyle = { border: "1px solid #dfe3e8", background: "#f9fafb", color: "#5c5f62", padding: "16px", borderRadius: "8px", fontSize: "13px", fontWeight: 500, marginTop: "12px" } as const;
-const completeBadgeStyle = { background: "#effaf5", color: "#0f5132", padding: "4px 10px", borderRadius: "6px", fontSize: "12px", fontWeight: 650, display: "inline-block" } as const;
+const buttonStyle = buttonPrimaryStyle;
+const dangerBtnStyle = buttonDangerStyle;
+const smallBtnStyle = buttonSmallStyle;
+const statusBtn = buttonSmallStyle;
+const linkStyle = { color: "#008060", textDecoration: "none", fontWeight: 500 } as const;
+const printBtnLinkStyle = buttonPrimaryStyle;
+const secondaryBtnLinkStyle = buttonSecondaryStyle;
+
+const tableWrapStyle = { overflowX: "auto", margin: "-24px", padding: "24px" } as const;
+const tableStyle = { width: "100%", borderCollapse: "separate", borderSpacing: "0", fontSize: "14px" } as const;
+const thStyle = { textAlign: "left", borderBottom: "1px solid #e5e7eb", padding: "16px 12px", whiteSpace: "nowrap", color: "#6b7280", fontSize: "13px", fontWeight: 600, backgroundColor: "#f9fafb", borderTop: "1px solid #e5e7eb" } as const;
+const tdStyle = { borderBottom: "1px solid #f3f4f6", padding: "16px 12px", verticalAlign: "middle", color: "#111827" } as const;
+const mutedStyle = { color: "#6b7280", fontSize: "13px", marginTop: "4px" } as const;
+
+const noticeStyle = (ok: boolean) => ({ border: `1px solid ${ok ? "#bbf7d0" : "#fecaca"}`, background: ok ? "#f0fdf4" : "#fef2f2", borderRadius: "8px", marginBottom: "20px", padding: "16px 20px", color: ok ? "#166534" : "#991b1b", fontWeight: 500, fontSize: "14px" }) as const;
+
+const cardMetricStyle = { border: "1px solid #e5e7eb", borderRadius: "12px", padding: "20px", background: "#ffffff", boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.05)" } as const;
+const metricLabelStyle = { color: "#6b7280", fontSize: "13px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" } as const;
+const metricValueStyle = { marginTop: "8px", fontSize: "28px", fontWeight: 800, color: "#111827", letterSpacing: "-0.02em" } as const;
+const progressTrackStyle = { width: "100%", background: "#f3f4f6", borderRadius: "999px", height: "10px", marginTop: "16px", overflow: "hidden" } as const;
+const progressBarFillStyle = { background: "#000000", height: "100%", transition: "width 0.8s cubic-bezier(0.4, 0, 0.2, 1)" } as const;
+const completeBadgeStyle = { background: "#f0fdf4", color: "#166534", padding: "6px 12px", borderRadius: "999px", fontSize: "12px", fontWeight: 600, display: "inline-block" } as const;
+const receivingGridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "20px", marginBottom: "20px" } as const;
+const mutedBannerStyle = { border: "1px solid #e5e7eb", background: "#f9fafb", color: "#4b5563", padding: "16px", borderRadius: "12px", fontSize: "14px", fontWeight: 500, marginTop: "16px" } as const;
+
+// react-select custom styles
+const selectStyles = {
+  control: (base: any, state: any) => ({
+    ...base,
+    border: state.isFocused ? "1px solid #000" : "1px solid #d1d5db",
+    boxShadow: state.isFocused ? "0 0 0 1px #000" : "none",
+    borderRadius: "8px",
+    padding: "4px",
+    fontSize: "14px",
+    "&:hover": { border: "1px solid #000" }
+  }),
+  option: (base: any, state: any) => ({
+    ...base,
+    backgroundColor: state.isSelected ? "#000" : state.isFocused ? "#f3f4f6" : "transparent",
+    color: state.isSelected ? "#fff" : "#111827",
+    cursor: "pointer",
+    fontSize: "14px"
+  }),
+};
 
 // Shopify requires ErrorBoundary
 export function ErrorBoundary() {

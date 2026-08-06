@@ -23,9 +23,23 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     prisma.storeSettings.findUnique({ where: { storeId: store.id } }),
     prisma.purchaseOrder.findMany({
       where: { storeId: store.id },
-      include: {
-        supplier: true,
-        lines: { include: { variant: { include: { product: true } }, receiptLines: true } },
+      select: {
+        id: true,
+        reference: true,
+        status: true,
+        expectedArrival: true,
+        lastSentAt: true,
+        sentCount: true,
+        createdAt: true,
+        updatedAt: true,
+        supplier: { select: { name: true } },
+        lines: {
+          select: {
+            quantity: true,
+            unitCost: true,
+            receiptLines: { select: { quantityReceived: true } },
+          },
+        },
       },
       orderBy: { createdAt: "desc" },
     }),
