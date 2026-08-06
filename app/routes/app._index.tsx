@@ -12,6 +12,7 @@ import {
   useRouteError,
 } from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
+import { shopifyBoundaryError } from "../shopify-boundary";
 import { authenticateAdmin, type AdminAuthResult } from "../authenticate-admin.server";
 import prisma from "../db.server";
 
@@ -1101,10 +1102,8 @@ const noticeStyle = (ok: boolean) =>
 // so that thrown 200/401 responses (App Bridge re-auth) are handled correctly.
 export function ErrorBoundary() {
   const error = useRouteError();
-  const boundaryError = boundary.error(error);
-  if (error instanceof Response && (error.status === 200 || error.status === 401)) {
-    return boundaryError;
-  }
+  const shopifyError = shopifyBoundaryError(error);
+  if (shopifyError) return shopifyError;
   let msg = "Unknown error";
   let stack = "";
   if (error instanceof Error) {

@@ -15,6 +15,7 @@ import {
   useRouteError,
 } from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
+import { shopifyBoundaryError } from "../shopify-boundary";
 import { authenticateAdmin } from "../authenticate-admin.server";
 import prisma from "../db.server";
 import {
@@ -893,10 +894,8 @@ const noticeStyle = (ok: boolean) => ({ border: `1px solid ${ok ? "#95c9b4" : "#
 
 export function ErrorBoundary() {
   const error = useRouteError();
-  const boundaryError = boundary.error(error);
-  if (error instanceof Response && (error.status === 200 || error.status === 401)) {
-    return boundaryError;
-  }
+  const shopifyError = shopifyBoundaryError(error);
+  if (shopifyError) return shopifyError;
   let msg = "Unknown error";
   let stack = "";
   if (error instanceof Error) {

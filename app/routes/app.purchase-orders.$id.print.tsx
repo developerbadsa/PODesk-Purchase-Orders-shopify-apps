@@ -1,7 +1,8 @@
-import { isValidElement, useEffect } from "react";
+import { useEffect } from "react";
 import type { HeadersFunction, LoaderFunctionArgs } from "react-router";
 import { Link, useLoaderData, useRouteError } from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
+import { shopifyBoundaryError } from "../shopify-boundary";
 import { authenticateAdmin } from "../authenticate-admin.server";
 import prisma from "../db.server";
 import { formatCurrency } from "../utils";
@@ -662,23 +663,8 @@ const footerStyle = {
 // so that thrown 200/401 responses (App Bridge re-auth) are handled correctly.
 export function ErrorBoundary() {
   const error = useRouteError();
-  const boundaryError = boundary.error(error);
-
-  // For embedded re-auth responses the boundary may return an element to render the
-  // app-bridge re-auth script. Only render it if it's a React element; otherwise
-  // fall back to a safe sign-in message to avoid exposing raw HTML/script content.
-  if (error instanceof Response && (error.status === 200 || error.status === 401)) {
-    if (isValidElement(boundaryError)) {
-      return boundaryError;
-    }
-
-    return (
-      <div style={{ padding: "20px", color: "#1f2937", background: "#fff", margin: "20px", borderRadius: "8px", border: "1px solid #e5e7eb", fontFamily: "sans-serif" }}>
-        <h2 style={{ margin: "0 0 10px 0" }}>Authentication required</h2>
-        <div>Please sign in to continue. <a href="/auth" style={{ color: "#2563eb", fontWeight: 600 }}>Sign in</a></div>
-      </div>
-    );
-  }
+  const shopifyError = shopifyBoundaryError(error);
+  if (shopifyError) return shopifyError;
 
   let msg = "Unknown error";
   let stack = "";

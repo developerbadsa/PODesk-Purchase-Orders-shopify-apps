@@ -17,6 +17,7 @@ import {
 } from "react-router";
 import type { PurchaseOrderStatus } from "@prisma/client";
 import { boundary } from "@shopify/shopify-app-react-router/server";
+import { shopifyBoundaryError } from "../shopify-boundary";
 import { authenticateAdmin } from "../authenticate-admin.server";
 import prisma from "../db.server";
 import { createUniquePoReference } from "../po.server";
@@ -1467,9 +1468,8 @@ const selectStyles = {
 // Shopify requires ErrorBoundary
 export function ErrorBoundary() {
   const error = useRouteError();
-  if (error instanceof Response && (error.status === 200 || error.status === 401)) {
-    return boundary.error(error);
-  }
+  const shopifyError = shopifyBoundaryError(error);
+  if (shopifyError) return shopifyError;
   let msg = "Unknown error";
   let stack = "";
   if (error instanceof Error) {

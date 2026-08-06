@@ -8,6 +8,7 @@ import {
 import { useEffect, useState } from "react";
 import BarLoader from "react-spinners/BarLoader";
 import { boundary } from "@shopify/shopify-app-react-router/server";
+import { shopifyBoundaryError } from "../shopify-boundary";
 import { AppProvider } from "@shopify/shopify-app-react-router/react";
 
 function cleanEnv(value?: string) {
@@ -133,10 +134,8 @@ function GlobalRouteLoader({
 // Shopify needs React Router to catch some thrown responses, so that their headers are included in the response.
 export function ErrorBoundary() {
   const error = useRouteError();
-  const boundaryError = boundary.error(error);
-  if (error instanceof Response && (error.status === 200 || error.status === 401)) {
-    return boundaryError;
-  }
+  const shopifyError = shopifyBoundaryError(error);
+  if (shopifyError) return shopifyError;
   let msg = "Unknown error";
   let stack = "";
   if (error instanceof Error) {
