@@ -1,4 +1,4 @@
-import React, { useId } from "react";
+import React, { useId, useState, useEffect } from "react";
 import Select, { Props as SelectProps } from "react-select";
 
 export interface OptionType {
@@ -17,6 +17,11 @@ export interface SearchableSelectProps extends Omit<SelectProps<OptionType, fals
 export function SearchableSelect({ options, value, onChange, name, required, ...rest }: SearchableSelectProps) {
   const id = useId();
   const selectedOption = options.find((opt) => opt.value === value) || null;
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const customStyles = {
     control: (provided: any, state: any) => ({
@@ -69,6 +74,31 @@ export function SearchableSelect({ options, value, onChange, name, required, ...
     }),
   };
 
+  if (!isMounted) {
+    return (
+      <select 
+        name={name} 
+        value={value} 
+        onChange={(e) => onChange(e.target.value)}
+        required={required}
+        style={{
+          width: "100%",
+          padding: "10px 12px",
+          borderRadius: "8px",
+          border: "1px solid #c9cccf",
+          minHeight: "42px",
+          color: "#202223",
+          fontSize: "14px"
+        }}
+      >
+        <option value="">{rest.placeholder || "Select..."}</option>
+        {options.map((opt) => (
+          <option key={opt.value} value={opt.value}>{opt.label}</option>
+        ))}
+      </select>
+    );
+  }
+
   return (
     <>
       <Select
@@ -79,7 +109,6 @@ export function SearchableSelect({ options, value, onChange, name, required, ...
         styles={customStyles}
         {...rest}
       />
-      {/* Hidden input for form submission if name is provided */}
       {name && (
         <input 
           type="hidden" 
