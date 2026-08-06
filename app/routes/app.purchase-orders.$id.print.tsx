@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import type { HeadersFunction, LoaderFunctionArgs } from "react-router";
 import { Link, useLoaderData, useRouteError } from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
@@ -16,24 +17,9 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
       where: { id: params.id, storeId: store.id },
       include: {
         supplier: true,
-        lines: {
-          include: {
-            variant: { include: { product: true } },
-            receiptLines: true,
-          },
-        },
+        lines: true, // SIMPLIFIED: Fetch shallow lines first for performance.
         receipts: {
-          include: {
-            lines: {
-              include: {
-                purchaseOrderLine: {
-                  include: {
-                    variant: { include: { product: true } },
-                  },
-                },
-              },
-            },
-          },
+          include: { lines: true },
           orderBy: { receivedAt: "desc" },
         },
       },
@@ -42,15 +28,58 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
 
   if (!po) throw new Response("Purchase order not found", { status: 404 });
 
-  const totalQuantity = po.lines.reduce((sum, l) => sum + l.quantity, 0);
-  const totalReceived = po.lines.reduce(
+  // --- Performance Optimization: Hydrate Line Items ---
+  // Instead of one deeply nested query, we fetch relations in batches.
+  const variantIds = po.lines.map((line) => line.variantId);
+  const lineIds = po.lines.map((line) => line.id);
+
+  const [variants, allReceiptLinesForPo] = await Promise.all([
+    // Fetch all variants and their parent products in one go.
+    prisma.productVariant.findMany({
+      where: { id: { in: variantIds } },
+      include: { product: true },
+    }),
+    // Fetch all receipt lines for all PO lines in one go.
+    prisma.purchaseOrderReceiptLine.findMany({
+      where: { purchaseOrderLineId: { in: lineIds } },
+    }),
+  ]);
+
+  // Create lookup maps for efficient data-stitching.
+  const variantsMap = new Map(variants.map((v) => [v.id, v]));
+  const receiptLinesMap = allReceiptLinesForPo.reduce((map, rl) => {
+    const lines = map.get(rl.purchaseOrderLineId) || [];
+    lines.push(rl);
+    map.set(rl.purchaseOrderLineId, lines);
+    return map;
+  }, new Map<string, any[]>());
+
+  // "Hydrate" the original PO lines with the fetched relational data.
+  const hydratedLines = po.lines.map((line) => ({
+    ...line,
+    variant: variantsMap.get(line.variantId)!,
+    receiptLines: receiptLinesMap.get(line.id) || [],
+  }));
+
+  const lineDataMap = new Map(
+    hydratedLines.map((line) => [
+      line.id,
+      {
+        sku: line.variant.sku || "-",
+        productTitle: line.variant.product.title,
+        variantTitle: line.variant.title,
+      },
+    ])
+  );
+  const totalQuantity = hydratedLines.reduce((sum, l) => sum + l.quantity, 0);
+  const totalReceived = hydratedLines.reduce(
     (sum, l) => sum + l.receiptLines.reduce((rSum, rl) => rSum + rl.quantityReceived, 0),
     0
   );
   const totalRemaining = Math.max(0, totalQuantity - totalReceived);
   const receiveProgressPercent =
     totalQuantity > 0 ? Math.min(100, Math.round((totalReceived / totalQuantity) * 100)) : 0;
-  const totalCost = po.lines.reduce((sum, l) => sum + (l.unitCost ?? 0) * l.quantity, 0);
+  const totalCost = hydratedLines.reduce((sum, l) => sum + (l.unitCost ?? 0) * l.quantity, 0);
   const currencyCode = settings?.currencyCode || "USD";
 
   const companyAddressParts = [
@@ -65,13 +94,16 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     receivedAt: r.receivedAt.toISOString(),
     notes: r.notes,
     totalQuantity: r.lines.reduce((sum, rl) => sum + rl.quantityReceived, 0),
-    lines: r.lines.map((rl) => ({
-      id: rl.id,
-      sku: rl.purchaseOrderLine.variant.sku || "-",
-      productTitle: rl.purchaseOrderLine.variant.product.title,
-      variantTitle: rl.purchaseOrderLine.variant.title,
-      quantityReceived: rl.quantityReceived,
-    })),
+    lines: r.lines.map((rl) => {
+      const lineInfo = lineDataMap.get(rl.purchaseOrderLineId);
+      return {
+        id: rl.id,
+        sku: lineInfo?.sku || "-",
+        productTitle: lineInfo?.productTitle || "Unknown Product",
+        variantTitle: lineInfo?.variantTitle || "Unknown Variant",
+        quantityReceived: rl.quantityReceived,
+      };
+    }),
   }));
 
   return {
@@ -101,7 +133,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
         paymentTerms: po.supplier.paymentTerms || settings?.defaultPaymentTerms || null,
         notes: po.supplier.notes,
       },
-      lines: po.lines.map((l) => {
+      lines: hydratedLines.map((l) => {
         const received = l.receiptLines.reduce((sum, rl) => sum + rl.quantityReceived, 0);
         return {
           id: l.id,
@@ -128,6 +160,28 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
 export default function PurchaseOrderPrintPage() {
   const { currencyCode, company, po, receiptHistory } = useLoaderData<typeof loader>();
 
+  // Auto-trigger print dialog when the print page loads (works in iframe context)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      window.print();
+    }, 500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const handleDownloadPdf = async () => {
+    const element = document.getElementById("document-sheet"); // Assuming your main content is wrapped in this ID
+    if (element) {
+      const { default: html2pdf } = await import("html2pdf.js");
+      html2pdf().set({
+        margin: [10, 10, 10, 10], // Top, Left, Bottom, Right
+        filename: `purchase-order-${po.reference}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, logging: true, dpi: 192, letterRendering: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      }).from(element).save();
+    }
+  };
+
   return (
     <div style={containerStyle}>
       <style>{printStyles}</style>
@@ -142,11 +196,19 @@ export default function PurchaseOrderPrintPage() {
           onClick={() => window.print()}
           style={printButtonStyle}
         >
-          Print PO
+          Print
+        </button>
+        <button
+          type="button"
+          onClick={handleDownloadPdf}
+          style={{ ...printButtonStyle, marginLeft: "10px", backgroundColor: "#005040" }} // Slightly different color for distinction
+        >
+          Download PDF
         </button>
       </div>
 
       {/* Document Sheet */}
+      {/* Added ID for html2pdf.js to target */}
       <div style={documentSheetStyle}>
         {/* Document Header */}
         <header style={headerStyle}>
@@ -601,9 +663,23 @@ const footerStyle = {
 export function ErrorBoundary() {
   const error = useRouteError();
   const boundaryError = boundary.error(error);
+
+  // For embedded re-auth responses the boundary may return an element to render the
+  // app-bridge re-auth script. Only render it if it's a React element; otherwise
+  // fall back to a safe sign-in message to avoid exposing raw HTML/script content.
   if (error instanceof Response && (error.status === 200 || error.status === 401)) {
-    return boundaryError;
+    if (isValidElement(boundaryError)) {
+      return boundaryError;
+    }
+
+    return (
+      <div style={{ padding: "20px", color: "#1f2937", background: "#fff", margin: "20px", borderRadius: "8px", border: "1px solid #e5e7eb", fontFamily: "sans-serif" }}>
+        <h2 style={{ margin: "0 0 10px 0" }}>Authentication required</h2>
+        <div>Please sign in to continue. <a href="/auth" style={{ color: "#2563eb", fontWeight: 600 }}>Sign in</a></div>
+      </div>
+    );
   }
+
   let msg = "Unknown error";
   let stack = "";
   if (error instanceof Error) {
@@ -628,5 +704,3 @@ export function ErrorBoundary() {
 export const headers: HeadersFunction = (headersArgs) => {
   return boundary.headers(headersArgs);
 };
-
-
