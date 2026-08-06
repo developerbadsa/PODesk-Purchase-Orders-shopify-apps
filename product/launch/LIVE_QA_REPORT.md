@@ -58,7 +58,7 @@ All 9 public routes and brand assets were verified via automated HTTP requests a
 | **A. Dashboard & Sync** | Trigger **Sync Shopify inventory**. Products, variants, and locations populate in DB. No GraphQL cost limits breached. Metric cards update. | **PASS** | Cursor-based pagination handles batching. Last sync timestamp updates. |
 | **B. Suppliers** | Create supplier (*Apex Apparel Ltd*, lead time 14, min order 250, Net 30). Edit lead time to 21. Archive and restore supplier. | **PASS** | Full CRUD and archiving state transitions persist in PostgreSQL. |
 | **C. SKU Mappings** | Map 5+ synced SKUs to Apex Apparel Ltd. Assign custom supplier SKU, unit cost ($18.50), lead time override. Set primary supplier. | **PASS** | Mappings reflect correctly in reorder tables and PO autofill. |
-| **D. Purchase Orders** | Create draft PO for Apex Apparel Ltd. Prefill unit costs. Progress status: `DRAFT` -> `SENT` -> `CONFIRMED`. Line editing locks on non-draft. Duplicate PO. Print view layout check. | **PASS** | Print stylesheet outputs clean branded PO headers with settings data. |
+| **D. Purchase Orders** | Create draft PO for Apex Apparel Ltd. Prefill unit costs. Progress status: `DRAFT` -> `SENT` -> `CONFIRMED`. Line editing locks on non-draft. Duplicate PO. Print view layout check. Open supplier email draft from PO detail. | **PASS** | Print stylesheet outputs clean branded PO headers with settings data. Email draft opens in the user's mail client with supplier recipient, subject, and message prefilled. |
 | **E. Receiving** | Record partial receipt against `CONFIRMED` PO. Status becomes `PARTIALLY_RECEIVED`. Record remainder. Status updates to `RECEIVED`. | **PASS** | Full receipt history and progress percentages calculated dynamically. |
 | **F. Reorder Planning** | Filter sales velocity windows (7d/14d/30d/90d). Adjust buffer and target stock days. Save manual override quantity with reason note. Multi-select same supplier rows to generate multi-line draft PO. | **PASS** | Manual overrides accurately replace suggested quantities in draft PO generation. |
 | **G. CSV / Stocky Import** | Download sample CSV (`podesk-supplier-sku-import-sample.csv`). Upload sample CSV. Preview column detection and invalid row warnings. Execute import. | **PASS** | Column detection maps headers dynamically. Invalid rows exported cleanly. |
@@ -75,7 +75,14 @@ All 9 public routes and brand assets were verified via automated HTTP requests a
 
 ---
 
-## 5. Summary of Launch Status & Remaining Blockers
+## 5. Manual QA Session Notes
+
+| Date | Area | Store / Context | Result | Evidence |
+|---|---|---|---|---|
+| 2026-08-06 | Purchase order supplier email draft | `test-store-fgyympec.myshopify.com`, PO detail page | **PASS** | Clicking **Open email draft** opens the local mail composer and pre-fills the supplier recipient, subject (`Purchase Order PO-20260806-123547-K161 from test-store-fgyympec.myshopify.com`), and email body with PO reference and expected arrival date. |
+| 2026-08-06 | Purchase order line items and sent status | `test-store-fgyympec.myshopify.com`, PO `PO-20260806-123547-K161` | **PASS** | Added a PO line item successfully, removed a PO line item successfully, and marked the purchase order as sent. The PO detail view updated to `SENT`, sent count changed to `1 time(s)`, and receiving inputs became available. |
+
+## 6. Summary of Launch Status & Remaining Blockers
 
 - **Hosted Web Server & Public Pages**: 100% Ready (Vercel Live).
 - **Production PostgreSQL Database**: 100% Ready.
