@@ -12,6 +12,7 @@ import prisma from "../db.server";
 import { createUniquePoReference } from "../po.server";
 import { formatCurrency } from "../utils";
 import { calculateLineReceiving, getPoReceivingSummary } from "../receiving.server";
+import { SearchableSelect } from "../components/SearchableSelect";
 
 type ActionData = { ok: boolean; message: string };
 
@@ -647,6 +648,7 @@ export default function PurchaseOrderDetailPage() {
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";
   const [unitCost, setUnitCost] = useState("");
+  const [selectedVariantId, setSelectedVariantId] = useState("");
 
   const [recipientEmail, setRecipientEmail] = useState(po.supplierEmailSnapshot || supplierEmail || "");
   const [emailSubject, setEmailSubject] = useState(defaultSubject);
@@ -709,71 +711,113 @@ export default function PurchaseOrderDetailPage() {
         </div>
       )}
 
-      <s-section heading="Details">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px" }}>
-          <div style={metaGridStyle}>
-            <div><strong>Supplier:</strong> <Link to={`/app/suppliers/${po.supplierId}`} style={linkStyle}>{po.supplierName}</Link></div>
-            <div><strong>Status:</strong> <span style={statusBadge(po.status)}>{po.status.replaceAll("_", " ")}</span></div>
-            <div><strong>Total cost:</strong> {po.totalCost > 0 ? formatCurrency(po.totalCost, currencyCode) : "-"}</div>
-            <div><strong>Currency:</strong> {currencyCode}</div>
-            <div><strong>Receiving:</strong> {po.totalReceivedQuantity} / {po.totalOrderedQuantity} received ({po.receiveProgressPercent}%)</div>
-            <div><strong>Last sent:</strong> {po.lastSentAt ? formatDate(po.lastSentAt) : "Not sent yet"}</div>
-            <div><strong>Sent count:</strong> {po.sentCount} time(s)</div>
-            <div><strong>Created:</strong> {formatDate(po.createdAt)}</div>
-            <div><strong>Last updated:</strong> {formatDate(po.updatedAt)}</div>
-          </div>
-          <Link
-            to={`/app/purchase-orders/${po.id}/print`}
-            style={printBtnLinkStyle}
-          >
-            Print PO
-          </Link>
+      
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)', gap: '24px', alignItems: 'start', marginTop: '24px' }}>
+        <div style={{ display: 'grid', gap: '24px' }}>
+          <div style={cardStyle}>
+  <h2 style={cardHeaderStyle}>{`Line items (${po.lines.length})`}</h2>
+  <div style={cardContentStyle}>
+    <div style={tableWrapStyle}>
+          <table style={tableStyle}>
+            <thead>
+              <tr>
+                <th style={thStyle}>Product</th>
+                <th style={thStyle}>SKU</th>
+                <th style={thStyle}>Ordered</th>
+                <th style={thStyle}>Received</th>
+                <th style={thStyle}>Remaining</th>
+                <th style={thStyle}>Unit cost</th>
+                <th style={thStyle}>Subtotal</th>
+                {isDraft && <th style={thStyle}>Actions</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {po.lines.map((line) => (
+                <tr key={line.id}>
+                  <td style={tdStyle}>
+                    {line.productTitle}
+                    <div style={mutedStyle}>{line.variantTitle}</div>
+                  </td>
+                  <td style={tdStyle}>{line.sku || "-"}</td>
+                  <td style={tdStyle}>{line.orderedQuantity}</td>
+                  <td style={tdStyle}>{line.receivedQuantity}</td>
+                  <td style={tdStyle}>{line.remainingQuantity}</td>
+                  <td style={tdStyle}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      {line.unitCost != null ? formatCurrency(line.unitCost, currencyCode) : "-"}
+                      {line.expectedCost != null && line.unitCost != null && line.unitCost > line.expectedCost && (
+                        <span style={{ color: "#d82c0d", fontSize: "12px", display: "flex", alignItems: "center" }} title={`Expected cost is ${formatCurrency(line.expectedCost, currencyCode)}`}>
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
+                            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                          </svg>
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td style={tdStyle}>{line.subtotal > 0 ? formatCurrency(line.subtotal, currencyCode) : "-"}</td>
+                  {isDraft && (
+                    <td style={tdStyle}>
+                      <Form method="post" style={{ display: "inline" }}>
+                        <input type="hidden" name="intent" value="remove-line" />
+                        <input type="hidden" name="lineId" value={line.id} />
+                        <button type="submit" style={smallBtnStyle}>Remove</button>
+                      </Form>
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-      </s-section>
 
-      <s-section heading="Recurring Settings">
-        <Form method="post">
-          <input type="hidden" name="intent" value="set-recurring" />
-          <div style={{ display: "flex", gap: "12px", alignItems: "center", marginBottom: "12px" }}>
-            <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", fontWeight: 500 }}>
-              <input 
-                type="checkbox" 
-                name="isRecurring" 
-                value="true"
-                defaultChecked={po.isRecurring} 
-              />
-              Make this PO recurring
-            </label>
+        {isDraft && (
+          <div style={{ marginTop: "12px", padding: "12px", border: "1px solid #dfe3e8", borderRadius: "8px" }}>
+            <div style={{ fontWeight: 600, fontSize: "13px", marginBottom: "8px" }}>Add line item</div>
+            <Form method="post">
+              <input type="hidden" name="intent" value="add-line" />
+              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: "8px" }}>
+                <div style={{ minWidth: "300px", zIndex: 50 }}>
+                  <SearchableSelect
+                    name="variantId"
+                    required
+                    placeholder="Search variant or SKU..."
+                    value={selectedVariantId}
+                    onChange={(val) => {
+                      setSelectedVariantId(val);
+                      handleVariantChange(val);
+                    }}
+                    options={variants.map((v) => {
+                      const isMapped = mappings.some((m) => m.supplierId === po.supplierId && m.variantId === v.id);
+                      return {
+                        value: v.id,
+                        label: `${v.productTitle} - ${v.variantTitle} ${v.sku ? `(${v.sku})` : ""}${isMapped ? " [mapped]" : ""}`
+                      };
+                    })}
+                  />
+                </div>
+                <input name="quantity" type="number" placeholder="Qty" min="1" required style={inputStyle} />
+                <input
+                  name="unitCost"
+                  type="number"
+                  step="0.01"
+                  placeholder="Cost"
+                  style={inputStyle}
+                  value={unitCost}
+                  onChange={(e) => setUnitCost(e.target.value)}
+                />
+              </div>
+              <button type="submit" disabled={isSubmitting} style={{ ...buttonStyle, marginTop: "8px" }}>
+                Add line
+              </button>
+            </Form>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", maxWidth: "500px" }}>
-            <label style={fieldLabelStyle}>
-              Interval (Days)
-              <input 
-                type="number" 
-                name="recurringIntervalDays" 
-                defaultValue={po.recurringIntervalDays?.toString() ?? ""} 
-                placeholder="e.g. 30" 
-                style={inputStyle} 
-              />
-            </label>
-            <label style={fieldLabelStyle}>
-              Next Generation Date
-              <input 
-                type="date" 
-                name="nextRecurringDate" 
-                defaultValue={po.nextRecurringDate ?? ""} 
-                style={inputStyle} 
-              />
-            </label>
-          </div>
-          <button type="submit" disabled={isSubmitting} style={{ ...buttonStyle, marginTop: "12px" }}>
-            Save recurring settings
-          </button>
-        </Form>
-      </s-section>
-
-      <s-section heading="Receiving">
-        <div style={receivingGridStyle}>
+        )}
+  </div>
+</div>
+          <div style={cardStyle}>
+  <h2 style={cardHeaderStyle}>Receiving</h2>
+  <div style={cardContentStyle}>
+    <div style={receivingGridStyle}>
           <div style={cardMetricStyle}>
             <div style={metricLabelStyle}>Total ordered</div>
             <div style={metricValueStyle}>{po.totalOrderedQuantity}</div>
@@ -883,10 +927,12 @@ export default function PurchaseOrderDetailPage() {
             </div>
           </Form>
         )}
-      </s-section>
-
-      <s-section heading="Receipt history">
-        {receiptHistory.length === 0 ? (
+  </div>
+</div>
+          <div style={cardStyle}>
+  <h2 style={cardHeaderStyle}>Receipt history</h2>
+  <div style={cardContentStyle}>
+    {receiptHistory.length === 0 ? (
           <div style={mutedStyle}>No receipts recorded yet.</div>
         ) : (
           <div style={tableWrapStyle}>
@@ -920,106 +966,63 @@ export default function PurchaseOrderDetailPage() {
             </table>
           </div>
         )}
-      </s-section>
-
-      <s-section heading={`Line items (${po.lines.length})`}>
-        <div style={tableWrapStyle}>
-          <table style={tableStyle}>
-            <thead>
-              <tr>
-                <th style={thStyle}>Product</th>
-                <th style={thStyle}>SKU</th>
-                <th style={thStyle}>Ordered</th>
-                <th style={thStyle}>Received</th>
-                <th style={thStyle}>Remaining</th>
-                <th style={thStyle}>Unit cost</th>
-                <th style={thStyle}>Subtotal</th>
-                {isDraft && <th style={thStyle}>Actions</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {po.lines.map((line) => (
-                <tr key={line.id}>
-                  <td style={tdStyle}>
-                    {line.productTitle}
-                    <div style={mutedStyle}>{line.variantTitle}</div>
-                  </td>
-                  <td style={tdStyle}>{line.sku || "-"}</td>
-                  <td style={tdStyle}>{line.orderedQuantity}</td>
-                  <td style={tdStyle}>{line.receivedQuantity}</td>
-                  <td style={tdStyle}>{line.remainingQuantity}</td>
-                  <td style={tdStyle}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                      {line.unitCost != null ? formatCurrency(line.unitCost, currencyCode) : "-"}
-                      {line.expectedCost != null && line.unitCost != null && line.unitCost > line.expectedCost && (
-                        <span style={{ color: "#d82c0d", fontSize: "12px", display: "flex", alignItems: "center" }} title={`Expected cost is ${formatCurrency(line.expectedCost, currencyCode)}`}>
-                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
-                            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                          </svg>
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                  <td style={tdStyle}>{line.subtotal > 0 ? formatCurrency(line.subtotal, currencyCode) : "-"}</td>
-                  {isDraft && (
-                    <td style={tdStyle}>
-                      <Form method="post" style={{ display: "inline" }}>
-                        <input type="hidden" name="intent" value="remove-line" />
-                        <input type="hidden" name="lineId" value={line.id} />
-                        <button type="submit" style={smallBtnStyle}>Remove</button>
-                      </Form>
-                    </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+  </div>
+</div>
         </div>
-
-        {isDraft && (
-          <div style={{ marginTop: "12px", padding: "12px", border: "1px solid #dfe3e8", borderRadius: "8px" }}>
-            <div style={{ fontWeight: 600, fontSize: "13px", marginBottom: "8px" }}>Add line item</div>
-            <Form method="post">
-              <input type="hidden" name="intent" value="add-line" />
-              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: "8px" }}>
-                <select
-                  name="variantId"
-                  required
-                  style={inputStyle}
-                  onChange={(e) => handleVariantChange(e.target.value)}
-                >
-                  <option value="">Select variant</option>
-                  {variants.map((v) => {
-                    const isMapped = mappings.some((m) => m.supplierId === po.supplierId && m.variantId === v.id);
-                    return (
-                      <option key={v.id} value={v.id}>
-                        {v.productTitle} - {v.variantTitle} {v.sku ? `(${v.sku})` : ""}
-                        {isMapped ? " [mapped]" : ""}
-                      </option>
-                    );
-                  })}
-                </select>
-                <input name="quantity" type="number" placeholder="Qty" min="1" required style={inputStyle} />
-                <input
-                  name="unitCost"
-                  type="number"
-                  step="0.01"
-                  placeholder="Cost"
-                  style={inputStyle}
-                  value={unitCost}
-                  onChange={(e) => setUnitCost(e.target.value)}
-                />
-              </div>
-              <button type="submit" disabled={isSubmitting} style={{ ...buttonStyle, marginTop: "8px" }}>
-                Add line
-              </button>
-            </Form>
+        
+        <div style={{ display: 'grid', gap: '24px' }}>
+          <div style={cardStyle}>
+  <h2 style={cardHeaderStyle}>Details</h2>
+  <div style={cardContentStyle}>
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px" }}>
+          <div style={metaGridStyle}>
+            <div><strong>Supplier:</strong> <Link to={`/app/suppliers/${po.supplierId}`} style={linkStyle}>{po.supplierName}</Link></div>
+            <div><strong>Status:</strong> <span style={statusBadge(po.status)}>{po.status.replaceAll("_", " ")}</span></div>
+            <div><strong>Total cost:</strong> {po.totalCost > 0 ? formatCurrency(po.totalCost, currencyCode) : "-"}</div>
+            <div><strong>Currency:</strong> {currencyCode}</div>
+            <div><strong>Receiving:</strong> {po.totalReceivedQuantity} / {po.totalOrderedQuantity} received ({po.receiveProgressPercent}%)</div>
+            <div><strong>Last sent:</strong> {po.lastSentAt ? formatDate(po.lastSentAt) : "Not sent yet"}</div>
+            <div><strong>Sent count:</strong> {po.sentCount} time(s)</div>
+            <div><strong>Created:</strong> {formatDate(po.createdAt)}</div>
+            <div><strong>Last updated:</strong> {formatDate(po.updatedAt)}</div>
           </div>
+          <Link
+            to={`/app/purchase-orders/${po.id}/print`}
+            style={printBtnLinkStyle}
+          >
+            Print PO
+          </Link>
+        </div>
+  </div>
+</div>
+          <div style={cardStyle}>
+  <h2 style={cardHeaderStyle}>Status</h2>
+  <div style={cardContentStyle}>
+    {isTerminalState ? (
+          <div style={mutedStyle}>No further status changes available for {po.status.replaceAll("_", " ")} purchase orders.</div>
+        ) : (
+          <Form method="post" style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+            <input type="hidden" name="intent" value="update-status" />
+            {allowedTransitions.map((s) => (
+              <button
+                key={s}
+                type="submit"
+                name="status"
+                value={s}
+                disabled={isSubmitting}
+                style={statusBtn}
+              >
+                Move to {s.replaceAll("_", " ")}
+              </button>
+            ))}
+          </Form>
         )}
-      </s-section>
-
-      <s-section heading="Supplier sharing">
-        {copyNotice ? (
+  </div>
+</div>
+          <div style={cardStyle}>
+  <h2 style={cardHeaderStyle}>Supplier sharing</h2>
+  <div style={cardContentStyle}>
+    {copyNotice ? (
           <div style={noticeStyle(true)}>{copyNotice}</div>
         ) : null}
 
@@ -1137,35 +1140,12 @@ export default function PurchaseOrderDetailPage() {
             </div>
           )}
         </div>
-      </s-section>
-
-      <s-section heading="Status">
-        {isTerminalState ? (
-          <div style={mutedStyle}>No further status changes available for {po.status.replaceAll("_", " ")} purchase orders.</div>
-        ) : (
-          <Form method="post" style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-            <input type="hidden" name="intent" value="update-status" />
-            {allowedTransitions.map((s) => (
-              <button
-                key={s}
-                type="submit"
-                name="status"
-                value={s}
-                disabled={isSubmitting}
-                style={statusBtn}
-              >
-                Move to {s.replaceAll("_", " ")}
-              </button>
-            ))}
-          </Form>
-        )}
-      </s-section>
-
-
-
-      {isDraft && (
-        <s-section heading="Edit">
-          <Form method="post">
+  </div>
+</div>
+          <div style={cardStyle}>
+  <h2 style={cardHeaderStyle}>Edit</h2>
+  <div style={cardContentStyle}>
+    <Form method="post">
             <input type="hidden" name="intent" value="update-po" />
             <div style={formGridStyle}>
               <Field label="PO reference" name="reference" type="text" required defaultValue={po.reference} />
@@ -1179,11 +1159,55 @@ export default function PurchaseOrderDetailPage() {
               Save changes
             </button>
           </Form>
-        </s-section>
-      )}
-
-      <s-section heading="Actions">
-        <div style={{ display: "flex", gap: "8px" }}>
+  </div>
+</div>
+          <div style={cardStyle}>
+  <h2 style={cardHeaderStyle}>Recurring Settings</h2>
+  <div style={cardContentStyle}>
+    <Form method="post">
+          <input type="hidden" name="intent" value="set-recurring" />
+          <div style={{ display: "flex", gap: "12px", alignItems: "center", marginBottom: "12px" }}>
+            <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", fontWeight: 500 }}>
+              <input 
+                type="checkbox" 
+                name="isRecurring" 
+                value="true"
+                defaultChecked={po.isRecurring} 
+              />
+              Make this PO recurring
+            </label>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", maxWidth: "500px" }}>
+            <label style={fieldLabelStyle}>
+              Interval (Days)
+              <input 
+                type="number" 
+                name="recurringIntervalDays" 
+                defaultValue={po.recurringIntervalDays?.toString() ?? ""} 
+                placeholder="e.g. 30" 
+                style={inputStyle} 
+              />
+            </label>
+            <label style={fieldLabelStyle}>
+              Next Generation Date
+              <input 
+                type="date" 
+                name="nextRecurringDate" 
+                defaultValue={po.nextRecurringDate ?? ""} 
+                style={inputStyle} 
+              />
+            </label>
+          </div>
+          <button type="submit" disabled={isSubmitting} style={{ ...buttonStyle, marginTop: "12px" }}>
+            Save recurring settings
+          </button>
+        </Form>
+  </div>
+</div>
+          <div style={cardStyle}>
+  <h2 style={cardHeaderStyle}>Actions</h2>
+  <div style={cardContentStyle}>
+    <div style={{ display: "flex", gap: "8px" }}>
           <Link to={`/app/purchase-orders/${po.id}/print`} style={smallBtnStyle}>Print PO</Link>
           <Form method="post" style={{ display: "inline" }}>
             <input type="hidden" name="intent" value="duplicate" />
@@ -1196,7 +1220,10 @@ export default function PurchaseOrderDetailPage() {
             </Form>
           )}
         </div>
-      </s-section>
+  </div>
+</div>
+        </div>
+      </div>
     </s-page>
   );
 }
@@ -1242,37 +1269,44 @@ function statusBadge(status: string) {
   return { background: c.bg, color: c.color, padding: "3px 8px", borderRadius: "4px", fontSize: "12px", fontWeight: 600, display: "inline-block" } as const;
 }
 
+
 // Styles
-const metaGridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "8px", marginBottom: "8px" } as const;
-const formGridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "12px", marginBottom: "12px" } as const;
+const pageLayoutGrid = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "24px", alignItems: "start", marginTop: "24px" } as const;
+const mainColStyle = { display: "grid", gap: "24px", gridColumn: "1 / -1", '@media (min-width: 768px)': { gridColumn: "span 2" } } as any;
+const sidebarColStyle = { display: "grid", gap: "24px", gridColumn: "1 / -1", '@media (min-width: 768px)': { gridColumn: "span 1" } } as any;
+const cardStyle = { background: "#ffffff", border: "1px solid #dfe3e8", borderRadius: "12px", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05), 0 1px 3px -1px rgba(0,0,0,0.02)", overflow: "hidden" } as const;
+const cardHeaderStyle = { margin: 0, padding: "16px 20px", fontSize: "15px", fontWeight: 650, color: "#202223", borderBottom: "1px solid #f1f2f3", backgroundColor: "#fcfcfd" } as const;
+const cardContentStyle = { padding: "20px" } as const;
+
+const metaGridStyle = { display: "grid", gridTemplateColumns: "1fr", gap: "10px", marginBottom: "8px" } as const;
+const formGridStyle = { display: "grid", gridTemplateColumns: "1fr", gap: "16px", marginBottom: "16px" } as const;
 const fieldLabelStyle = { display: "grid", gap: "6px", color: "#202223", fontSize: "13px", fontWeight: 600 } as const;
-const inputStyle = { border: "1px solid #c9cccf", borderRadius: "6px", padding: "9px 10px", fontSize: "14px", width: "100%" } as const;
+const inputStyle = { border: "1px solid #c9cccf", borderRadius: "8px", padding: "10px 12px", fontSize: "14px", width: "100%", outline: "none", transition: "border-color 0.2s" } as const;
 const textareaStyle = { ...inputStyle, resize: "vertical" } as const;
-const buttonStyle = { border: "0", borderRadius: "6px", padding: "10px 14px", background: "#008060", color: "#fff", fontWeight: 650, cursor: "pointer" } as const;
-const smallBtnStyle = { border: "1px solid #c9cccf", borderRadius: "4px", padding: "4px 10px", background: "#fff", cursor: "pointer", fontSize: "12px" } as const;
-const dangerBtnStyle = { border: "1px solid #d72c0d", borderRadius: "6px", padding: "10px 14px", background: "#fff", color: "#d72c0d", fontWeight: 650, cursor: "pointer" } as const;
-const statusBtn = { border: "1px solid #c9cccf", borderRadius: "4px", padding: "6px 12px", background: "#fff", cursor: "pointer", fontSize: "12px" } as const;
-const linkStyle = { color: "#2c6ecb", textDecoration: "none" } as const;
-const printBtnLinkStyle = { display: "inline-block", border: "1px solid #008060", borderRadius: "6px", padding: "8px 14px", background: "#008060", color: "#fff", fontWeight: 650, textDecoration: "none", fontSize: "13px" } as const;
-const secondaryBtnLinkStyle = { display: "inline-block", border: "1px solid #c9cccf", borderRadius: "6px", padding: "8px 14px", background: "#ffffff", color: "#202223", fontWeight: 650, textDecoration: "none", fontSize: "13px" } as const;
+const buttonStyle = { display: "inline-flex", justifyContent: "center", alignItems: "center", border: "0", borderRadius: "8px", padding: "10px 16px", background: "#008060", color: "#fff", fontWeight: 650, cursor: "pointer", transition: "background 0.2s" } as const;
+const smallBtnStyle = { border: "1px solid #c9cccf", borderRadius: "6px", padding: "6px 12px", background: "#fff", cursor: "pointer", fontSize: "13px", fontWeight: 500, transition: "background 0.2s" } as const;
+const dangerBtnStyle = { ...smallBtnStyle, border: "1px solid #d72c0d", color: "#d72c0d" } as const;
+const statusBtn = { ...smallBtnStyle } as const;
+const linkStyle = { color: "#2c6ecb", textDecoration: "none", fontWeight: 500 } as const;
+const printBtnLinkStyle = { ...buttonStyle, textDecoration: "none" } as const;
+const secondaryBtnLinkStyle = { display: "inline-flex", justifyContent: "center", alignItems: "center", border: "1px solid #c9cccf", borderRadius: "8px", padding: "10px 16px", background: "#ffffff", color: "#202223", fontWeight: 650, textDecoration: "none", fontSize: "13px" } as const;
 const mutedStyle = { color: "#6d7175", fontSize: "13px", marginTop: "4px" } as const;
 const tableWrapStyle = { overflowX: "auto" } as const;
 const tableStyle = { width: "100%", borderCollapse: "collapse", fontSize: "14px" } as const;
-const thStyle = { textAlign: "left", borderBottom: "1px solid #dfe3e8", padding: "10px 8px", whiteSpace: "nowrap" } as const;
-const tdStyle = { borderBottom: "1px solid #f1f2f3", padding: "10px 8px", verticalAlign: "top" } as const;
-const noticeStyle = (ok: boolean) => ({ border: `1px solid ${ok ? "#95c9b4" : "#e0b3b2"}`, background: ok ? "#effaf5" : "#fff4f4", borderRadius: "8px", marginTop: "12px", marginBottom: "12px", padding: "10px 12px", color: ok ? "#0f5132" : "#8a1f11" }) as const;
+const thStyle = { textAlign: "left", borderBottom: "1px solid #dfe3e8", padding: "12px 10px", whiteSpace: "nowrap", color: "#5c5f62", fontSize: "13px", fontWeight: 650 } as const;
+const tdStyle = { borderBottom: "1px solid #f1f2f3", padding: "12px 10px", verticalAlign: "middle" } as const;
+const noticeStyle = (ok: boolean) => ({ border: `1px solid ${ok ? "#95c9b4" : "#e0b3b2"}`, background: ok ? "#effaf5" : "#fff4f4", borderRadius: "8px", marginTop: "16px", marginBottom: "16px", padding: "12px 16px", color: ok ? "#0f5132" : "#8a1f11", fontWeight: 500 }) as const;
 
-const receivingGridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "12px", marginBottom: "12px" } as const;
-const cardMetricStyle = { border: "1px solid #dfe3e8", borderRadius: "8px", padding: "12px", background: "#f6f6f7" } as const;
-const metricLabelStyle = { color: "#6d7175", fontSize: "12px", fontWeight: 600 } as const;
-const metricValueStyle = { marginTop: "4px", fontSize: "18px", fontWeight: 700 } as const;
-const progressTrackStyle = { width: "100%", background: "#dfe3e8", borderRadius: "4px", height: "6px", marginTop: "8px", overflow: "hidden" } as const;
-const progressBarFillStyle = { background: "#008060", height: "100%", transition: "width 0.3s ease" } as const;
-const mutedBannerStyle = { border: "1px solid #dfe3e8", background: "#f6f6f7", color: "#5c5f62", padding: "12px", borderRadius: "6px", fontSize: "13px", fontWeight: 500, marginTop: "8px" } as const;
-const completeBadgeStyle = { background: "#effaf5", color: "#0f5132", padding: "2px 8px", borderRadius: "4px", fontSize: "12px", fontWeight: 600, display: "inline-block" } as const;
+const receivingGridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: "16px", marginBottom: "16px" } as const;
+const cardMetricStyle = { border: "1px solid #dfe3e8", borderRadius: "10px", padding: "16px", background: "#f9fafb" } as const;
+const metricLabelStyle = { color: "#6d7175", fontSize: "13px", fontWeight: 600 } as const;
+const metricValueStyle = { marginTop: "6px", fontSize: "20px", fontWeight: 700, color: "#202223" } as const;
+const progressTrackStyle = { width: "100%", background: "#dfe3e8", borderRadius: "999px", height: "8px", marginTop: "12px", overflow: "hidden" } as const;
+const progressBarFillStyle = { background: "#008060", height: "100%", transition: "width 0.5s ease" } as const;
+const mutedBannerStyle = { border: "1px solid #dfe3e8", background: "#f9fafb", color: "#5c5f62", padding: "16px", borderRadius: "8px", fontSize: "13px", fontWeight: 500, marginTop: "12px" } as const;
+const completeBadgeStyle = { background: "#effaf5", color: "#0f5132", padding: "4px 10px", borderRadius: "6px", fontSize: "12px", fontWeight: 650, display: "inline-block" } as const;
 
-// Shopify requires ErrorBoundary on every route that calls authenticate.admin
-// so that thrown 200/401 responses (App Bridge re-auth) are handled correctly.
+// Shopify requires ErrorBoundary
 export function ErrorBoundary() {
   const error = useRouteError();
   const boundaryError = boundary.error(error);

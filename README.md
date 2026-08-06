@@ -20,6 +20,7 @@ This repo now contains the official Shopify React Router app scaffold plus a wor
 - [WORK_PLAN.md](WORK_PLAN.md) - execution tracker with Done, Ongoing, Not Started, phase plan, and next tasks.
 - [PROJECT_STATUS.html](PROJECT_STATUS.html) - browser-friendly visual status dashboard for quick review.
 - [APP_PLAN.md](APP_PLAN.md) - long-form product strategy and roadmap archive.
+- [PRICING_STRATEGY.md](product/PRICING_STRATEGY.md) - active Free, Pro, and Growth pricing strategy.
 
 ### Launch Readiness & Public App Routes
 - [/privacy](app/routes/privacy.tsx) - public Privacy Policy route (`/privacy`).

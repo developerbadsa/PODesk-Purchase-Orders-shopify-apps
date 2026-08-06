@@ -7,6 +7,7 @@ import type {
 import { Form, Link, useActionData, useLoaderData, useNavigation, useRouteError } from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticateAdmin } from "../authenticate-admin.server";
+import { SearchableSelect } from "../components/SearchableSelect";
 import prisma from "../db.server";
 import { createUniquePoReference } from "../po.server";
 import { formatCurrency } from "../utils";
@@ -267,18 +268,16 @@ export default function PurchaseOrdersPage() {
               <div style={formGridStyle}>
                 <label style={fieldLabelStyle}>
                   <span>Supplier <span style={{ color: "#d72c0d" }}>*</span></span>
-                  <select
-                    name="supplierId"
-                    required
-                    style={inputStyle}
-                    value={selectedSupplierId}
-                    onChange={(e) => handleSupplierChange(e.target.value)}
-                  >
-                    <option value="">Select supplier</option>
-                    {suppliers.map((s) => (
-                      <option key={s.id} value={s.id}>{s.name}</option>
-                    ))}
-                  </select>
+                  <div style={{ zIndex: 100 }}>
+                    <SearchableSelect
+                      name="supplierId"
+                      required
+                      placeholder="Select supplier..."
+                      value={selectedSupplierId}
+                      onChange={handleSupplierChange}
+                      options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
+                    />
+                  </div>
                 </label>
                 <Field label="Expected arrival date" name="expectedArrival" type="date" />
               </div>
@@ -297,25 +296,21 @@ export default function PurchaseOrdersPage() {
 
                 {[0, 1, 2, 3, 4].map((i) => (
                   <div key={i} style={{ display: "grid", gridTemplateColumns: "3fr 1fr 1fr", gap: "12px", marginBottom: "10px" }}>
-                    <select
-                      name="lineVariantId"
-                      style={inputStyle}
-                      value={lineVariants[i] ?? ""}
-                      onChange={(e) => handleVariantChange(i, e.target.value)}
-                    >
-                      <option value="">- select variant -</option>
-                      {variants.map((v) => {
-                        const isMapped = mappings.some(
-                          (m) => m.supplierId === selectedSupplierId && m.variantId === v.id
-                        );
-                        return (
-                          <option key={v.id} value={v.id}>
-                            {v.productTitle} - {v.variantTitle} {v.sku ? `(${v.sku})` : ""}
-                            {isMapped ? " [mapped]" : ""}
-                          </option>
-                        );
-                      })}
-                    </select>
+                    <div style={{ zIndex: 90 - i }}>
+                      <SearchableSelect
+                        name="lineVariantId"
+                        placeholder="- select variant -"
+                        value={lineVariants[i] || ""}
+                        onChange={(val) => handleVariantChange(i, val)}
+                        options={variants.map((v) => {
+                          const isMapped = mappings.some((m) => m.supplierId === selectedSupplierId && m.variantId === v.id);
+                          return {
+                            value: v.id,
+                            label: `${v.productTitle} - ${v.variantTitle} ${v.sku ? `(${v.sku})` : ""}${isMapped ? " [mapped]" : ""}`
+                          };
+                        })}
+                      />
+                    </div>
                     <input name="lineQuantity" type="number" placeholder="Qty" min="0" style={inputStyle} />
                     <input
                       name="lineUnitCost"
