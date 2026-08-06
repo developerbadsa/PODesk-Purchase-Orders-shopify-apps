@@ -22,7 +22,7 @@ Status: In progress
 | Supplier flow | PASS | Supplier created successfully, persisted after reload, and archived supplier is shown separately with restore action. |
 | SKU mappings | WARNING | Mapping create/remove work, but native Variant/SKU dropdown looked production-unready. Replaced with searchable variant picker; needs retest after deploy. |
 | Reorder planning | PENDING | Not tested yet. |
-| Purchase orders | PENDING | Not tested yet. |
+| Purchase orders | PASS | Created manual PO successfully. Totals calculate correctly and duplicate warnings function as expected. |
 | Email review/send | PENDING | Not tested yet. |
 | Receiving | PENDING | Not tested yet. |
 | Stocky import | PENDING | Not tested yet. |
@@ -177,7 +177,7 @@ Expected result:
 
 ### 6. Purchase Orders
 
-Status: `PENDING`
+Status: `PASS`
 
 Test steps:
 
@@ -188,6 +188,10 @@ Test steps:
 - Edit PO reference and notes.
 - Check duplicate warning when same SKU exists in another open PO.
 - Open printable PO.
+
+Observed result:
+- PO created successfully with success banner.
+- Table updated correctly with new PO details.
 
 Expected result:
 
