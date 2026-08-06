@@ -360,6 +360,7 @@ function VariantPicker({
   mappedVariantIds: Set<string>;
 }) {
   const [query, setQuery] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
   const [selectedVariantId, setSelectedVariantId] = useState("");
   const selectedVariant = variants.find((variant) => variant.id === selectedVariantId);
 
@@ -384,14 +385,25 @@ function VariantPicker({
   }, [query, variants]);
 
   return (
-    <div style={variantPickerStyle}>
+    <div
+      style={variantPickerStyle}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) {
+          setIsOpen(false);
+        }
+      }}
+    >
       <label style={fieldLabelStyle}>
         <span>Variant / SKU <span style={{ color: "#d72c0d" }}>*</span></span>
         <input type="hidden" name="variantId" value={selectedVariantId} />
         <input
           type="search"
           value={query}
-          onChange={(event) => setQuery(event.target.value)}
+          onFocus={() => setIsOpen(true)}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            setIsOpen(true);
+          }}
           placeholder="Search product, variant, SKU, or Shopify ID"
           style={inputStyle}
         />
@@ -405,12 +417,15 @@ function VariantPicker({
             </div>
             <div style={selectedVariantMetaStyle}>
               {selectedVariant.variantTitle}
-              {selectedVariant.sku ? ` · SKU ${selectedVariant.sku}` : " · No SKU"}
+              {selectedVariant.sku ? ` - SKU ${selectedVariant.sku}` : " - No SKU"}
             </div>
           </div>
           <button
             type="button"
-            onClick={() => setSelectedVariantId("")}
+            onClick={() => {
+              setSelectedVariantId("");
+              setIsOpen(true);
+            }}
             style={clearSelectionButtonStyle}
           >
             Change
@@ -418,6 +433,7 @@ function VariantPicker({
         </div>
       ) : null}
 
+      {isOpen ? (
       <div style={variantResultsStyle} role="listbox" aria-label="Available variants">
         {filteredVariants.length === 0 ? (
           <div style={variantEmptyStyle}>No variants match this search.</div>
@@ -429,7 +445,12 @@ function VariantPicker({
               <button
                 key={variant.id}
                 type="button"
-                onClick={() => setSelectedVariantId(variant.id)}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => {
+                  setSelectedVariantId(variant.id);
+                  setQuery("");
+                  setIsOpen(false);
+                }}
                 style={variantOptionStyle(isSelected)}
                 aria-pressed={isSelected}
               >
@@ -437,7 +458,7 @@ function VariantPicker({
                   <span style={variantOptionTitleStyle}>{variant.productTitle}</span>
                   <span style={variantOptionMetaStyle}>
                     {variant.variantTitle}
-                    {variant.sku ? ` · SKU ${variant.sku}` : " · No SKU"}
+                    {variant.sku ? ` - SKU ${variant.sku}` : " - No SKU"}
                   </span>
                 </span>
                 {isMapped ? <span style={mappedBadgeStyle}>Mapped</span> : null}
@@ -446,6 +467,7 @@ function VariantPicker({
           })
         )}
       </div>
+      ) : null}
       <div style={helpTextStyle}>Select the exact Shopify variant that this supplier can fulfill.</div>
     </div>
   );
@@ -488,12 +510,12 @@ const formCardStyle = { background: "#ffffff", border: "1px solid #e1e3e5", bord
 const formGridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "16px" } as const;
 const fieldLabelStyle = { display: "flex", flexDirection: "column", gap: "6px", color: "#202223", fontSize: "13px", fontWeight: 600 } as const;
 const inputStyle = { height: "40px", border: "1px solid #8c9196", borderRadius: "8px", padding: "0 12px", fontSize: "14px", width: "100%", backgroundColor: "#ffffff", outline: "none", boxSizing: "border-box" } as const;
-const variantPickerStyle = { gridColumn: "span 2", display: "flex", flexDirection: "column", gap: "8px", minWidth: 0 } as const;
+const variantPickerStyle = { gridColumn: "span 2", display: "flex", flexDirection: "column", gap: "8px", minWidth: 0, position: "relative" } as const;
 const selectedVariantStyle = { border: "1px solid #95c9b4", background: "#effaf5", borderRadius: "8px", padding: "10px 12px", display: "flex", justifyContent: "space-between", gap: "12px", alignItems: "center" } as const;
 const selectedVariantTitleStyle = { color: "#202223", fontSize: "14px", fontWeight: 650, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } as const;
 const selectedVariantMetaStyle = { color: "#4b5563", fontSize: "12px", marginTop: "3px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } as const;
 const clearSelectionButtonStyle = { border: "1px solid #95c9b4", borderRadius: "6px", background: "#ffffff", color: "#006e52", height: "30px", padding: "0 10px", fontSize: "12px", fontWeight: 650, cursor: "pointer", flexShrink: 0 } as const;
-const variantResultsStyle = { border: "1px solid #dfe3e8", borderRadius: "8px", overflow: "hidden", background: "#ffffff", maxHeight: "288px", overflowY: "auto" } as const;
+const variantResultsStyle = { position: "absolute", top: "68px", left: 0, right: 0, zIndex: 20, border: "1px solid #dfe3e8", borderRadius: "8px", overflow: "hidden", background: "#ffffff", maxHeight: "288px", overflowY: "auto", boxShadow: "0 12px 28px rgba(0, 0, 0, 0.14)" } as const;
 const variantEmptyStyle = { padding: "14px", color: "#6d7175", fontSize: "13px" } as const;
 const variantOptionStyle = (selected: boolean) => ({
   width: "100%",
