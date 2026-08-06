@@ -728,6 +728,31 @@ export default function PurchaseOrderDetailPage() {
   const mailtoBody = `${emailMessage}\n\nNote: Open PODesk and print PO ${po.reference} from the purchase order page.`;
   const mailtoUrl = `mailto:${encodeURIComponent(recipientEmail)}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(mailtoBody)}`;
 
+  async function handleOpenEmailDraft() {
+    if (!recipientEmail) {
+      setCopyNotice("Enter a supplier email before opening the email draft.");
+      setTimeout(() => setCopyNotice(""), 3000);
+      return;
+    }
+
+    const draftText = `To: ${recipientEmail}\nSubject: ${emailSubject}\n\n${emailMessage}`;
+    try {
+      if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(draftText);
+      }
+    } catch {
+      // Opening the mail client is still useful even if clipboard access is blocked.
+    }
+
+    const popup = window.open(mailtoUrl, "_blank", "noopener,noreferrer");
+    if (popup) {
+      setCopyNotice("Email draft opened. The draft details were also copied for backup.");
+    } else {
+      setCopyNotice("Popup blocked. Email draft details copied; paste them into your email app.");
+    }
+    setTimeout(() => setCopyNotice(""), 4000);
+  }
+
   const todayIso = new Date().toISOString().slice(0, 10);
 
   return (
@@ -1137,12 +1162,13 @@ export default function PurchaseOrderDetailPage() {
               </button>
             </Form>
           ) : (
-            <a
-              href={mailtoUrl}
+            <button
+              type="button"
+              onClick={handleOpenEmailDraft}
               style={secondaryBtnLinkStyle}
             >
               Open email draft
-            </a>
+            </button>
           )}
 
           <button

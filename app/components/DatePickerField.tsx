@@ -9,7 +9,7 @@ const fieldLabelStyle: CSSProperties = {
   fontWeight: 600,
 };
 
-const inputStyle: CSSProperties = {
+const dateInputStyle: CSSProperties = {
   height: "40px",
   border: "1px solid #8c9196",
   borderRadius: "8px",
@@ -17,6 +17,7 @@ const inputStyle: CSSProperties = {
   fontSize: "14px",
   width: "100%",
   backgroundColor: "#ffffff",
+  color: "#202223",
   outline: "none",
   boxSizing: "border-box",
   fontFamily: "inherit",
@@ -27,13 +28,29 @@ interface DatePickerFieldProps {
   name: string;
   defaultValue?: string;
   required?: boolean;
+  placeholder?: string;
 }
 
-export function DatePickerField({ label, name, defaultValue, required }: DatePickerFieldProps) {
+export function DatePickerField({
+  label,
+  name,
+  defaultValue = "",
+  required = false,
+  placeholder,
+}: DatePickerFieldProps) {
   return (
     <label style={fieldLabelStyle}>
-      <span>{label} {required ? <span style={{ color: "#d72c0d" }}>*</span> : null}</span>
-      <input type="date" name={name} defaultValue={defaultValue} required={required} style={inputStyle} />
+      <span>
+        {label} {required ? <span style={{ color: "#d72c0d" }}>*</span> : null}
+      </span>
+      <input
+        name={name}
+        type="date"
+        defaultValue={defaultValue}
+        required={required}
+        placeholder={placeholder}
+        style={dateInputStyle}
+      />
     </label>
   );
 }
