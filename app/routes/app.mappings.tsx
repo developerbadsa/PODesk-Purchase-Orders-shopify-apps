@@ -185,7 +185,7 @@ export default function MappingsPage() {
   const unmappedVariants = variants.filter((v) => !mappedVariantIds.has(v.id));
 
   return (
-    <s-page full-width heading="SKU-Supplier Mappings">
+    <s-page heading="SKU-Supplier Mappings">
       {actionData?.message ? (
         <div style={noticeStyle(actionData.ok)}>{actionData.message}</div>
       ) : null}

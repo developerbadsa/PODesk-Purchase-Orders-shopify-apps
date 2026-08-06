@@ -269,7 +269,7 @@ export default function ImportsPage() {
   const activeJob = actionData?.job;
 
   return (
-    <s-page full-width heading="Stocky import">
+    <s-page heading="Stocky import">
       {actionData?.message ? (
         <div style={noticeStyle(actionData.ok)}>{actionData.message}</div>
       ) : null}

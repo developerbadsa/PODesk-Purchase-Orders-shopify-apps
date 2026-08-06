@@ -124,7 +124,7 @@ export default function SupplierDetailPage() {
   const isSubmitting = navigation.state === "submitting";
 
   return (
-    <s-page full-width heading={supplier.name}>
+    <s-page heading={supplier.name}>
       {actionData?.message ? (
         <div style={noticeStyle(actionData.ok)}>{actionData.message}</div>
       ) : null}
