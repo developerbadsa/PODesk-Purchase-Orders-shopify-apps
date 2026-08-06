@@ -8,6 +8,7 @@ import { Form, Link, useActionData, useLoaderData, useNavigation, useRouteError 
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticateAdmin } from "../authenticate-admin.server";
 import { SearchableSelect } from "../components/SearchableSelect";
+import { DatePickerField } from "../components/DatePickerField";
 import prisma from "../db.server";
 import { createUniquePoReference } from "../po.server";
 import { formatCurrency } from "../utils";
@@ -19,57 +20,59 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const store = await prisma.store.findUnique({ where: { shop: session.shop } });
   if (!store) return { purchaseOrders: [], suppliers: [], variants: [], mappings: [], currencyCode: "USD" };
 
-  const [settings, purchaseOrders, suppliers, variants, mappings] = await Promise.all([
-    prisma.storeSettings.findUnique({ where: { storeId: store.id } }),
-    prisma.purchaseOrder.findMany({
-      where: { storeId: store.id },
-      select: {
-        id: true,
-        reference: true,
-        status: true,
-        expectedArrival: true,
-        lastSentAt: true,
-        sentCount: true,
-        createdAt: true,
-        updatedAt: true,
-        supplier: { select: { name: true } },
-        lines: {
-          select: {
-            quantity: true,
-            unitCost: true,
-            receiptLines: { select: { quantityReceived: true } },
-          },
+  const settings = await prisma.storeSettings.findUnique({
+    where: { storeId: store.id },
+    select: { currencyCode: true },
+  });
+  const purchaseOrders = await prisma.purchaseOrder.findMany({
+    where: { storeId: store.id },
+    select: {
+      id: true,
+      reference: true,
+      status: true,
+      expectedArrival: true,
+      lastSentAt: true,
+      sentCount: true,
+      createdAt: true,
+      updatedAt: true,
+      supplier: { select: { name: true } },
+      lines: {
+        select: {
+          quantity: true,
+          unitCost: true,
+          receiptLines: { select: { quantityReceived: true } },
         },
       },
-      orderBy: { createdAt: "desc" },
-    }),
-    prisma.supplier.findMany({
-      where: { storeId: store.id, isArchived: false },
-      orderBy: { name: "asc" },
-    }),
-    // Only load variants that have at least one supplier mapping —
-    // avoids loading thousands of unmapped variants for the PO line item picker.
-    prisma.shopifyVariant.findMany({
-      where: {
-        storeId: store.id,
-        supplierMappings: { some: { storeId: store.id } },
-      },
-      select: {
-        id: true,
-        title: true,
-        sku: true,
-        unitCostAmount: true,
-        product: { select: { title: true } },
-      },
-      orderBy: [{ product: { title: "asc" } }, { title: "asc" }],
-      take: 1000,
-    }),
-    prisma.supplierVariantMapping.findMany({
-      where: { storeId: store.id },
-      select: { supplierId: true, variantId: true, supplierCost: true, supplierSku: true },
-      take: 2000,
-    }),
-  ]);
+    },
+    orderBy: { createdAt: "desc" },
+  });
+  const suppliers = await prisma.supplier.findMany({
+    where: { storeId: store.id, isArchived: false },
+    select: { id: true, name: true },
+    orderBy: { name: "asc" },
+  });
+  // Only load variants that have at least one supplier mapping -
+  // avoids loading thousands of unmapped variants for the PO line item picker.
+  const variants = await prisma.shopifyVariant.findMany({
+    where: {
+      storeId: store.id,
+      supplierMappings: { some: { storeId: store.id } },
+    },
+    select: {
+      id: true,
+      title: true,
+      sku: true,
+      unitCostAmount: true,
+      product: { select: { title: true } },
+    },
+    orderBy: [{ product: { title: "asc" } }, { title: "asc" }],
+    take: 1000,
+  });
+  const mappings = await prisma.supplierVariantMapping.findMany({
+    where: { storeId: store.id },
+    select: { supplierId: true, variantId: true, supplierCost: true, supplierSku: true },
+    take: 2000,
+  });
 
   const currencyCode = settings?.currencyCode || "USD";
 
@@ -253,188 +256,184 @@ export default function PurchaseOrdersPage() {
   }
 
   return (
-    <s-page heading="Purchase Orders">
-      {actionData?.message ? (
-        <div style={noticeStyle(actionData.ok)}>{actionData.message}</div>
-      ) : null}
+    <>
+      <ui-title-bar title="Purchase Orders" />
+      <div style={{ padding: "24px 32px", maxWidth: "1600px", margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
+        {actionData?.message ? (
+          <div style={noticeStyle(actionData.ok)}>{actionData.message}</div>
+        ) : null}
 
-      <s-section heading="Create purchase order">
-        {suppliers.length === 0 ? (
-          <div style={{ padding: "20px", background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: "10px" }}>
-            <div style={{ fontWeight: 650, fontSize: "15px", marginBottom: "6px", color: "#202223" }}>No suppliers found</div>
-            <p style={{ margin: "0 0 14px", color: "#6d7175", fontSize: "13px" }}>
-              Add a supplier first before creating a purchase order.
-            </p>
-            <Link to="/app/suppliers" style={buttonStyle}>Add Supplier</Link>
-          </div>
-        ) : variants.length === 0 ? (
-          <div style={{ padding: "20px", background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: "10px" }}>
-            <div style={{ fontWeight: 650, fontSize: "15px", marginBottom: "6px", color: "#202223" }}>No Shopify variants synced yet</div>
-            <p style={{ margin: "0 0 14px", color: "#6d7175", fontSize: "13px" }}>
-              Sync inventory first to create purchase orders from real SKUs.
-            </p>
-            <Link to="/app" style={buttonStyle}>Sync Inventory</Link>
-          </div>
-        ) : (
-          <div style={formCardStyle}>
-            <Form method="post" id="create-po-form">
-              <input type="hidden" name="intent" value="create-po" />
-              <div style={formGridStyle}>
-                <label style={fieldLabelStyle}>
-                  <span>Supplier <span style={{ color: "#d72c0d" }}>*</span></span>
-                  <div style={{ zIndex: 100 }}>
-                    <SearchableSelect
-                      name="supplierId"
-                      required
-                      placeholder="Select supplier..."
-                      value={selectedSupplierId}
-                      onChange={handleSupplierChange}
-                      options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
-                    />
-                  </div>
-                </label>
-                <Field label="Expected arrival date" name="expectedArrival" type="date" />
+        {/* Create PO card */}
+        <div style={sectionCardStyle}>
+          <h2 style={cardHeaderStyle}>Create Purchase Order</h2>
+          <div style={cardBodyStyle}>
+            {suppliers.length === 0 ? (
+              <div style={emptyCardStyle}>
+                <div style={{ fontWeight: 650, fontSize: "15px", marginBottom: "6px", color: "#202223" }}>No suppliers found</div>
+                <p style={{ margin: "0 0 14px", color: "#6d7175", fontSize: "13px" }}>
+                  Add a supplier first before creating a purchase order.
+                </p>
+                <Link to="/app/suppliers" style={buttonStyle}>Add Supplier</Link>
               </div>
-
-              <div style={{ margin: "20px 0" }}>
-                <div style={{ fontWeight: 650, fontSize: "14px", color: "#202223", marginBottom: "10px" }}>
-                  Line items
-                </div>
-                
-                {/* Line items table header */}
-                <div style={{ display: "grid", gridTemplateColumns: "3fr 1fr 1fr", gap: "12px", marginBottom: "8px", padding: "0 4px" }}>
-                  <div style={{ fontSize: "12px", fontWeight: 650, color: "#5c5f62", textTransform: "uppercase" }}>Variant / Product SKU</div>
-                  <div style={{ fontSize: "12px", fontWeight: 650, color: "#5c5f62", textTransform: "uppercase" }}>Quantity</div>
-                  <div style={{ fontSize: "12px", fontWeight: 650, color: "#5c5f62", textTransform: "uppercase" }}>Unit Cost ($)</div>
-                </div>
-
-                {[0, 1, 2, 3, 4].map((i) => (
-                  <div key={i} style={{ display: "grid", gridTemplateColumns: "3fr 1fr 1fr", gap: "12px", marginBottom: "10px" }}>
-                    <div style={{ zIndex: 90 - i }}>
+            ) : variants.length === 0 ? (
+              <div style={emptyCardStyle}>
+                <div style={{ fontWeight: 650, fontSize: "15px", marginBottom: "6px", color: "#202223" }}>No Shopify variants synced yet</div>
+                <p style={{ margin: "0 0 14px", color: "#6d7175", fontSize: "13px" }}>
+                  Sync inventory first to create purchase orders from real SKUs.
+                </p>
+                <Link to="/app" style={buttonStyle}>Sync Inventory</Link>
+              </div>
+            ) : (
+              <Form method="post" id="create-po-form">
+                <input type="hidden" name="intent" value="create-po" />
+                <div style={formGridStyle}>
+                  <label style={fieldLabelStyle}>
+                    <span>Supplier <span style={{ color: "#d72c0d" }}>*</span></span>
+                    <div style={{ zIndex: 100 }}>
                       <SearchableSelect
-                        name="lineVariantId"
-                        placeholder="- select variant -"
-                        value={lineVariants[i] || ""}
-                        onChange={(val) => handleVariantChange(i, val)}
-                        options={variants.map((v) => {
-                          const isMapped = mappings.some((m) => m.supplierId === selectedSupplierId && m.variantId === v.id);
-                          return {
-                            value: v.id,
-                            label: `${v.productTitle} - ${v.variantTitle} ${v.sku ? `(${v.sku})` : ""}${isMapped ? " [mapped]" : ""}`
-                          };
-                        })}
+                        name="supplierId"
+                        required
+                        placeholder="Select supplier..."
+                        value={selectedSupplierId}
+                        onChange={handleSupplierChange}
+                        options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
                       />
                     </div>
-                    <input name="lineQuantity" type="number" placeholder="Qty" min="0" style={inputStyle} />
-                    <input
-                      name="lineUnitCost"
-                      type="number"
-                      step="0.01"
-                      placeholder="Cost"
-                      style={inputStyle}
-                      value={lineCosts[i] ?? ""}
-                      onChange={(e) => setLineCosts((prev) => ({ ...prev, [i]: e.target.value }))}
-                    />
+                  </label>
+                  <DatePickerField label="Expected arrival date" name="expectedArrival" />
+                </div>
+
+                <div style={{ margin: "20px 0" }}>
+                  <div style={{ fontWeight: 650, fontSize: "14px", color: "#202223", marginBottom: "10px" }}>
+                    Line items
                   </div>
-                ))}
-                <div style={mutedStyle}>
-                  Fill at least one line item. Mapped SKUs show <span style={{ color: "#008060", fontWeight: 600 }}>[mapped]</span> and prefill unit cost automatically.
+                  
+                  {/* Line items table header */}
+                  <div style={{ display: "grid", gridTemplateColumns: "3fr 1fr 1fr", gap: "12px", marginBottom: "8px", padding: "0 4px" }}>
+                    <div style={{ fontSize: "12px", fontWeight: 650, color: "#5c5f62", textTransform: "uppercase" }}>Variant / Product SKU</div>
+                    <div style={{ fontSize: "12px", fontWeight: 650, color: "#5c5f62", textTransform: "uppercase" }}>Quantity</div>
+                    <div style={{ fontSize: "12px", fontWeight: 650, color: "#5c5f62", textTransform: "uppercase" }}>Unit Cost ($)</div>
+                  </div>
+
+                  {[0, 1, 2, 3, 4].map((i) => (
+                    <div key={i} style={{ display: "grid", gridTemplateColumns: "3fr 1fr 1fr", gap: "12px", marginBottom: "10px" }}>
+                      <div style={{ zIndex: 90 - i }}>
+                        <SearchableSelect
+                          name="lineVariantId"
+                          placeholder="- select variant -"
+                          value={lineVariants[i] || ""}
+                          onChange={(val) => handleVariantChange(i, val)}
+                          options={variants.map((v) => {
+                            const isMapped = mappings.some((m) => m.supplierId === selectedSupplierId && m.variantId === v.id);
+                            return {
+                              value: v.id,
+                              label: `${v.productTitle} - ${v.variantTitle} ${v.sku ? `(${v.sku})` : ""}${isMapped ? " [mapped]" : ""}`
+                            };
+                          })}
+                        />
+                      </div>
+                      <input name="lineQuantity" type="number" placeholder="Qty" min="0" style={inputStyle} />
+                      <input
+                        name="lineUnitCost"
+                        type="number"
+                        step="0.01"
+                        placeholder="Cost"
+                        style={inputStyle}
+                        value={lineCosts[i] ?? ""}
+                        onChange={(e) => setLineCosts((prev) => ({ ...prev, [i]: e.target.value }))}
+                      />
+                    </div>
+                  ))}
+                  <div style={mutedStyle}>
+                    Fill at least one line item. Mapped SKUs show <span style={{ color: "#008060", fontWeight: 600 }}>[mapped]</span> and prefill unit cost automatically.
+                  </div>
+                </div>
+
+                <label style={fieldLabelStyle}>
+                  <span>Notes / Instructions (Optional)</span>
+                  <textarea name="notes" rows={2} placeholder="Add special instructions for supplier..." style={textareaStyle} />
+                </label>
+
+                <div style={{ marginTop: "18px" }}>
+                  <button type="submit" disabled={isSubmitting} style={buttonStyle}>
+                    {isSubmitting ? "Creating PO..." : "Create purchase order"}
+                  </button>
+                </div>
+              </Form>
+            )}
+          </div>
+        </div>
+
+        {/* All POs Card */}
+        <div style={sectionCardStyle}>
+          <h2 style={cardHeaderStyle}>All Purchase Orders ({purchaseOrders.length})</h2>
+          <div style={cardBodyStyle}>
+            {purchaseOrders.length === 0 ? (
+              <div style={emptyCardStyle}>
+                <div style={{ fontWeight: 650, fontSize: "15px", marginBottom: "6px", color: "#202223" }}>No purchase orders created yet</div>
+                <p style={{ margin: "0 0 14px", color: "#6d7175", fontSize: "13px" }}>
+                  Create your first draft purchase order using the form above or review automated reorder suggestions based on your sales velocity.
+                </p>
+                <div style={{ display: "flex", gap: "10px" }}>
+                  <Link to="/app/reorder" style={buttonStyle}>Open Reorder Planning</Link>
+                  <Link to="/app/mappings" style={secondaryButtonStyle}>Map Suppliers & SKUs</Link>
                 </div>
               </div>
-
-              <label style={fieldLabelStyle}>
-                <span>Notes / Instructions (Optional)</span>
-                <textarea name="notes" rows={2} placeholder="Add special instructions for supplier..." style={textareaStyle} />
-              </label>
-
-              <div style={{ marginTop: "18px" }}>
-                <button type="submit" disabled={isSubmitting} style={buttonStyle}>
-                  {isSubmitting ? "Creating PO..." : "Create purchase order"}
-                </button>
+            ) : (
+              <div style={tableWrapStyle}>
+                <table style={tableStyle}>
+                  <thead>
+                    <tr>
+                      <th style={thStyle}>Reference</th>
+                      <th style={thStyle}>Supplier</th>
+                      <th style={thStyle}>Status</th>
+                      <th style={{ ...thStyle, textAlign: "right" }}>Lines</th>
+                      <th style={thStyle}>Receiving</th>
+                      <th style={{ ...thStyle, textAlign: "right" }}>Total</th>
+                      <th style={thStyle}>Expected</th>
+                      <th style={thStyle}>Sent</th>
+                      <th style={thStyle}>Created</th>
+                      <th style={thStyle}>Updated</th>
+                      <th style={{ ...thStyle, textAlign: "center" }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {purchaseOrders.map((po) => (
+                      <tr key={po.id}>
+                        <td style={tdStyle}>
+                          <Link to={`/app/purchase-orders/${po.id}`} style={linkStyle}>{po.reference}</Link>
+                        </td>
+                        <td style={tdStyle}>{po.supplierName}</td>
+                        <td style={tdStyle}>
+                          <span style={statusBadge(po.status)}>{po.status.replaceAll("_", " ")}</span>
+                        </td>
+                        <td style={{ ...tdStyle, textAlign: "right" }}>{po.lineCount}</td>
+                        <td style={tdStyle}>
+                          {po.totalOrdered > 0
+                            ? `${po.totalReceived} / ${po.totalOrdered} (${po.receiveProgressPercent}%)`
+                            : "-"}
+                        </td>
+                        <td style={{ ...tdStyle, textAlign: "right" }}>{po.totalCost > 0 ? formatCurrency(po.totalCost, currencyCode) : "-"}</td>
+                        <td style={tdStyle}>{po.expectedArrival ? formatDate(po.expectedArrival) : "-"}</td>
+                        <td style={tdStyle}>{po.lastSentAt ? `${formatDate(po.lastSentAt)} (${po.sentCount}x)` : "-"}</td>
+                        <td style={tdStyle}>{formatDate(po.createdAt)}</td>
+                        <td style={tdStyle}>{formatDate(po.updatedAt)}</td>
+                        <td style={{ ...tdStyle, textAlign: "center" }}>
+                          <div style={{ display: "flex", gap: "8px", alignItems: "center", justifyContent: "center" }}>
+                            <Link to={`/app/purchase-orders/${po.id}`} style={linkStyle}>View</Link>
+                            <Link to={`/app/purchase-orders/${po.id}/print`} style={linkStyle}>Print</Link>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            </Form>
+            )}
           </div>
-        )}
-      </s-section>
-
-      <s-section heading={`All purchase orders (${purchaseOrders.length})`}>
-        {purchaseOrders.length === 0 ? (
-          <div style={{ padding: "20px", background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: "10px" }}>
-            <div style={{ fontWeight: 650, fontSize: "15px", marginBottom: "6px", color: "#202223" }}>No purchase orders created yet</div>
-            <p style={{ margin: "0 0 14px", color: "#6d7175", fontSize: "13px" }}>
-              Create your first draft purchase order using the form above or review automated reorder suggestions based on your sales velocity.
-            </p>
-            <div style={{ display: "flex", gap: "10px" }}>
-              <Link to="/app/reorder" style={buttonStyle}>Open Reorder Planning</Link>
-              <Link to="/app/mappings" style={secondaryButtonStyle}>Map Suppliers & SKUs</Link>
-            </div>
-          </div>
-        ) : (
-          <div style={tableWrapStyle}>
-            <table style={tableStyle}>
-              <thead>
-                <tr>
-                  <th style={thStyle}>Reference</th>
-                  <th style={thStyle}>Supplier</th>
-                  <th style={thStyle}>Status</th>
-                  <th style={thStyle}>Lines</th>
-                  <th style={thStyle}>Receiving</th>
-                  <th style={thStyle}>Total</th>
-                  <th style={thStyle}>Expected</th>
-                  <th style={thStyle}>Sent</th>
-                  <th style={thStyle}>Created</th>
-                  <th style={thStyle}>Updated</th>
-                  <th style={thStyle}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {purchaseOrders.map((po) => (
-                  <tr key={po.id}>
-                    <td style={tdStyle}>
-                      <Link to={`/app/purchase-orders/${po.id}`} style={linkStyle}>{po.reference}</Link>
-                    </td>
-                    <td style={tdStyle}>{po.supplierName}</td>
-                    <td style={tdStyle}>
-                      <span style={statusBadge(po.status)}>{po.status.replaceAll("_", " ")}</span>
-                    </td>
-                    <td style={tdStyle}>{po.lineCount}</td>
-                    <td style={tdStyle}>
-                      {po.totalOrdered > 0
-                        ? `${po.totalReceived} / ${po.totalOrdered} (${po.receiveProgressPercent}%)`
-                        : "-"}
-                    </td>
-                    <td style={tdStyle}>{po.totalCost > 0 ? formatCurrency(po.totalCost, currencyCode) : "-"}</td>
-                    <td style={tdStyle}>{po.expectedArrival ? formatDate(po.expectedArrival) : "-"}</td>
-                    <td style={tdStyle}>{po.lastSentAt ? `${formatDate(po.lastSentAt)} (${po.sentCount}x)` : "-"}</td>
-                    <td style={tdStyle}>{formatDate(po.createdAt)}</td>
-                    <td style={tdStyle}>{formatDate(po.updatedAt)}</td>
-                    <td style={tdStyle}>
-                      <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                        <Link to={`/app/purchase-orders/${po.id}`} style={linkStyle}>View</Link>
-                        <Link to={`/app/purchase-orders/${po.id}/print`} style={linkStyle}>Print</Link>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </s-section>
-    </s-page>
-  );
-}
-
-function Field({
-  label, name, type = "text", required = false, defaultValue, step, placeholder,
-}: {
-  label: string; name: string; type?: string; required?: boolean; defaultValue?: string; step?: string; placeholder?: string;
-}) {
-  return (
-    <label style={fieldLabelStyle}>
-      <span>{label} {required ? <span style={{ color: "#d72c0d" }}>*</span> : null}</span>
-      <input name={name} type={type} required={required} defaultValue={defaultValue} step={step} placeholder={placeholder} style={inputStyle} />
-    </label>
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -488,6 +487,28 @@ const tableWrapStyle = { overflowX: "auto" } as const;
 const tableStyle = { width: "100%", borderCollapse: "collapse", fontSize: "14px" } as const;
 const thStyle = { textAlign: "left", borderBottom: "1px solid #dfe3e8", padding: "12px 10px", whiteSpace: "nowrap", color: "#5c5f62", fontSize: "13px", fontWeight: 650 } as const;
 const tdStyle = { borderBottom: "1px solid #f1f2f3", padding: "12px 10px", verticalAlign: "middle" } as const;
+const sectionCardStyle = {
+  background: "#ffffff",
+  border: "1px solid #e5e7eb",
+  borderRadius: "16px",
+  boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03)",
+  marginBottom: "24px",
+  overflow: "hidden",
+  width: "100%",
+  boxSizing: "border-box",
+} as const;
+const cardHeaderStyle = {
+  margin: 0,
+  padding: "16px 24px",
+  fontSize: "16px",
+  fontWeight: 700,
+  color: "#111827",
+  borderBottom: "1px solid #f3f4f6",
+  backgroundColor: "#f9fafb",
+} as const;
+const cardBodyStyle = { padding: "24px" } as const;
+const emptyCardStyle = { padding: "24px", background: "#ffffff", border: "1px solid #e5e7eb", borderRadius: "12px", textAlign: "left" } as const;
+
 const noticeStyle = (ok: boolean) => ({ border: `1px solid ${ok ? "#95c9b4" : "#e0b3b2"}`, background: ok ? "#effaf5" : "#fff4f4", borderRadius: "8px", marginTop: "12px", marginBottom: "12px", padding: "12px 16px", color: ok ? "#0f5132" : "#8a1f11", fontWeight: 550 }) as const;
 
 
@@ -522,5 +543,3 @@ export function ErrorBoundary() {
 export const headers: HeadersFunction = (headersArgs) => {
   return boundary.headers(headersArgs);
 };
-
-

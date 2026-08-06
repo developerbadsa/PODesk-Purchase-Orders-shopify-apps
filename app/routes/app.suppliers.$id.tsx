@@ -3,10 +3,19 @@ import type {
   HeadersFunction,
   LoaderFunctionArgs,
 } from "react-router";
-import { Form, Link, useActionData, useLoaderData, useNavigation, redirect, useRouteError } from "react-router";
+import {
+  Form,
+  Link,
+  useActionData,
+  useLoaderData,
+  useNavigation,
+  redirect,
+  useRouteError,
+} from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticateAdmin } from "../authenticate-admin.server";
 import prisma from "../db.server";
+import { PrimaryButton, DangerButton, SecondaryButton } from "../components/Button";
 
 type ActionData = { ok: boolean; message: string };
 
@@ -95,7 +104,7 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
         notes: optionalString(formData.get("notes")),
       },
     });
-    return { ok: true, message: "Supplier updated." } satisfies ActionData;
+    return { ok: true, message: "Supplier updated successfully." } satisfies ActionData;
   }
 
   if (intent === "remove-mapping") {
@@ -103,7 +112,7 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
     await prisma.supplierVariantMapping.deleteMany({
       where: { id: mappingId, storeId: store.id },
     });
-    return { ok: true, message: "Mapping removed." } satisfies ActionData;
+    return { ok: true, message: "SKU mapping removed." } satisfies ActionData;
   }
 
   if (intent === "archive") {
@@ -124,129 +133,164 @@ export default function SupplierDetailPage() {
   const isSubmitting = navigation.state === "submitting";
 
   return (
-    <s-page heading={supplier.name}>
-      {actionData?.message ? (
-        <div style={noticeStyle(actionData.ok)}>{actionData.message}</div>
-      ) : null}
+    <>
+      <ui-title-bar title={supplier.name} />
+      <div style={{ padding: "24px 32px", width: "100%", boxSizing: "border-box" }}>
+        {actionData?.message ? (
+          <div style={noticeStyle(actionData.ok)}>{actionData.message}</div>
+        ) : null}
 
-      <s-section heading="Edit supplier">
-        <div style={formCardStyle}>
-          <Form method="post">
-            <input type="hidden" name="intent" value="update" />
-            <div style={formGridStyle}>
-              <Field label="Supplier name" name="name" required defaultValue={supplier.name} />
-              <Field label="Email" name="email" type="email" defaultValue={supplier.email ?? ""} />
-              <Field label="Phone" name="phone" defaultValue={supplier.phone ?? ""} />
-              <Field label="Lead time (days)" name="leadTimeDays" type="number" defaultValue={String(supplier.leadTimeDays)} />
-              <Field label="Minimum order" name="minimumOrder" type="number" defaultValue={supplier.minimumOrder != null ? String(supplier.minimumOrder) : ""} />
-              <Field label="Payment terms" name="paymentTerms" defaultValue={supplier.paymentTerms ?? ""} />
-            </div>
-            <div style={{ marginTop: "16px" }}>
-              <label style={fieldLabelStyle}>
-                <span>Notes</span>
-                <textarea name="notes" rows={3} style={textareaStyle} defaultValue={supplier.notes ?? ""} />
-              </label>
-            </div>
-            <div style={{ display: "flex", gap: "10px", marginTop: "18px" }}>
-              <button type="submit" disabled={isSubmitting} style={buttonStyle}>
-                Save changes
-              </button>
-              <Form method="post" style={{ display: "inline" }}>
-                <input type="hidden" name="intent" value="archive" />
-                <button type="submit" style={dangerBtnStyle}>Archive supplier</button>
-              </Form>
-            </div>
-          </Form>
+        {/* Edit supplier card */}
+        <div style={sectionCardStyle}>
+          <h2 style={cardHeaderStyle}>Edit Supplier Details</h2>
+          <div style={cardBodyStyle}>
+            <Form method="post">
+              <input type="hidden" name="intent" value="update" />
+              <div style={formGridStyle}>
+                <Field label="Supplier name" name="name" required defaultValue={supplier.name} />
+                <Field label="Email" name="email" type="email" defaultValue={supplier.email ?? ""} />
+                <Field label="Phone" name="phone" defaultValue={supplier.phone ?? ""} />
+                <Field label="Lead time (days)" name="leadTimeDays" type="number" defaultValue={String(supplier.leadTimeDays)} />
+                <Field label="Minimum order" name="minimumOrder" type="number" defaultValue={supplier.minimumOrder != null ? String(supplier.minimumOrder) : ""} />
+                <Field label="Payment terms" name="paymentTerms" defaultValue={supplier.paymentTerms ?? ""} />
+              </div>
+              <div style={{ marginTop: "16px" }}>
+                <label style={fieldLabelStyle}>
+                  <span>Notes</span>
+                  <textarea name="notes" rows={3} style={textareaStyle} defaultValue={supplier.notes ?? ""} />
+                </label>
+              </div>
+              <div style={{ display: "flex", gap: "12px", marginTop: "20px", alignItems: "center" }}>
+                <PrimaryButton type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? "Saving..." : "Save changes"}
+                </PrimaryButton>
+                <Form method="post" style={{ display: "inline" }}>
+                  <input type="hidden" name="intent" value="archive" />
+                  <DangerButton type="submit" disabled={isSubmitting}>
+                    Archive supplier
+                  </DangerButton>
+                </Form>
+              </div>
+            </Form>
+          </div>
         </div>
-      </s-section>
 
-      <s-section heading={`Mapped SKUs (${mappings.length})`}>
-        {mappings.length === 0 ? (
-          <s-paragraph>
-            No SKUs mapped to this supplier yet. Go to{" "}
-            <Link to="/app/mappings" style={linkStyle}>SKU mappings</Link> to assign products.
-          </s-paragraph>
-        ) : (
-          <div style={tableWrapStyle}>
-            <table style={tableStyle}>
-              <thead>
-                <tr>
-                  <th style={thStyle}>Product</th>
-                  <th style={thStyle}>SKU</th>
-                  <th style={thStyle}>Supplier SKU</th>
-                  <th style={thStyle}>Cost</th>
-                  <th style={thStyle}>Lead time</th>
-                  <th style={thStyle}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {mappings.map((m) => (
-                  <tr key={m.id}>
-                    <td style={tdStyle}>
-                      <span style={{ fontWeight: 600, color: "#202223" }}>{m.productTitle}</span>
-                      <div style={mutedStyle}>{m.variantTitle}</div>
-                    </td>
-                    <td style={tdStyle}>{m.sku || "-"}</td>
-                    <td style={tdStyle}>{m.supplierSku || "-"}</td>
-                    <td style={tdStyle}>{m.supplierCost != null ? `$${m.supplierCost.toFixed(2)}` : "-"}</td>
-                    <td style={tdStyle}>{m.supplierLeadTimeDays != null ? `${m.supplierLeadTimeDays}d` : "Default"}</td>
-                    <td style={tdStyle}>
-                      <Form method="post" style={{ display: "inline" }}>
-                        <input type="hidden" name="intent" value="remove-mapping" />
-                        <input type="hidden" name="mappingId" value={m.id} />
-                        <button type="submit" style={smallBtnStyle}>Remove</button>
-                      </Form>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        {/* Mapped SKUs card */}
+        <div style={sectionCardStyle}>
+          <h2 style={cardHeaderStyle}>Mapped SKUs ({mappings.length})</h2>
+          <div style={cardBodyStyle}>
+            {mappings.length === 0 ? (
+              <p style={{ margin: 0, color: "#6b7280", fontSize: "14px" }}>
+                No SKUs mapped to this supplier yet. Go to{" "}
+                <Link to="/app/mappings" style={linkStyle}>SKU mappings</Link> to assign products.
+              </p>
+            ) : (
+              <div style={tableWrapStyle}>
+                <table style={tableStyle}>
+                  <thead>
+                    <tr>
+                      <th style={thStyle}>Product</th>
+                      <th style={thStyle}>SKU</th>
+                      <th style={thStyle}>Supplier SKU</th>
+                      <th style={{ ...thStyle, textAlign: "right" }}>Cost</th>
+                      <th style={{ ...thStyle, textAlign: "right" }}>Lead time</th>
+                      <th style={{ ...thStyle, textAlign: "center" }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {mappings.map((m) => (
+                      <tr key={m.id}>
+                        <td style={tdStyle}>
+                          <div style={{ fontWeight: 650, color: "#111827" }}>{m.productTitle}</div>
+                          <div style={mutedStyle}>{m.variantTitle}</div>
+                        </td>
+                        <td style={tdStyle}>{m.sku || "-"}</td>
+                        <td style={tdStyle}>{m.supplierSku || "-"}</td>
+                        <td style={{ ...tdStyle, textAlign: "right" }}>
+                          {m.supplierCost != null ? `$${m.supplierCost.toFixed(2)}` : "-"}
+                        </td>
+                        <td style={{ ...tdStyle, textAlign: "right" }}>
+                          {m.supplierLeadTimeDays != null ? `${m.supplierLeadTimeDays}d` : "Default"}
+                        </td>
+                        <td style={{ ...tdStyle, textAlign: "center" }}>
+                          <Form method="post" style={{ display: "inline" }}>
+                            <input type="hidden" name="intent" value="remove-mapping" />
+                            <input type="hidden" name="mappingId" value={m.id} />
+                            <SecondaryButton type="submit" style={{ height: "32px", padding: "0 12px", fontSize: "13px" }}>
+                              Remove
+                            </SecondaryButton>
+                          </Form>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
-        )}
-      </s-section>
+        </div>
 
-      <s-section heading={`Purchase orders (${purchaseOrders.length})`}>
-        {purchaseOrders.length === 0 ? (
-          <s-paragraph>No purchase orders for this supplier yet.</s-paragraph>
-        ) : (
-          <div style={tableWrapStyle}>
-            <table style={tableStyle}>
-              <thead>
-                <tr>
-                  <th style={thStyle}>Reference</th>
-                  <th style={thStyle}>Status</th>
-                  <th style={thStyle}>Lines</th>
-                  <th style={thStyle}>Expected</th>
-                </tr>
-              </thead>
-              <tbody>
-                {purchaseOrders.map((po) => (
-                  <tr key={po.id}>
-                    <td style={tdStyle}>
-                      <Link to={`/app/purchase-orders/${po.id}`} style={linkStyle}>{po.reference}</Link>
-                    </td>
-                    <td style={tdStyle}>{po.status.replaceAll("_", " ")}</td>
-                    <td style={tdStyle}>{po.lineCount}</td>
-                    <td style={tdStyle}>{po.expectedArrival ? formatDate(po.expectedArrival) : "-"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        {/* Recent Purchase Orders card */}
+        <div style={sectionCardStyle}>
+          <h2 style={cardHeaderStyle}>Recent Purchase Orders ({purchaseOrders.length})</h2>
+          <div style={cardBodyStyle}>
+            {purchaseOrders.length === 0 ? (
+              <p style={{ margin: 0, color: "#6b7280", fontSize: "14px" }}>No purchase orders created for this supplier yet.</p>
+            ) : (
+              <div style={tableWrapStyle}>
+                <table style={tableStyle}>
+                  <thead>
+                    <tr>
+                      <th style={thStyle}>Reference</th>
+                      <th style={thStyle}>Status</th>
+                      <th style={{ ...thStyle, textAlign: "right" }}>Lines</th>
+                      <th style={thStyle}>Expected Arrival</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {purchaseOrders.map((po) => (
+                      <tr key={po.id}>
+                        <td style={tdStyle}>
+                          <Link to={`/app/purchase-orders/${po.id}`} style={linkStyle}>{po.reference}</Link>
+                        </td>
+                        <td style={tdStyle}>
+                          <span style={statusBadgeStyle(po.status)}>{po.status.replaceAll("_", " ")}</span>
+                        </td>
+                        <td style={{ ...tdStyle, textAlign: "right" }}>{po.lineCount}</td>
+                        <td style={tdStyle}>{po.expectedArrival ? formatDate(po.expectedArrival) : "-"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
-        )}
-      </s-section>
-    </s-page>
+        </div>
+      </div>
+    </>
   );
 }
 
 function Field({
-  label, name, type = "text", required = false, defaultValue, step,
+  label,
+  name,
+  type = "text",
+  required = false,
+  defaultValue,
+  step,
 }: {
-  label: string; name: string; type?: string; required?: boolean; defaultValue?: string; step?: string;
+  label: string;
+  name: string;
+  type?: string;
+  required?: boolean;
+  defaultValue?: string;
+  step?: string;
 }) {
   return (
     <label style={fieldLabelStyle}>
-      <span>{label} {required ? <span style={{ color: "#d72c0d" }}>*</span> : null}</span>
+      <span>
+        {label} {required ? <span style={{ color: "#dc2626" }}>*</span> : null}
+      </span>
       <input name={name} type={type} required={required} defaultValue={defaultValue} step={step} style={inputStyle} />
     </label>
   );
@@ -274,25 +318,73 @@ function formatDate(value: string) {
   return new Intl.DateTimeFormat("en", { dateStyle: "medium" }).format(new Date(value));
 }
 
+function statusBadgeStyle(status: string) {
+  const colors: Record<string, { bg: string; color: string }> = {
+    DRAFT: { bg: "#f3f4f6", color: "#374151" },
+    SENT: { bg: "#fef3c7", color: "#92400e" },
+    CONFIRMED: { bg: "#dbeafe", color: "#1e40af" },
+    PARTIALLY_RECEIVED: { bg: "#ffedd5", color: "#c2410c" },
+    RECEIVED: { bg: "#dcfce7", color: "#166534" },
+    CANCELLED: { bg: "#fee2e2", color: "#991b1b" },
+  };
+  const c = colors[status] ?? { bg: "#f3f4f6", color: "#374151" };
+  return {
+    background: c.bg,
+    color: c.color,
+    padding: "3px 8px",
+    borderRadius: "6px",
+    fontSize: "12px",
+    fontWeight: 600,
+    display: "inline-block",
+    whiteSpace: "nowrap",
+  } as const;
+}
+
 // Styles
-const formCardStyle = { background: "#ffffff", border: "1px solid #e1e3e5", borderRadius: "10px", padding: "20px 24px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" } as const;
+const sectionCardStyle = {
+  background: "#ffffff",
+  border: "1px solid #e5e7eb",
+  borderRadius: "16px",
+  boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03)",
+  marginBottom: "24px",
+  overflow: "hidden",
+  width: "100%",
+  boxSizing: "border-box",
+} as const;
+const cardHeaderStyle = {
+  margin: 0,
+  padding: "16px 24px",
+  fontSize: "16px",
+  fontWeight: 700,
+  color: "#111827",
+  borderBottom: "1px solid #f3f4f6",
+  backgroundColor: "#f9fafb",
+} as const;
+const cardBodyStyle = { padding: "24px" } as const;
 const formGridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "16px" } as const;
 const fieldLabelStyle = { display: "flex", flexDirection: "column", gap: "6px", color: "#202223", fontSize: "13px", fontWeight: 600 } as const;
-const inputStyle = { height: "40px", border: "1px solid #8c9196", borderRadius: "8px", padding: "0 12px", fontSize: "14px", width: "100%", backgroundColor: "#ffffff", outline: "none", boxSizing: "border-box" } as const;
-const textareaStyle = { ...inputStyle, height: "auto", minHeight: "80px", padding: "10px 12px", resize: "vertical" } as const;
-const buttonStyle = { height: "40px", border: "0", borderRadius: "8px", padding: "0 20px", background: "#008060", color: "#fff", fontWeight: 650, fontSize: "14px", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", boxShadow: "0 1px 2px rgba(0,0,0,0.12)" } as const;
-const smallBtnStyle = { height: "32px", border: "1px solid #c9cccf", borderRadius: "6px", padding: "0 12px", background: "#fff", color: "#202223", cursor: "pointer", fontSize: "13px", fontWeight: 600, display: "inline-flex", alignItems: "center" } as const;
-const dangerBtnStyle = { height: "40px", border: "1px solid #d72c0d", borderRadius: "8px", padding: "0 16px", background: "#fff", color: "#d72c0d", fontWeight: 650, fontSize: "14px", cursor: "pointer", display: "inline-flex", alignItems: "center" } as const;
+const inputStyle = {
+  height: "42px",
+  minHeight: "42px",
+  boxSizing: "border-box",
+  border: "1px solid #d1d5db",
+  borderRadius: "8px",
+  padding: "0 14px",
+  fontSize: "14px",
+  width: "100%",
+  outline: "none",
+  backgroundColor: "#ffffff",
+  color: "#111827",
+} as const;
+const textareaStyle = { ...inputStyle, height: "auto", minHeight: "80px", padding: "10px 14px", resize: "vertical" } as const;
 const linkStyle = { color: "#2c6ecb", textDecoration: "none", fontWeight: 600 } as const;
-const mutedStyle = { color: "#6d7175", fontSize: "13px", marginTop: "4px" } as const;
-const tableWrapStyle = { overflowX: "auto" } as const;
-const tableStyle = { width: "100%", borderCollapse: "collapse", fontSize: "14px" } as const;
-const thStyle = { textAlign: "left", borderBottom: "1px solid #dfe3e8", padding: "12px 10px", whiteSpace: "nowrap", color: "#5c5f62", fontSize: "13px", fontWeight: 650 } as const;
-const tdStyle = { borderBottom: "1px solid #f1f2f3", padding: "12px 10px", verticalAlign: "middle" } as const;
+const mutedStyle = { color: "#6b7280", fontSize: "12px", marginTop: "3px" } as const;
+const tableWrapStyle = { overflowX: "auto", border: "1px solid #e5e7eb", borderRadius: "12px", background: "#ffffff", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" } as const;
+const tableStyle = { width: "100%", borderCollapse: "separate", borderSpacing: "0", fontSize: "14px" } as const;
+const thStyle = { textAlign: "left", borderBottom: "1px solid #e5e7eb", padding: "14px 12px", whiteSpace: "nowrap", backgroundColor: "#f9fafb", color: "#4b5563", fontSize: "13px", fontWeight: 650 } as const;
+const tdStyle = { borderBottom: "1px solid #f3f4f6", padding: "14px 12px", verticalAlign: "middle", color: "#111827" } as const;
 const noticeStyle = (ok: boolean) => ({ border: `1px solid ${ok ? "#95c9b4" : "#e0b3b2"}`, background: ok ? "#effaf5" : "#fff4f4", borderRadius: "8px", marginTop: "12px", marginBottom: "12px", padding: "12px 16px", color: ok ? "#0f5132" : "#8a1f11", fontWeight: 550 }) as const;
 
-// Shopify requires ErrorBoundary on every route that calls authenticate.admin
-// so that thrown 200/401 responses (App Bridge re-auth) are handled correctly.
 export function ErrorBoundary() {
   const error = useRouteError();
   const boundaryError = boundary.error(error);
@@ -323,5 +415,3 @@ export function ErrorBoundary() {
 export const headers: HeadersFunction = (headersArgs) => {
   return boundary.headers(headersArgs);
 };
-
-

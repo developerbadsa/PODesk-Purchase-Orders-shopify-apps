@@ -247,249 +247,257 @@ export default function SettingsPage() {
   );
 
   return (
-    <s-page heading="Settings">
-      {actionData?.message ? (
-        <div style={noticeStyle(actionData.ok)}>{actionData.message}</div>
-      ) : null}
+    <>
+      <ui-title-bar title="Settings" />
+      <div style={{ padding: "24px 32px", maxWidth: "1600px", margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
+        {actionData?.message ? (
+          <div style={noticeStyle(actionData.ok)}>{actionData.message}</div>
+        ) : null}
 
-      <Form method="post">
-        <input type="hidden" name="intent" value="save-settings" />
+        <Form method="post">
+          <input type="hidden" name="intent" value="save-settings" />
 
-        <s-section heading="Business identity">
-          <div style={formCardStyle}>
-            <div style={formGridStyle}>
-              <Field label="Company name" name="companyName" defaultValue={settings?.companyName ?? ""} placeholder="e.g. Acme Retail Ltd." />
-              <Field label="Contact email" name="contactEmail" type="email" defaultValue={settings?.contactEmail ?? ""} placeholder="purchasing@acmeretail.com" />
-              <Field label="Phone" name="phone" defaultValue={settings?.phone ?? ""} placeholder="+1 (555) 019-2834" />
-              <Field label="Address line 1" name="addressLine1" defaultValue={settings?.addressLine1 ?? ""} placeholder="123 Commerce Way" />
-              <Field label="Address line 2" name="addressLine2" defaultValue={settings?.addressLine2 ?? ""} placeholder="Suite 400" />
-              <Field label="City" name="city" defaultValue={settings?.city ?? ""} placeholder="New York" />
-              <Field label="State / Region" name="region" defaultValue={settings?.region ?? ""} placeholder="NY" />
-              <Field label="Postal code" name="postalCode" defaultValue={settings?.postalCode ?? ""} placeholder="10001" />
-              <Field label="Country" name="country" defaultValue={settings?.country ?? ""} placeholder="United States" />
+          <div style={sectionCardStyle}>
+            <h2 style={cardHeaderStyle}>Business Identity</h2>
+            <div style={cardBodyStyle}>
+              <div style={formGridStyle}>
+                <Field label="Company name" name="companyName" defaultValue={settings?.companyName ?? ""} placeholder="e.g. Acme Retail Ltd." />
+                <Field label="Contact email" name="contactEmail" type="email" defaultValue={settings?.contactEmail ?? ""} placeholder="purchasing@acmeretail.com" />
+                <Field label="Phone" name="phone" defaultValue={settings?.phone ?? ""} placeholder="+1 (555) 019-2834" />
+                <Field label="Address line 1" name="addressLine1" defaultValue={settings?.addressLine1 ?? ""} placeholder="123 Commerce Way" />
+                <Field label="Address line 2" name="addressLine2" defaultValue={settings?.addressLine2 ?? ""} placeholder="Suite 400" />
+                <Field label="City" name="city" defaultValue={settings?.city ?? ""} placeholder="New York" />
+                <Field label="State / Region" name="region" defaultValue={settings?.region ?? ""} placeholder="NY" />
+                <Field label="Postal code" name="postalCode" defaultValue={settings?.postalCode ?? ""} placeholder="10001" />
+                <Field label="Country" name="country" defaultValue={settings?.country ?? ""} placeholder="United States" />
+              </div>
             </div>
           </div>
-        </s-section>
 
-        <s-section heading="Purchase order defaults">
-          <div style={formCardStyle}>
-            <div style={formGridStyle}>
-              <Field
-                label="PO reference prefix"
-                name="poNumberPrefix"
-                defaultValue={settings?.poNumberPrefix ?? "PO"}
-                placeholder="PO"
-              />
-              <Field
-                label="Default payment terms"
-                name="defaultPaymentTerms"
-                defaultValue={settings?.defaultPaymentTerms ?? ""}
-                placeholder="e.g. Net 30"
-              />
-            </div>
-            <div style={{ marginTop: "16px" }}>
-              <label style={fieldLabelStyle}>
-                <span>Default PO notes</span>
-                <textarea
-                  name="defaultPoNotes"
-                  rows={3}
-                  placeholder="Standard notes printed on all purchase orders..."
-                  style={textareaStyle}
-                  defaultValue={settings?.defaultPoNotes ?? ""}
+          <div style={sectionCardStyle}>
+            <h2 style={cardHeaderStyle}>Purchase Order Defaults</h2>
+            <div style={cardBodyStyle}>
+              <div style={formGridStyle}>
+                <Field
+                  label="PO reference prefix"
+                  name="poNumberPrefix"
+                  defaultValue={settings?.poNumberPrefix ?? "PO"}
+                  placeholder="PO"
                 />
-              </label>
-            </div>
-          </div>
-        </s-section>
-
-        <s-section heading="Supplier email automation">
-          <div style={formCardStyle}>
-            <div style={sectionIntroStyle}>
-              <div style={sectionTitleStyle}>Email sending workflow</div>
-              <p style={sectionTextStyle}>
-                Choose how PODesk should handle supplier emails after a purchase
-                order is reviewed. PODesk will not send supplier emails just
-                because a draft PO was created.
-              </p>
-            </div>
-
-            <div style={radioGridStyle}>
-              <label htmlFor="supplier-email-review" style={radioCardStyle}>
-                <input
-                  id="supplier-email-review"
-                  type="radio"
-                  name="supplierEmailAutomationMode"
-                  value={SUPPLIER_EMAIL_AUTOMATION_MODES[0]}
-                  aria-label="Review before sending supplier emails"
-                  checked={automationMode === "REVIEW_BEFORE_SEND"}
-                  onChange={() => setAutomationMode("REVIEW_BEFORE_SEND")}
-                  style={radioInputStyle}
+                <Field
+                  label="Default payment terms"
+                  name="defaultPaymentTerms"
+                  defaultValue={settings?.defaultPaymentTerms ?? ""}
+                  placeholder="e.g. Net 30"
                 />
-                <span>
-                  <span style={radioTitleStyle}>Review before sending</span>
-                  <span style={radioTextStyle}>
-                    PODesk prepares the email draft. The merchant opens the
-                    email, reviews it, sends it, then marks the PO as sent.
-                  </span>
-                </span>
-              </label>
-
-              <label htmlFor="supplier-email-auto-send" style={radioCardStyle}>
-                <input
-                  id="supplier-email-auto-send"
-                  type="radio"
-                  name="supplierEmailAutomationMode"
-                  value={SUPPLIER_EMAIL_AUTOMATION_MODES[1]}
-                  aria-label="Auto-send supplier emails after review"
-                  checked={automationMode === "AUTO_SEND_AFTER_REVIEW"}
-                  onChange={() => setAutomationMode("AUTO_SEND_AFTER_REVIEW")}
-                  style={radioInputStyle}
-                />
-                <span>
-                  <span style={radioTitleStyle}>Auto-send after review</span>
-                  <span style={radioTextStyle}>
-                    The merchant still reviews the PO first. After confirmation,
-                    PODesk can send the supplier email automatically when email
-                    delivery is connected.
-                  </span>
-                </span>
-              </label>
-            </div>
-
-            {automationMode === "AUTO_SEND_AFTER_REVIEW" && (
-              <div style={{ marginTop: "24px", paddingTop: "24px", borderTop: "1px solid #dfe3e8" }}>
-                <div style={{ ...sectionTitleStyle, fontSize: "14px", marginBottom: "16px" }}>Email Delivery Configuration</div>
-              
-              <div style={{ marginBottom: "20px" }}>
+              </div>
+              <div style={{ marginTop: "16px" }}>
                 <label style={fieldLabelStyle}>
-                  Email Provider
-                  <select
-                    name="emailProvider"
-                    value={provider}
-                    onChange={(e) => setProvider(parseEmailProvider(e.target.value))}
-                    style={inputStyle}
-                  >
-                    <option value="SMTP">Custom SMTP (Easy - Gmail, Outlook, cPanel)</option>
-                    <option value="RESEND">Resend.com (Advanced)</option>
-                  </select>
+                  <span>Default PO notes</span>
+                  <textarea
+                    name="defaultPoNotes"
+                    rows={3}
+                    placeholder="Standard notes printed on all purchase orders..."
+                    style={textareaStyle}
+                    defaultValue={settings?.defaultPoNotes ?? ""}
+                  />
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div style={sectionCardStyle}>
+            <h2 style={cardHeaderStyle}>Supplier Email Automation</h2>
+            <div style={cardBodyStyle}>
+              <div style={sectionIntroStyle}>
+                <div style={sectionTitleStyle}>Email sending workflow</div>
+                <p style={sectionTextStyle}>
+                  Choose how PODesk should handle supplier emails after a purchase
+                  order is reviewed. PODesk will not send supplier emails just
+                  because a draft PO was created.
+                </p>
+              </div>
+
+              <div style={radioGridStyle}>
+                <label htmlFor="supplier-email-review" style={radioCardStyle}>
+                  <input
+                    id="supplier-email-review"
+                    type="radio"
+                    name="supplierEmailAutomationMode"
+                    value={SUPPLIER_EMAIL_AUTOMATION_MODES[0]}
+                    aria-label="Review before sending supplier emails"
+                    checked={automationMode === "REVIEW_BEFORE_SEND"}
+                    onChange={() => setAutomationMode("REVIEW_BEFORE_SEND")}
+                    style={radioInputStyle}
+                  />
+                  <span>
+                    <span style={radioTitleStyle}>Review before sending</span>
+                    <span style={radioTextStyle}>
+                      PODesk prepares the email draft. The merchant opens the
+                      email, reviews it, sends it, then marks the PO as sent.
+                    </span>
+                  </span>
+                </label>
+
+                <label htmlFor="supplier-email-auto-send" style={radioCardStyle}>
+                  <input
+                    id="supplier-email-auto-send"
+                    type="radio"
+                    name="supplierEmailAutomationMode"
+                    value={SUPPLIER_EMAIL_AUTOMATION_MODES[1]}
+                    aria-label="Auto-send supplier emails after review"
+                    checked={automationMode === "AUTO_SEND_AFTER_REVIEW"}
+                    onChange={() => setAutomationMode("AUTO_SEND_AFTER_REVIEW")}
+                    style={radioInputStyle}
+                  />
+                  <span>
+                    <span style={radioTitleStyle}>Auto-send after review</span>
+                    <span style={radioTextStyle}>
+                      The merchant still reviews the PO first. After confirmation,
+                      PODesk can send the supplier email automatically when email
+                      delivery is connected.
+                    </span>
+                  </span>
                 </label>
               </div>
 
-              {provider === "SMTP" ? (
-                <>
-                  <p style={{ ...sectionTextStyle, marginBottom: "16px" }}>
-                    Enter your custom SMTP credentials to send emails directly from your own email account. 
-                    If using Gmail, use an <a href="https://support.google.com/accounts/answer/185833?hl=en" target="_blank" rel="noreferrer" style={{color: "#005bd3", textDecoration: "none"}}>App Password</a>.
-                  </p>
-                  <div style={formGridStyle}>
-                    <Field
-                      label="SMTP Host (e.g. smtp.gmail.com)"
-                      name="smtpHost"
-                      defaultValue={settings?.smtpHost ?? ""}
-                      placeholder="smtp.gmail.com"
-                    />
-                    <Field
-                      label="SMTP Port (e.g. 465 or 587)"
-                      name="smtpPort"
-                      type="number"
-                      defaultValue={settings?.smtpPort?.toString() ?? ""}
-                      placeholder="465"
-                    />
-                    <Field
-                      label="SMTP Username (Your Email)"
-                      name="smtpUser"
-                      type="email"
-                      defaultValue={settings?.smtpUser ?? ""}
-                      placeholder="you@gmail.com"
-                    />
-                    <Field
-                      label="SMTP Password / App Password"
-                      name="smtpPassword"
-                      type="password"
-                      defaultValue=""
-                      placeholder={hasSmtpPassword ? "Saved password configured" : "Enter password or app password"}
-                    />
-                  </div>
-                </>
-              ) : (
-                <>
-                  <p style={{ ...sectionTextStyle, marginBottom: "16px" }}>
-                    To enable auto-sending, you must provide your own API key from <a href="https://resend.com" target="_blank" rel="noreferrer" style={{color: "#005bd3", textDecoration: "none"}}>Resend.com</a> and a verified sender email address.
-                  </p>
-                  <div style={formGridStyle}>
-                    <Field
-                      label="Resend API Key"
-                      name="resendApiKey"
-                      type="password"
-                      defaultValue=""
-                      placeholder={hasResendApiKey ? "Saved API key configured" : "re_..."}
-                    />
-                    <Field
-                      label="Verified Sender Email"
-                      name="resendFromEmail"
-                      type="email"
-                      defaultValue={settings?.resendFromEmail ?? ""}
-                      placeholder="orders@yourdomain.com"
-                    />
-                  </div>
-                </>
+              {automationMode === "AUTO_SEND_AFTER_REVIEW" && (
+                <div style={{ marginTop: "24px", paddingTop: "24px", borderTop: "1px solid #dfe3e8" }}>
+                  <div style={{ ...sectionTitleStyle, fontSize: "14px", marginBottom: "16px" }}>Email Delivery Configuration</div>
+                
+                <div style={{ marginBottom: "20px" }}>
+                  <label style={fieldLabelStyle}>
+                    Email Provider
+                    <select
+                      name="emailProvider"
+                      value={provider}
+                      onChange={(e) => setProvider(parseEmailProvider(e.target.value))}
+                      style={inputStyle}
+                    >
+                      <option value="SMTP">Custom SMTP (Easy - Gmail, Outlook, cPanel)</option>
+                      <option value="RESEND">Resend.com (Advanced)</option>
+                    </select>
+                  </label>
+                </div>
+
+                {provider === "SMTP" ? (
+                  <>
+                    <p style={{ ...sectionTextStyle, marginBottom: "16px" }}>
+                      Enter your custom SMTP credentials to send emails directly from your own email account. 
+                      If using Gmail, use an <a href="https://support.google.com/accounts/answer/185833?hl=en" target="_blank" rel="noreferrer" style={{color: "#005bd3", textDecoration: "none"}}>App Password</a>.
+                    </p>
+                    <div style={formGridStyle}>
+                      <Field
+                        label="SMTP Host (e.g. smtp.gmail.com)"
+                        name="smtpHost"
+                        defaultValue={settings?.smtpHost ?? ""}
+                        placeholder="smtp.gmail.com"
+                      />
+                      <Field
+                        label="SMTP Port (e.g. 465 or 587)"
+                        name="smtpPort"
+                        type="number"
+                        defaultValue={settings?.smtpPort?.toString() ?? ""}
+                        placeholder="465"
+                      />
+                      <Field
+                        label="SMTP Username (Your Email)"
+                        name="smtpUser"
+                        type="email"
+                        defaultValue={settings?.smtpUser ?? ""}
+                        placeholder="you@gmail.com"
+                      />
+                      <Field
+                        label="SMTP Password / App Password"
+                        name="smtpPassword"
+                        type="password"
+                        defaultValue=""
+                        placeholder={hasSmtpPassword ? "Saved password configured" : "Enter password or app password"}
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p style={{ ...sectionTextStyle, marginBottom: "16px" }}>
+                      To enable auto-sending, you must provide your own API key from <a href="https://resend.com" target="_blank" rel="noreferrer" style={{color: "#005bd3", textDecoration: "none"}}>Resend.com</a> and a verified sender email address.
+                    </p>
+                    <div style={formGridStyle}>
+                      <Field
+                        label="Resend API Key"
+                        name="resendApiKey"
+                        type="password"
+                        defaultValue=""
+                        placeholder={hasResendApiKey ? "Saved API key configured" : "re_..."}
+                      />
+                      <Field
+                        label="Verified Sender Email"
+                        name="resendFromEmail"
+                        type="email"
+                        defaultValue={settings?.resendFromEmail ?? ""}
+                        placeholder="orders@yourdomain.com"
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
               )}
             </div>
-            )}
           </div>
-        </s-section>
 
-        <s-section heading="Automations">
-          <div style={formCardStyle}>
-            <div style={sectionTitleStyle}>Automated Reminders & Follow-ups</div>
-            <p style={sectionTextStyle}>
-              Configure how many days to wait before sending automatic email reminders.
-              Leave blank or set to 0 to disable an automation.
-            </p>
+          <div style={sectionCardStyle}>
+            <h2 style={cardHeaderStyle}>Automations</h2>
+            <div style={cardBodyStyle}>
+              <div style={sectionTitleStyle}>Automated Reminders & Follow-ups</div>
+              <p style={sectionTextStyle}>
+                Configure how many days to wait before sending automatic email reminders.
+                Leave blank or set to 0 to disable an automation.
+              </p>
 
-            <div style={formGridStyle}>
-              <Field
-                label="Draft PO Reminder (Days)"
-                name="remindDraftPoDays"
-                type="number"
-                defaultValue={settings?.remindDraftPoDays?.toString() ?? ""}
-                placeholder="e.g. 3"
-              />
-              <Field
-                label="Supplier Follow-up (Days after sending)"
-                name="followUpSentPoDays"
-                type="number"
-                defaultValue={settings?.followUpSentPoDays?.toString() ?? ""}
-                placeholder="e.g. 5"
-              />
-            </div>
-            <p style={{ ...sectionTextStyle, fontSize: "12px", marginTop: "12px" }}>
-              Note: Follow-up emails will only be sent if &quot;Auto-send after review&quot; is selected and Email Delivery is configured.
-            </p>
-          </div>
-        </s-section>
-
-        <s-section heading="Localization">
-          <div style={formCardStyle}>
-            <div style={formGridStyle}>
-              <Field
-                label="Currency code (e.g. USD, CAD, EUR, GBP)"
-                name="currencyCode"
-                defaultValue={settings?.currencyCode ?? "USD"}
-                required
-                placeholder="USD"
-              />
+              <div style={formGridStyle}>
+                <Field
+                  label="Draft PO Reminder (Days)"
+                  name="remindDraftPoDays"
+                  type="number"
+                  defaultValue={settings?.remindDraftPoDays?.toString() ?? ""}
+                  placeholder="e.g. 3"
+                />
+                <Field
+                  label="Supplier Follow-up (Days after sending)"
+                  name="followUpSentPoDays"
+                  type="number"
+                  defaultValue={settings?.followUpSentPoDays?.toString() ?? ""}
+                  placeholder="e.g. 5"
+                />
+              </div>
+              <p style={{ ...sectionTextStyle, fontSize: "12px", marginTop: "12px" }}>
+                Note: Follow-up emails will only be sent if &quot;Auto-send after review&quot; is selected and Email Delivery is configured.
+              </p>
             </div>
           </div>
-        </s-section>
 
-        <div style={{ marginTop: "20px", marginBottom: "32px" }}>
-          <button type="submit" disabled={isSubmitting} style={buttonStyle}>
-            {isSubmitting ? "Saving settings..." : "Save settings"}
-          </button>
-        </div>
-      </Form>
-    </s-page>
+          <div style={sectionCardStyle}>
+            <h2 style={cardHeaderStyle}>Localization</h2>
+            <div style={cardBodyStyle}>
+              <div style={formGridStyle}>
+                <Field
+                  label="Currency code (e.g. USD, CAD, EUR, GBP)"
+                  name="currencyCode"
+                  defaultValue={settings?.currencyCode ?? "USD"}
+                  required
+                  placeholder="USD"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div style={{ marginTop: "20px", marginBottom: "32px" }}>
+            <button type="submit" disabled={isSubmitting} style={buttonStyle}>
+              {isSubmitting ? "Saving settings..." : "Save settings"}
+            </button>
+          </div>
+        </Form>
+      </div>
+    </>
   );
 }
 
@@ -635,6 +643,27 @@ const buttonStyle = {
   alignItems: "center",
   justifyContent: "center",
 } as const;
+const sectionCardStyle = {
+  background: "#ffffff",
+  border: "1px solid #e5e7eb",
+  borderRadius: "16px",
+  boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03)",
+  marginBottom: "24px",
+  overflow: "hidden",
+  width: "100%",
+  boxSizing: "border-box",
+} as const;
+const cardHeaderStyle = {
+  margin: 0,
+  padding: "16px 24px",
+  fontSize: "16px",
+  fontWeight: 700,
+  color: "#111827",
+  borderBottom: "1px solid #f3f4f6",
+  backgroundColor: "#f9fafb",
+} as const;
+const cardBodyStyle = { padding: "24px" } as const;
+
 const noticeStyle = (ok: boolean) =>
   ({
     border: `1px solid ${ok ? "#95c9b4" : "#e0b3b2"}`,

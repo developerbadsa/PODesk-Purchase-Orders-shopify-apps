@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { isValidElement, useEffect } from "react";
 import type { HeadersFunction, LoaderFunctionArgs } from "react-router";
 import { Link, useLoaderData, useRouteError } from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
@@ -35,7 +35,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
 
   const [variants, allReceiptLinesForPo] = await Promise.all([
     // Fetch all variants and their parent products in one go.
-    prisma.productVariant.findMany({
+    prisma.shopifyVariant.findMany({
       where: { id: { in: variantIds } },
       include: { product: true },
     }),

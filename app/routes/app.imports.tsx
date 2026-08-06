@@ -269,288 +269,295 @@ export default function ImportsPage() {
   const activeJob = actionData?.job;
 
   return (
-    <s-page heading="Stocky import">
-      {actionData?.message ? (
-        <div style={noticeStyle(actionData.ok)}>{actionData.message}</div>
-      ) : null}
+    <>
+      <ui-title-bar title="Stocky Import" />
+      <div style={{ padding: "24px 32px", maxWidth: "1600px", margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
+        {actionData?.message ? (
+          <div style={noticeStyle(actionData.ok)}>{actionData.message}</div>
+        ) : null}
 
-      <s-section heading="Migration metrics">
-        <div style={metricGridStyle}>
-          <Metric label="Suppliers" value={data.supplierCount} />
-          <Metric label="SKU mappings" value={data.mappingCount} />
-          <Metric label="Purchase orders" value={data.purchaseOrderCount} />
-          <Metric label="Import jobs" value={data.importJobs.length} />
-        </div>
-      </s-section>
-
-      {/* SAMPLE CSV DOWNLOAD BANNER */}
-      <s-section heading="Import Template & Data Safety">
-        <div style={sampleBannerStyle}>
-          <div>
-            <div style={{ fontWeight: 650, fontSize: "14px", marginBottom: "4px" }}>
-              Download Sample CSV Template
+        <div style={sectionCardStyle}>
+          <h2 style={cardHeaderStyle}>Migration Metrics</h2>
+          <div style={cardBodyStyle}>
+            <div style={metricGridStyle}>
+              <Metric label="Suppliers" value={data.supplierCount} />
+              <Metric label="SKU mappings" value={data.mappingCount} />
+              <Metric label="Purchase orders" value={data.purchaseOrderCount} />
+              <Metric label="Import jobs" value={data.importJobs.length} />
             </div>
-            <div style={{ color: "#5c5f62", fontSize: "13px" }}>
-              Need a starting template? Download our sample CSV file with standard column headers for supplier names, SKUs, unit costs, and lead times. All CSV uploads are previewed safely before creating any records.
-            </div>
-          </div>
-          <a
-            href="/app/imports/sample-csv"
-            download="podesk-supplier-sku-import-sample.csv"
-            style={secondaryBtnStyle}
-          >
-            Download sample CSV
-          </a>
-        </div>
-      </s-section>
-
-      {/* STEP 1: UPLOAD / PASTE FORM */}
-      <s-section heading="Upload supplier SKU mappings CSV">
-        <p style={bodyStyle}>
-          Upload or paste a CSV export from Stocky, spreadsheets, or supplier lists to create suppliers and SKU mappings automatically.
-        </p>
-
-        <div style={{ marginBottom: "16px", padding: "12px", background: "#f4f6f8", borderRadius: "6px", border: "1px solid #dfe3e8" }}>
-          <div style={{ fontWeight: 650, fontSize: "13px", marginBottom: "6px" }}>Supported CSV Columns</div>
-          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", fontSize: "12px", color: "#5c5f62" }}>
-            <div><strong>sku*</strong> (Shopify SKU)</div>
-            <div><strong>supplierName*</strong> (Company name)</div>
-            <div><strong>supplierSku</strong> (Part #)</div>
-            <div><strong>supplierCost</strong> (Unit cost)</div>
-            <div><strong>leadTimeDays</strong> (Lead time)</div>
-            <div><strong>paymentTerms</strong> (Terms)</div>
-            <div><strong>minimumOrder</strong> (Min Qty)</div>
-            <div><strong>notes</strong> (Internal notes)</div>
           </div>
         </div>
 
-        <Form method="post" encType="multipart/form-data">
-          <input type="hidden" name="intent" value="preview-csv" />
-
-          <div style={typeBadgeStyle}>
-            Type: <strong>Supplier SKU Mappings</strong>
-          </div>
-
-          <div style={{ marginBottom: "16px" }}>
-            <label style={fieldLabelStyle}>
-              Choose CSV File
-              <input
-                type="file"
-                name="csvFile"
-                accept=".csv,text/csv"
-                style={fileInputStyle}
-              />
-            </label>
-          </div>
-
-          <div style={{ marginBottom: "16px" }}>
-            <label style={fieldLabelStyle}>
-              Or Paste CSV Text
-              <textarea
-                name="csvText"
-                rows={6}
-                placeholder={SAMPLE_CSV}
-                style={textareaStyle}
-              />
-            </label>
-          </div>
-
-          <button type="submit" disabled={isSubmitting} style={buttonStyle}>
-            {isSubmitting ? "Parsing CSV..." : "Preview CSV"}
-          </button>
-        </Form>
-      </s-section>
-
-      {/* STEP 2: PREVIEW & CONFIRM IMPORT */}
-      {activeJob && (
-        <s-section heading={`Preview: ${activeJob.filename || "CSV Import"}`}>
-          <div style={previewSummaryStyle}>
-            <div>
-              <strong>Status:</strong>{" "}
-              <span style={statusBadgeStyle(activeJob.status)}>
-                {activeJob.status}
-              </span>
-            </div>
-            <div><strong>Total rows:</strong> {activeJob.totalRows}</div>
-            <div><strong style={{ color: "#0f5132" }}>Valid rows:</strong> {activeJob.validRows}</div>
-            <div><strong style={{ color: "#8a1f11" }}>Invalid rows:</strong> {activeJob.invalidRows}</div>
-            {activeJob.invalidRows > 0 && (
-              <a
-                href={`/app/imports/invalid-csv/${activeJob.id}`}
-                download={`invalid-rows-${activeJob.id}.csv`}
-                style={dangerOutlineBtnStyle}
-              >
-                Download invalid rows
-              </a>
-            )}
-          </div>
-
-          {/* COLUMN MAPPING DETECTION */}
-          <div style={{ marginTop: "16px", marginBottom: "16px" }}>
-            <div style={subHeadingStyle}>Column mapping</div>
-            <Form method="post">
-              <input type="hidden" name="intent" value="remap-preview" />
-              <input type="hidden" name="jobId" value={activeJob.id} />
-              <div style={mappingGridStyle}>
-                {TARGET_FIELDS.map((field) => {
-                  const def = FIELD_DEFINITIONS[field];
-                  const detectedHeader = activeJob.detectedMapping[field] || "";
-                  return (
-                    <label key={field} style={mappingCardStyle}>
-                      <span style={{ fontWeight: 600, fontSize: "13px" }}>
-                        {def.label} {def.required && <span style={{ color: "#d72c0d" }}>*</span>}
-                      </span>
-                      <span style={mutedStyle}>{def.description}</span>
-                      <select
-                        name={`mapping_${field}`}
-                        defaultValue={detectedHeader}
-                        style={selectStyle}
-                      >
-                        <option value="">Not mapped</option>
-                        {activeJob.originalHeaders.map((header) => (
-                          <option key={`${field}-${header}`} value={header}>
-                            {header}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  );
-                })}
+        {/* SAMPLE CSV DOWNLOAD BANNER */}
+        <div style={sectionCardStyle}>
+          <h2 style={cardHeaderStyle}>Import Template & Data Safety</h2>
+          <div style={cardBodyStyle}>
+            <div style={sampleBannerStyle}>
+              <div>
+                <div style={{ fontWeight: 650, fontSize: "14px", marginBottom: "4px" }}>
+                  Download Sample CSV Template
+                </div>
+                <div style={{ color: "#5c5f62", fontSize: "13px" }}>
+                  Need a starting template? Download our sample CSV file with standard column headers for supplier names, SKUs, unit costs, and lead times. All CSV uploads are previewed safely before creating any records.
+                </div>
               </div>
-              <button type="submit" disabled={isSubmitting} style={{ ...buttonStyle, marginTop: "12px" }}>
-                {isSubmitting ? "Updating mapping..." : "Update mapping preview"}
+              <a
+                href="/app/imports/sample-csv"
+                download="podesk-supplier-sku-import-sample.csv"
+                style={secondaryBtnStyle}
+              >
+                Download sample CSV
+              </a>
+            </div>
+          </div>
+        </div>
+
+        {/* STEP 1: UPLOAD / PASTE FORM */}
+        <div style={sectionCardStyle}>
+          <h2 style={cardHeaderStyle}>Upload Supplier SKU Mappings CSV</h2>
+          <div style={cardBodyStyle}>
+            <p style={bodyStyle}>
+              Upload or paste a CSV export from Stocky, spreadsheets, or supplier lists to create suppliers and SKU mappings automatically.
+            </p>
+
+            <div style={{ marginBottom: "16px", padding: "12px", background: "#f4f6f8", borderRadius: "6px", border: "1px solid #dfe3e8" }}>
+              <div style={{ fontWeight: 650, fontSize: "13px", marginBottom: "6px" }}>Supported CSV Columns</div>
+              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", fontSize: "12px", color: "#5c5f62" }}>
+                <div><strong>sku*</strong> (Shopify SKU)</div>
+                <div><strong>supplierName*</strong> (Company name)</div>
+                <div><strong>supplierSku</strong> (Part #)</div>
+                <div><strong>supplierCost</strong> (Unit cost)</div>
+                <div><strong>leadTimeDays</strong> (Lead time)</div>
+                <div><strong>paymentTerms</strong> (Terms)</div>
+                <div><strong>minimumOrder</strong> (Min Qty)</div>
+                <div><strong>notes</strong> (Internal notes)</div>
+              </div>
+            </div>
+
+            <Form method="post" encType="multipart/form-data">
+              <input type="hidden" name="intent" value="preview-csv" />
+
+              <div style={typeBadgeStyle}>
+                Type: <strong>Supplier SKU Mappings</strong>
+              </div>
+
+              <div style={{ marginBottom: "16px" }}>
+                <label style={fieldLabelStyle}>
+                  Choose CSV File
+                  <input
+                    type="file"
+                    name="csvFile"
+                    accept=".csv,text/csv"
+                    style={fileInputStyle}
+                  />
+                </label>
+              </div>
+
+              <div style={{ marginBottom: "16px" }}>
+                <label style={fieldLabelStyle}>
+                  Or Paste CSV Text
+                  <textarea
+                    name="csvText"
+                    rows={6}
+                    placeholder={SAMPLE_CSV}
+                    style={textareaStyle}
+                  />
+                </label>
+              </div>
+
+              <button type="submit" disabled={isSubmitting} style={buttonStyle}>
+                {isSubmitting ? "Parsing CSV..." : "Preview CSV"}
               </button>
             </Form>
           </div>
+        </div>
 
-          {/* CONFIRM IMPORT BUTTON */}
-          {activeJob.status === "PREVIEW" && activeJob.validRows > 0 ? (
-            <div style={{ marginTop: "20px", marginBottom: "20px" }}>
-              <Form method="post">
-                <input type="hidden" name="intent" value="confirm-import" />
-                <input type="hidden" name="jobId" value={activeJob.id} />
-                <button type="submit" disabled={isSubmitting} style={primaryButtonStyle}>
-                  {isSubmitting ? "Importing..." : `Confirm & Import ${activeJob.validRows} Valid Row(s)`}
-                </button>
-              </Form>
-            </div>
-          ) : activeJob.status === "PREVIEW" && activeJob.validRows === 0 ? (
-            <div style={{ marginTop: "16px", marginBottom: "16px", padding: "12px", background: "#fff4f4", border: "1px solid #e0b3b2", borderRadius: "6px", color: "#8a1f11", fontSize: "13px" }}>
-              No valid rows available to import. Please verify column mappings above or correct invalid SKU / supplier fields.
-            </div>
-          ) : null}
+        {/* STEP 2: PREVIEW & CONFIRM IMPORT */}
+        {activeJob && (
+          <div style={sectionCardStyle}>
+            <h2 style={cardHeaderStyle}>Preview: {activeJob.filename || "CSV Import"}</h2>
+            <div style={cardBodyStyle}>
+              <div style={previewSummaryStyle}>
+                <div>
+                  <strong>Status:</strong>{" "}
+                  <span style={statusBadgeStyle(activeJob.status)}>
+                    {activeJob.status}
+                  </span>
+                </div>
+                <div><strong>Total rows:</strong> {activeJob.totalRows}</div>
+                <div><strong style={{ color: "#0f5132" }}>Valid rows:</strong> {activeJob.validRows}</div>
+                <div><strong style={{ color: "#8a1f11" }}>Invalid rows:</strong> {activeJob.invalidRows}</div>
+                {activeJob.invalidRows > 0 && (
+                  <a
+                    href={`/app/imports/invalid-csv/${activeJob.id}`}
+                    download={`invalid-rows-${activeJob.id}.csv`}
+                    style={dangerOutlineBtnStyle}
+                  >
+                    Download invalid rows
+                  </a>
+                )}
+              </div>
 
-          {/* ROW PREVIEW TABLE */}
-          <div style={{ marginTop: "16px" }}>
-            <div style={subHeadingStyle}>Row Validation Preview ({activeJob.rows.length})</div>
-            <div style={tableWrapStyle}>
-              <table style={tableStyle}>
-                <thead>
-                  <tr>
-                    <th style={thStyle}>Row #</th>
-                    <th style={thStyle}>Status</th>
-                    <th style={thStyle}>SKU</th>
-                    <th style={thStyle}>Supplier</th>
-                    <th style={thStyle}>Supplier SKU</th>
-                    <th style={thStyle}>Cost</th>
-                    <th style={thStyle}>Lead Time</th>
-                    <th style={thStyle}>Notes / Error</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {activeJob.rows.map((r) => {
-                    const norm = r.normalizedData;
-                    return (
-                      <tr key={r.id} style={{ background: r.status === "INVALID" ? "#fff8f8" : "inherit" }}>
-                        <td style={tdStyle}>{r.rowNumber}</td>
-                        <td style={tdStyle}>
-                          <span style={statusBadgeStyle(r.status)}>{r.status}</span>
-                        </td>
-                        <td style={tdStyle}>{norm?.sku || r.rawData["sku"] || "-"}</td>
-                        <td style={tdStyle}>{norm?.supplierName || r.rawData["supplierName"] || "-"}</td>
-                        <td style={tdStyle}>{norm?.supplierSku || "-"}</td>
-                        <td style={tdStyle}>
-                          {norm?.supplierCost != null ? `$${norm.supplierCost.toFixed(2)}` : "-"}
-                        </td>
-                        <td style={tdStyle}>
-                          {norm?.leadTimeDays != null ? `${norm.leadTimeDays}d` : "-"}
-                        </td>
-                        <td style={tdStyle}>
-                          {r.errorMessage ? (
-                            <span style={{ color: "#d72c0d", fontWeight: 600 }}>{r.errorMessage}</span>
-                          ) : (
-                            norm?.notes || "-"
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </s-section>
-      )}
-
-      {/* IMPORT HISTORY */}
-      <s-section heading={`Import History (${data.importJobs.length})`}>
-        {data.importJobs.length === 0 ? (
-          <s-paragraph>No CSV imports performed yet. Upload or paste a CSV above to get started.</s-paragraph>
-        ) : (
-          <div style={tableWrapStyle}>
-            <table style={tableStyle}>
-              <thead>
-                <tr>
-                  <th style={thStyle}>Filename</th>
-                  <th style={thStyle}>Status</th>
-                  <th style={thStyle}>Total</th>
-                  <th style={thStyle}>Valid</th>
-                  <th style={thStyle}>Invalid</th>
-                  <th style={thStyle}>Imported Mappings</th>
-                  <th style={thStyle}>Date</th>
-                  <th style={thStyle}>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.importJobs.map((j) => (
-                  <tr key={j.id}>
-                    <td style={tdStyle}>
-                      <strong>{j.filename}</strong>
-                    </td>
-                    <td style={tdStyle}>
-                      <span style={statusBadgeStyle(j.status)}>{j.status}</span>
-                    </td>
-                    <td style={tdStyle}>{j.totalRows}</td>
-                    <td style={tdStyle}>{j.validRows}</td>
-                    <td style={tdStyle}>{j.invalidRows}</td>
-                    <td style={tdStyle}>{j.importedMappings}</td>
-                    <td style={tdStyle}>{formatDate(j.createdAt)}</td>
-                    <td style={tdStyle}>
-                      <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                        {j.invalidRows > 0 && (
-                          <a
-                            href={`/app/imports/invalid-csv/${j.id}`}
-                            download={`invalid-rows-${j.id}.csv`}
-                            style={smallDangerLinkStyle}
+              {/* COLUMN MAPPING DETECTION */}
+              <div style={{ marginTop: "16px", marginBottom: "16px" }}>
+                <div style={subHeadingStyle}>Column mapping</div>
+                <Form method="post">
+                  <input type="hidden" name="intent" value="remap-preview" />
+                  <input type="hidden" name="jobId" value={activeJob.id} />
+                  <div style={mappingGridStyle}>
+                    {TARGET_FIELDS.map((field) => {
+                      const def = FIELD_DEFINITIONS[field];
+                      const detectedHeader = activeJob.detectedMapping[field] || "";
+                      return (
+                        <label key={field} style={mappingCardStyle}>
+                          <span style={{ fontWeight: 600, fontSize: "13px" }}>
+                            {def.label} {def.required && <span style={{ color: "#d72c0d" }}>*</span>}
+                          </span>
+                          <span style={mutedStyle}>{def.description}</span>
+                          <select
+                            name={`mapping_${field}`}
+                            defaultValue={detectedHeader}
+                            style={selectStyle}
                           >
-                            Download invalid rows
-                          </a>
-                        )}
-                        <Form method="post" style={{ display: "inline" }}>
-                          <input type="hidden" name="intent" value="delete-job" />
-                          <input type="hidden" name="jobId" value={j.id} />
-                          <button type="submit" style={smallBtnStyle}>Delete</button>
-                        </Form>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                            <option value="">Not mapped</option>
+                            {activeJob.originalHeaders.map((header) => (
+                              <option key={`${field}-${header}`} value={header}>
+                                {header}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <button type="submit" disabled={isSubmitting} style={{ ...buttonStyle, marginTop: "12px" }}>
+                    {isSubmitting ? "Updating mapping..." : "Update mapping preview"}
+                  </button>
+                </Form>
+              </div>
+
+              {/* CONFIRM IMPORT BUTTON */}
+              {activeJob.status === "PREVIEW" && activeJob.validRows > 0 ? (
+                <div style={{ marginTop: "20px", marginBottom: "20px" }}>
+                  <Form method="post">
+                    <input type="hidden" name="intent" value="confirm-import" />
+                    <input type="hidden" name="jobId" value={activeJob.id} />
+                    <button type="submit" disabled={isSubmitting} style={primaryButtonStyle}>
+                      {isSubmitting ? "Importing..." : `Confirm & Import ${activeJob.validRows} Valid Row(s)`}
+                    </button>
+                  </Form>
+                </div>
+              ) : activeJob.status === "PREVIEW" && activeJob.validRows === 0 ? (
+                <div style={{ marginTop: "16px", marginBottom: "16px", padding: "12px", background: "#fff4f4", border: "1px solid #e0b3b2", borderRadius: "6px", color: "#8a1f11", fontSize: "13px" }}>
+                  No valid rows available to import. Please verify column mappings above or correct invalid SKU / supplier fields.
+                </div>
+              ) : null}
+
+              {/* ROW PREVIEW TABLE */}
+              <div style={{ marginTop: "16px" }}>
+                <div style={subHeadingStyle}>Row Validation Preview ({activeJob.rows.length})</div>
+                <div style={tableWrapStyle}>
+                  <table style={tableStyle}>
+                    <thead>
+                      <tr>
+                        <th style={thStyle}>Row #</th>
+                        <th style={thStyle}>Status</th>
+                        <th style={thStyle}>SKU</th>
+                        <th style={thStyle}>Supplier</th>
+                        <th style={thStyle}>Supplier SKU</th>
+                        <th style={{ ...thStyle, textAlign: "right" }}>Cost</th>
+                        <th style={{ ...thStyle, textAlign: "right" }}>Lead Time</th>
+                        <th style={thStyle}>Notes / Error</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {activeJob.rows.map((r) => {
+                        const norm = r.normalizedData;
+                        return (
+                          <tr key={r.id} style={{ background: r.status === "INVALID" ? "#fff8f8" : "inherit" }}>
+                            <td style={tdStyle}>{r.rowNumber}</td>
+                            <td style={tdStyle}>
+                              <span style={statusBadgeStyle(r.status)}>{r.status}</span>
+                            </td>
+                            <td style={tdStyle}>{norm?.sku || r.rawData["sku"] || "-"}</td>
+                            <td style={tdStyle}>{norm?.supplierName || r.rawData["supplierName"] || "-"}</td>
+                            <td style={tdStyle}>{norm?.supplierSku || "-"}</td>
+                            <td style={{ ...tdStyle, textAlign: "right" }}>
+                              {norm?.supplierCost != null ? `$${norm.supplierCost.toFixed(2)}` : "-"}
+                            </td>
+                            <td style={{ ...tdStyle, textAlign: "right" }}>
+                              {norm?.leadTimeDays != null ? `${norm.leadTimeDays}d` : "-"}
+                            </td>
+                            <td style={tdStyle}>
+                              {r.errorMessage ? (
+                                <span style={{ color: "#d72c0d", fontWeight: 600 }}>{r.errorMessage}</span>
+                              ) : (
+                                norm?.notes || "-"
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
           </div>
         )}
-      </s-section>
-    </s-page>
+
+        {/* IMPORT HISTORY */}
+        <div style={sectionCardStyle}>
+          <h2 style={cardHeaderStyle}>Import History ({data.importJobs.length})</h2>
+          <div style={cardBodyStyle}>
+            {data.importJobs.length === 0 ? (
+              <p style={{ margin: 0, color: "#6b7280", fontSize: "14px" }}>No CSV imports performed yet. Upload or paste a CSV above to get started.</p>
+            ) : (
+              <div style={tableWrapStyle}>
+                <table style={tableStyle}>
+                  <thead>
+                    <tr>
+                      <th style={thStyle}>Filename</th>
+                      <th style={thStyle}>Status</th>
+                      <th style={{ ...thStyle, textAlign: "right" }}>Total</th>
+                      <th style={{ ...thStyle, textAlign: "right" }}>Valid</th>
+                      <th style={{ ...thStyle, textAlign: "right" }}>Invalid</th>
+                      <th style={{ ...thStyle, textAlign: "right" }}>Imported Mappings</th>
+                      <th style={thStyle}>Date</th>
+                      <th style={{ ...thStyle, textAlign: "center" }}>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.importJobs.map((j) => (
+                      <tr key={j.id}>
+                        <td style={tdStyle}>
+                          <strong>{j.filename}</strong>
+                        </td>
+                        <td style={tdStyle}>
+                          <span style={statusBadgeStyle(j.status)}>{j.status}</span>
+                        </td>
+                        <td style={{ ...tdStyle, textAlign: "right" }}>{j.totalRows}</td>
+                        <td style={{ ...tdStyle, textAlign: "right", color: "#166534" }}>{j.validRows}</td>
+                        <td style={{ ...tdStyle, textAlign: "right", color: "#dc2626" }}>{j.invalidRows}</td>
+                        <td style={{ ...tdStyle, textAlign: "right" }}>{j.importedMappings}</td>
+                        <td style={tdStyle}>{formatDate(j.createdAt)}</td>
+                        <td style={{ ...tdStyle, textAlign: "center" }}>
+                          <Form method="post" style={{ display: "inline" }}>
+                            <input type="hidden" name="intent" value="delete-job" />
+                            <input type="hidden" name="jobId" value={j.id} />
+                            <button type="submit" style={smallBtnStyle}>Delete</button>
+                          </Form>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -802,6 +809,27 @@ const tdStyle = {
   padding: "10px 8px",
   verticalAlign: "top",
 } as const;
+
+const sectionCardStyle = {
+  background: "#ffffff",
+  border: "1px solid #e5e7eb",
+  borderRadius: "16px",
+  boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03)",
+  marginBottom: "24px",
+  overflow: "hidden",
+  width: "100%",
+  boxSizing: "border-box",
+} as const;
+const cardHeaderStyle = {
+  margin: 0,
+  padding: "16px 24px",
+  fontSize: "16px",
+  fontWeight: 700,
+  color: "#111827",
+  borderBottom: "1px solid #f3f4f6",
+  backgroundColor: "#f9fafb",
+} as const;
+const cardBodyStyle = { padding: "24px" } as const;
 
 const noticeStyle = (ok: boolean) =>
   ({

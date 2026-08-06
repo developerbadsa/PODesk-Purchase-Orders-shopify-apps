@@ -499,7 +499,7 @@ export default function ReorderPage() {
   return (
     <>
       <ui-title-bar title="Reorder Planning" />
-      <div style={{ padding: "24px 32px", width: "100%", boxSizing: "border-box" }}>
+      <div style={{ padding: "24px 32px", maxWidth: "1600px", margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
         {actionData?.message ? (
           <div style={noticeStyle(actionData.ok)}>{actionData.message}</div>
         ) : null}

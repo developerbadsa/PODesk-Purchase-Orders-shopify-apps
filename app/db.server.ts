@@ -12,20 +12,23 @@ function withServerlessPoolConfig(databaseUrl?: string) {
 
   const sanitized = databaseUrl.trim().replace(/^["']|["']$/g, "");
 
-  // Do not enforce 1-connection limit in local dev; allow Prisma to pool connections normally for parallel Promise.all queries.
-  if (!process.env.VERCEL) {
+  // In production-like serverless environments, we need to adjust the connection pool settings.
+  // In local development, allow Prisma to pool connections normally.
+  if (process.env.NODE_ENV !== "production") {
     return sanitized;
   }
 
   try {
     const url = new URL(sanitized);
-    // Increase serverless pool limits slightly to avoid quick exhaustion during
-    // occasional parallel queries (e.g., multiple Prisma calls in Promise.all).
-    // Keep pgbouncer enabled if not already present.
-    if (!url.searchParams.has("connection_limit")) {
+    // Keep the pool small for serverless, but do not allow an explicit
+    // connection_limit=1 to make one request's parallel reads starve itself.
+    const connectionLimit = Number(url.searchParams.get("connection_limit"));
+    if (!Number.isFinite(connectionLimit) || connectionLimit < 3) {
       url.searchParams.set("connection_limit", "3");
     }
-    if (!url.searchParams.has("pool_timeout")) {
+
+    const poolTimeout = Number(url.searchParams.get("pool_timeout"));
+    if (!Number.isFinite(poolTimeout) || poolTimeout < 30) {
       url.searchParams.set("pool_timeout", "30");
     }
     if (!url.searchParams.has("pgbouncer")) {

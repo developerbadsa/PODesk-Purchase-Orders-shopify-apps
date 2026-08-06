@@ -21,119 +21,128 @@ export default function BillingPage() {
   const { shop, subscription } = useLoaderData<typeof loader>();
 
   return (
-    <s-page heading="Billing & Plans">
-      <s-section heading="Current Plan Status">
-        <div style={statusCardStyle}>
-          <div style={statusLabelStyle}>Store: {shop}</div>
-          <div style={planTitleStyle}>
-            Current Plan: Free Beta ({subscription?.planName || "Development Build"})
-          </div>
-          <div style={statusBadgeStyle}>
-            FREE BETA ACCESS
-          </div>
-          <p style={mutedNoticeStyle}>
-            PODesk is free during beta. Billing is not enforced in this development build. All features (Inventory Sync, Suppliers, Mappings, Purchase Orders, Receiving, Reorder Planning, and CSV Import) are fully unlocked and free to use.
-          </p>
-          <div style={{ marginTop: "8px", fontSize: "12px", color: "#6d7175" }}>
-            Note: The subscription tiers below represent planned post-launch pricing and are currently inactive.
+    <>
+      <ui-title-bar title="Billing & Plans" />
+      <div style={{ padding: "24px 32px", maxWidth: "1600px", margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
+        <div style={sectionCardStyle}>
+          <h2 style={cardHeaderStyle}>Current Plan Status</h2>
+          <div style={cardBodyStyle}>
+            <div style={statusCardStyle}>
+              <div style={statusLabelStyle}>Store: {shop}</div>
+              <div style={planTitleStyle}>
+                Current Plan: Free Beta ({subscription?.planName || "Development Build"})
+              </div>
+              <div style={statusBadgeStyle}>
+                FREE BETA ACCESS
+              </div>
+              <p style={mutedNoticeStyle}>
+                PODesk is free during beta. Billing is not enforced in this development build. All features (Inventory Sync, Suppliers, Mappings, Purchase Orders, Receiving, Reorder Planning, and CSV Import) are fully unlocked and free to use.
+              </p>
+              <div style={{ marginTop: "8px", fontSize: "12px", color: "#6d7175" }}>
+                Note: The subscription tiers below represent planned post-launch pricing and are currently inactive.
+              </div>
+            </div>
           </div>
         </div>
-      </s-section>
 
-      <s-section heading="Subscription Tiers & Pricing">
-        <div style={gridStyle}>
-          {/* Free Starter Plan */}
-          <div style={planCardStyle}>
-            <div style={badgeStyle}>Free / Starter</div>
-            <div style={priceStyle}>
-              $0<span style={periodStyle}>/month</span>
-            </div>
-            <div style={freeTrialStyle}>Free forever</div>
-            <p style={descriptionStyle}>
-              Full-featured purchase order workflow and replenishment planning for growing Shopify stores.
-            </p>
-            <ul style={featureListStyle}>
-              <li>Shopify product, variant & inventory sync</li>
-              <li>Unlimited supplier management & contacts</li>
-              <li>Unlimited purchase orders & printable PO PDFs</li>
-              <li>SKU-to-supplier cost & lead time mapping</li>
-              <li>Reorder velocity planning table & stockout alerts</li>
-              <li>Interactive PO sharing & supplier email tools</li>
-              <li>CSV sample templates & basic import preview</li>
-            </ul>
-            <button type="button" disabled style={disabledButtonStyle}>
-              Included
-            </button>
-          </div>
+        <div style={sectionCardStyle}>
+          <h2 style={cardHeaderStyle}>Subscription Tiers & Pricing</h2>
+          <div style={cardBodyStyle}>
+            <div style={gridStyle}>
+              {/* Free Starter Plan */}
+              <div style={planCardStyle}>
+                <div style={badgeStyle}>Free / Starter</div>
+                <div style={priceStyle}>
+                  $0<span style={periodStyle}>/month</span>
+                </div>
+                <div style={freeTrialStyle}>Free forever</div>
+                <p style={descriptionStyle}>
+                  Full-featured purchase order workflow and replenishment planning for growing Shopify stores.
+                </p>
+                <ul style={featureListStyle}>
+                  <li>Shopify product, variant & inventory sync</li>
+                  <li>Unlimited supplier management & contacts</li>
+                  <li>Unlimited purchase orders & printable PO PDFs</li>
+                  <li>SKU-to-supplier cost & lead time mapping</li>
+                  <li>Reorder velocity planning table & stockout alerts</li>
+                  <li>Interactive PO sharing & supplier email tools</li>
+                  <li>CSV sample templates & basic import preview</li>
+                </ul>
+                <button type="button" disabled style={disabledButtonStyle}>
+                  Included
+                </button>
+              </div>
 
-          {/* Pro Plan */}
-          <div style={{ ...planCardStyle, border: "2px solid #008060" }}>
-            <div style={recommendedBadgeStyle}>Recommended</div>
-            <div style={badgeStyle}>Pro</div>
-            <div style={priceStyle}>
-              $19<span style={periodStyle}>/month</span>
-            </div>
-            <div style={trialStyle}>14-day free trial</div>
-            <p style={descriptionStyle}>
-              Complete replenishment, partial receiving workflows, custom branding, and velocity customization.
-            </p>
-            <ul style={featureListStyle}>
-              <li>Everything in Free</li>
-              <li>PO receiving workflow & partial receipt tracking</li>
-              <li>Configurable reorder velocity windows (7-90d)</li>
-              <li>Custom PO reference prefix & company branding</li>
-              <li>Stocky CSV bulk supplier & SKU mapping import</li>
-              <li>Historical receiving logs & cost analysis</li>
-            </ul>
-            <button type="button" disabled style={disabledButtonStyle}>
-              Coming soon
-            </button>
-          </div>
+              {/* Pro Plan */}
+              <div style={{ ...planCardStyle, border: "2px solid #008060" }}>
+                <div style={recommendedBadgeStyle}>Recommended</div>
+                <div style={badgeStyle}>Pro</div>
+                <div style={priceStyle}>
+                  $19<span style={periodStyle}>/month</span>
+                </div>
+                <div style={trialStyle}>14-day free trial</div>
+                <p style={descriptionStyle}>
+                  Complete replenishment, partial receiving workflows, custom branding, and velocity customization.
+                </p>
+                <ul style={featureListStyle}>
+                  <li>Everything in Free</li>
+                  <li>PO receiving workflow & partial receipt tracking</li>
+                  <li>Configurable reorder velocity windows (7-90d)</li>
+                  <li>Custom PO reference prefix & company branding</li>
+                  <li>Stocky CSV bulk supplier & SKU mapping import</li>
+                  <li>Historical receiving logs & cost analysis</li>
+                </ul>
+                <button type="button" disabled style={disabledButtonStyle}>
+                  Coming soon
+                </button>
+              </div>
 
-          {/* Business Plan */}
-          <div style={planCardStyle}>
-            <div style={badgeStyle}>Business</div>
-            <div style={priceStyle}>
-              $39<span style={periodStyle}>/month</span>
-            </div>
-            <div style={trialStyle}>14-day free trial</div>
-            <p style={descriptionStyle}>
-              Advanced operations for multi-location stores, POS retailers, and heavy catalog volume.
-            </p>
-            <ul style={featureListStyle}>
-              <li>Everything in Pro</li>
-              <li>Multi-location inventory tracking & location filters</li>
-              <li>Auto-reorder suggestions & bulk PO generator</li>
-              <li>Priority 1-on-1 support & setup assistance</li>
-            </ul>
-            <button type="button" disabled style={disabledButtonStyle}>
-              Coming soon
-            </button>
-          </div>
+              {/* Business Plan */}
+              <div style={planCardStyle}>
+                <div style={badgeStyle}>Business</div>
+                <div style={priceStyle}>
+                  $39<span style={periodStyle}>/month</span>
+                </div>
+                <div style={trialStyle}>14-day free trial</div>
+                <p style={descriptionStyle}>
+                  Advanced operations for multi-location stores, POS retailers, and heavy catalog volume.
+                </p>
+                <ul style={featureListStyle}>
+                  <li>Everything in Pro</li>
+                  <li>Multi-location inventory tracking & location filters</li>
+                  <li>Auto-reorder suggestions & bulk PO generator</li>
+                  <li>Priority 1-on-1 support & setup assistance</li>
+                </ul>
+                <button type="button" disabled style={disabledButtonStyle}>
+                  Coming soon
+                </button>
+              </div>
 
-          {/* Migration Service */}
-          <div style={{ ...planCardStyle, background: "#fafbfb" }}>
-            <div style={badgeStyle}>Migration Service</div>
-            <div style={priceStyle}>
-              $79<span style={periodStyle}> one-time</span>
+              {/* Migration Service */}
+              <div style={{ ...planCardStyle, background: "#fafbfb" }}>
+                <div style={badgeStyle}>Migration Service</div>
+                <div style={priceStyle}>
+                  $79<span style={periodStyle}> one-time</span>
+                </div>
+                <div style={trialStyle}>Managed setup</div>
+                <p style={descriptionStyle}>
+                  White-glove migration assistance for Stocky users and legacy spreadsheet workflows.
+                </p>
+                <ul style={featureListStyle}>
+                  <li>Data extraction & CSV cleaning</li>
+                  <li>Supplier & SKU mapping verification</li>
+                  <li>PO template customization</li>
+                  <li>1-on-1 team onboarding call</li>
+                </ul>
+                <button type="button" disabled style={disabledButtonStyle}>
+                  Coming soon
+                </button>
+              </div>
             </div>
-            <div style={trialStyle}>Managed setup</div>
-            <p style={descriptionStyle}>
-              White-glove migration assistance for Stocky users and legacy spreadsheet workflows.
-            </p>
-            <ul style={featureListStyle}>
-              <li>Data extraction & CSV cleaning</li>
-              <li>Supplier & SKU mapping verification</li>
-              <li>PO template customization</li>
-              <li>1-on-1 team onboarding call</li>
-            </ul>
-            <button type="button" disabled style={disabledButtonStyle}>
-              Coming soon
-            </button>
           </div>
         </div>
-      </s-section>
-    </s-page>
+      </div>
+    </>
   );
 }
 
@@ -261,6 +270,27 @@ const disabledButtonStyle = {
   cursor: "not-allowed",
   width: "100%",
 } as const;
+
+const sectionCardStyle = {
+  background: "#ffffff",
+  border: "1px solid #e5e7eb",
+  borderRadius: "16px",
+  boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03)",
+  marginBottom: "24px",
+  overflow: "hidden",
+  width: "100%",
+  boxSizing: "border-box",
+} as const;
+const cardHeaderStyle = {
+  margin: 0,
+  padding: "16px 24px",
+  fontSize: "16px",
+  fontWeight: 700,
+  color: "#111827",
+  borderBottom: "1px solid #f3f4f6",
+  backgroundColor: "#f9fafb",
+} as const;
+const cardBodyStyle = { padding: "24px" } as const;
 
 
 // Shopify requires ErrorBoundary on every route that calls authenticate.admin

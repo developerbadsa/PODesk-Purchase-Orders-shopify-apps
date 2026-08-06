@@ -7,6 +7,7 @@ import { Form, Link, useActionData, useLoaderData, useNavigation, useRouteError 
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticateAdmin } from "../authenticate-admin.server";
 import prisma from "../db.server";
+import { PrimaryButton, SecondaryButton, DangerButton } from "../components/Button";
 
 type ActionData = { ok: boolean; message: string };
 
@@ -113,7 +114,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   if (intent === "delete") {
     const id = String(formData.get("id") || "");
     if (!id) return { ok: false, message: "Supplier ID required." } satisfies ActionData;
-    // Only delete if no POs reference this supplier
     const poCount = await prisma.purchaseOrder.count({ where: { supplierId: id, storeId: store.id } });
     if (poCount > 0) {
       return { ok: false, message: "Cannot delete supplier with purchase orders. Archive instead." } satisfies ActionData;
@@ -136,190 +136,213 @@ export default function SuppliersPage() {
   const archivedSuppliers = suppliers.filter((s) => s.isArchived);
 
   return (
-    <s-page heading="Suppliers">
-      {actionData?.message ? (
-        <div style={noticeStyle(actionData.ok)}>{actionData.message}</div>
-      ) : null}
+    <>
+      <ui-title-bar title="Suppliers" />
+      <div style={{ padding: "24px 32px", width: "100%", boxSizing: "border-box" }}>
+        {actionData?.message ? (
+          <div style={noticeStyle(actionData.ok)}>{actionData.message}</div>
+        ) : null}
 
-      <s-section heading="Add supplier">
-        <Form method="post" style={supplierFormStyle}>
-          <input type="hidden" name="intent" value="create" />
-          <div style={formIntroStyle}>
-            <div>
-              <div style={formTitleStyle}>Supplier details</div>
-              <p style={formDescriptionStyle}>
-                Add the supplier contact and buying terms used for purchase orders.
-              </p>
+        {/* Add supplier card */}
+        <div style={sectionCardStyle}>
+          <h2 style={cardHeaderStyle}>Add New Supplier</h2>
+          <div style={cardBodyStyle}>
+            <Form method="post" style={{ display: "grid", gap: "20px" }}>
+              <input type="hidden" name="intent" value="create" />
+              <div style={formIntroStyle}>
+                <div>
+                  <div style={formTitleStyle}>Supplier Details & Terms</div>
+                  <p style={formDescriptionStyle}>
+                    Add supplier contact details and buying terms used for automated purchase orders.
+                  </p>
+                </div>
+                <span style={requiredHintStyle}>Supplier name required</span>
+              </div>
+
+              <div style={formGroupStyle}>
+                <div style={groupHeadingStyle}>Contact</div>
+                <div style={formGridStyle}>
+                  <Field
+                    label="Supplier name"
+                    name="name"
+                    required
+                    placeholder="Acme Supply Co."
+                    helpText="The name shown on supplier lists and purchase orders."
+                  />
+                  <Field
+                    label="Email"
+                    name="email"
+                    type="email"
+                    placeholder="orders@example.com"
+                    helpText="Used as the primary order contact."
+                  />
+                  <Field
+                    label="Phone"
+                    name="phone"
+                    type="tel"
+                    placeholder="+1 555 0100"
+                    helpText="Optional contact number for urgent order issues."
+                  />
+                </div>
+              </div>
+
+              <div style={formGroupStyle}>
+                <div style={groupHeadingStyle}>Ordering Terms</div>
+                <div style={formGridStyle}>
+                  <Field
+                    label="Lead time"
+                    name="leadTimeDays"
+                    type="number"
+                    defaultValue="14"
+                    min="0"
+                    inputMode="numeric"
+                    suffix="days"
+                    helpText="Typical time from placing a PO to receiving stock."
+                  />
+                  <Field
+                    label="Minimum order"
+                    name="minimumOrder"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    inputMode="decimal"
+                    placeholder="500"
+                    helpText="Leave blank if the supplier has no minimum."
+                  />
+                  <Field
+                    label="Payment terms"
+                    name="paymentTerms"
+                    placeholder="Net 30"
+                    helpText="Examples: Due on receipt, Net 15, Net 30."
+                  />
+                </div>
+              </div>
+
+              <div style={formGroupStyle}>
+                <label style={fieldLabelStyle}>
+                  <span style={labelTextStyle}>Internal notes</span>
+                  <textarea
+                    name="notes"
+                    rows={3}
+                    placeholder="Packaging rules, ordering cutoff, account number, or contact notes"
+                    style={textareaStyle}
+                  />
+                  <span style={helpTextStyle}>Visible only inside PODesk.</span>
+                </label>
+              </div>
+
+              <div style={formActionsStyle}>
+                <PrimaryButton type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? "Saving..." : "Save supplier"}
+                </PrimaryButton>
+              </div>
+            </Form>
+          </div>
+        </div>
+
+        {/* Active suppliers table card */}
+        <div style={sectionCardStyle}>
+          <h2 style={cardHeaderStyle}>Active Suppliers ({activeSuppliers.length})</h2>
+          <div style={cardBodyStyle}>
+            {activeSuppliers.length === 0 ? (
+              <div style={emptyCardStyle}>
+                <div style={{ fontWeight: 650, fontSize: "15px", marginBottom: "6px" }}>No suppliers added yet</div>
+                <p style={{ margin: 0, color: "#6d7175", fontSize: "13px" }}>
+                  Add your first supplier using the form above to start mapping SKUs, setting lead times, and creating purchase orders.
+                </p>
+              </div>
+            ) : (
+              <div style={tableWrapStyle}>
+                <table style={tableStyle}>
+                  <thead>
+                    <tr>
+                      <th style={thStyle}>Name</th>
+                      <th style={thStyle}>Email</th>
+                      <th style={{ ...thStyle, textAlign: "right" }}>Lead time</th>
+                      <th style={{ ...thStyle, textAlign: "right" }}>Mapped SKUs</th>
+                      <th style={{ ...thStyle, textAlign: "right" }}>POs</th>
+                      <th style={{ ...thStyle, textAlign: "center" }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {activeSuppliers.map((supplier) => (
+                      <tr key={supplier.id}>
+                        <td style={tdStyle}>
+                          <Link to={`/app/suppliers/${supplier.id}`} style={linkStyle}>
+                            {supplier.name}
+                          </Link>
+                        </td>
+                        <td style={tdStyle}>{supplier.email || "-"}</td>
+                        <td style={{ ...tdStyle, textAlign: "right" }}>{supplier.leadTimeDays}d</td>
+                        <td style={{ ...tdStyle, textAlign: "right" }}>{supplier.mappingCount}</td>
+                        <td style={{ ...tdStyle, textAlign: "right" }}>{supplier.poCount}</td>
+                        <td style={{ ...tdStyle, textAlign: "center" }}>
+                          <Form method="post" style={{ display: "inline" }}>
+                            <input type="hidden" name="intent" value="archive" />
+                            <input type="hidden" name="id" value={supplier.id} />
+                            <SecondaryButton type="submit" style={{ height: "32px", padding: "0 12px", fontSize: "13px" }}>
+                              Archive
+                            </SecondaryButton>
+                          </Form>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Archived suppliers card */}
+        {archivedSuppliers.length > 0 && (
+          <div style={sectionCardStyle}>
+            <h2 style={cardHeaderStyle}>Archived Suppliers ({archivedSuppliers.length})</h2>
+            <div style={cardBodyStyle}>
+              <div style={tableWrapStyle}>
+                <table style={tableStyle}>
+                  <thead>
+                    <tr>
+                      <th style={thStyle}>Name</th>
+                      <th style={{ ...thStyle, textAlign: "right" }}>POs</th>
+                      <th style={{ ...thStyle, textAlign: "center" }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {archivedSuppliers.map((supplier) => (
+                      <tr key={supplier.id}>
+                        <td style={tdStyle}>{supplier.name}</td>
+                        <td style={{ ...tdStyle, textAlign: "right" }}>{supplier.poCount}</td>
+                        <td style={{ ...tdStyle, textAlign: "center" }}>
+                          <div style={{ display: "flex", gap: "8px", justifyContent: "center" }}>
+                            <Form method="post" style={{ display: "inline" }}>
+                              <input type="hidden" name="intent" value="restore" />
+                              <input type="hidden" name="id" value={supplier.id} />
+                              <SecondaryButton type="submit" style={{ height: "32px", padding: "0 12px", fontSize: "13px" }}>
+                                Restore
+                              </SecondaryButton>
+                            </Form>
+                            {supplier.poCount === 0 && (
+                              <Form method="post" style={{ display: "inline" }}>
+                                <input type="hidden" name="intent" value="delete" />
+                                <input type="hidden" name="id" value={supplier.id} />
+                                <DangerButton type="submit" style={{ height: "32px", padding: "0 12px", fontSize: "13px" }}>
+                                  Delete
+                                </DangerButton>
+                              </Form>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-            <span style={requiredHintStyle}>Supplier name required</span>
-          </div>
-
-          <div style={formGroupStyle}>
-            <div style={groupHeadingStyle}>Contact</div>
-            <div style={formGridStyle}>
-              <Field
-                label="Supplier name"
-                name="name"
-                required
-                placeholder="Acme Supply Co."
-                helpText="The name shown on supplier lists and purchase orders."
-              />
-              <Field
-                label="Email"
-                name="email"
-                type="email"
-                placeholder="orders@example.com"
-                helpText="Used as the primary order contact."
-              />
-              <Field
-                label="Phone"
-                name="phone"
-                type="tel"
-                placeholder="+1 555 0100"
-                helpText="Optional contact number for urgent order issues."
-              />
-            </div>
-          </div>
-
-          <div style={formGroupStyle}>
-            <div style={groupHeadingStyle}>Ordering terms</div>
-            <div style={formGridStyle}>
-              <Field
-                label="Lead time"
-                name="leadTimeDays"
-                type="number"
-                defaultValue="14"
-                min="0"
-                inputMode="numeric"
-                suffix="days"
-                helpText="Typical time from placing a PO to receiving stock."
-              />
-              <Field
-                label="Minimum order"
-                name="minimumOrder"
-                type="number"
-                min="0"
-                step="0.01"
-                inputMode="decimal"
-                placeholder="500"
-                helpText="Leave blank if the supplier has no minimum."
-              />
-              <Field
-                label="Payment terms"
-                name="paymentTerms"
-                placeholder="Net 30"
-                helpText="Examples: Due on receipt, Net 15, Net 30."
-              />
-            </div>
-          </div>
-
-          <div style={formGroupStyle}>
-            <label style={fieldLabelStyle}>
-              <span style={labelTextStyle}>Internal notes</span>
-              <textarea
-                name="notes"
-                rows={3}
-                placeholder="Packaging rules, ordering cutoff, account number, or contact notes"
-                style={textareaStyle}
-              />
-              <span style={helpTextStyle}>Visible only inside PODesk.</span>
-            </label>
-          </div>
-
-          <div style={formActionsStyle}>
-            <button type="submit" disabled={isSubmitting} style={buttonStyle(isSubmitting)}>
-              {isSubmitting ? "Saving..." : "Save supplier"}
-            </button>
-          </div>
-        </Form>
-      </s-section>
-
-      <s-section heading={`Active suppliers (${activeSuppliers.length})`}>
-        {activeSuppliers.length === 0 ? (
-          <div style={{ padding: "18px", background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: "8px", textAlign: "left" }}>
-            <div style={{ fontWeight: 650, fontSize: "14px", marginBottom: "6px" }}>No suppliers added yet</div>
-            <p style={{ margin: "0 0 10px", color: "#6d7175", fontSize: "13px" }}>
-              Add your first supplier using the form above to start mapping SKUs, setting lead times, and creating purchase orders.
-            </p>
-          </div>
-        ) : (
-          <div style={tableWrapStyle}>
-            <table style={tableStyle}>
-              <thead>
-                <tr>
-                  <th style={thStyle}>Name</th>
-                  <th style={thStyle}>Email</th>
-                  <th style={thStyle}>Lead time</th>
-                  <th style={thStyle}>SKUs</th>
-                  <th style={thStyle}>POs</th>
-                  <th style={thStyle}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {activeSuppliers.map((supplier) => (
-                  <tr key={supplier.id}>
-                    <td style={tdStyle}>
-                      <Link to={`/app/suppliers/${supplier.id}`} style={linkStyle}>
-                        {supplier.name}
-                      </Link>
-                    </td>
-                    <td style={tdStyle}>{supplier.email || "-"}</td>
-                    <td style={tdStyle}>{supplier.leadTimeDays}d</td>
-                    <td style={tdStyle}>{supplier.mappingCount}</td>
-                    <td style={tdStyle}>{supplier.poCount}</td>
-                    <td style={tdStyle}>
-                      <Form method="post" style={{ display: "inline" }}>
-                        <input type="hidden" name="intent" value="archive" />
-                        <input type="hidden" name="id" value={supplier.id} />
-                        <button type="submit" style={smallBtnStyle}>Archive</button>
-                      </Form>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
           </div>
         )}
-      </s-section>
-
-      {archivedSuppliers.length > 0 && (
-        <s-section heading={`Archived (${archivedSuppliers.length})`}>
-          <div style={tableWrapStyle}>
-            <table style={tableStyle}>
-              <thead>
-                <tr>
-                  <th style={thStyle}>Name</th>
-                  <th style={thStyle}>POs</th>
-                  <th style={thStyle}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {archivedSuppliers.map((supplier) => (
-                  <tr key={supplier.id}>
-                    <td style={tdStyle}>{supplier.name}</td>
-                    <td style={tdStyle}>{supplier.poCount}</td>
-                    <td style={tdStyle}>
-                      <Form method="post" style={{ display: "inline", marginRight: 8 }}>
-                        <input type="hidden" name="intent" value="restore" />
-                        <input type="hidden" name="id" value={supplier.id} />
-                        <button type="submit" style={smallBtnStyle}>Restore</button>
-                      </Form>
-                      {supplier.poCount === 0 && (
-                        <Form method="post" style={{ display: "inline" }}>
-                          <input type="hidden" name="intent" value="delete" />
-                          <input type="hidden" name="id" value={supplier.id} />
-                          <button type="submit" style={dangerBtnStyle}>Delete</button>
-                        </Form>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </s-section>
-      )}
-    </s-page>
+      </div>
+    </>
   );
 }
 
@@ -392,7 +415,26 @@ function optionalNumber(value: FormDataEntryValue | null) {
 }
 
 // Styles
-const supplierFormStyle = { display: "grid", gap: "20px", background: "#ffffff", border: "1px solid #e1e3e5", borderRadius: "10px", padding: "20px 24px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" } as const;
+const sectionCardStyle = {
+  background: "#ffffff",
+  border: "1px solid #e5e7eb",
+  borderRadius: "16px",
+  boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03)",
+  marginBottom: "24px",
+  overflow: "hidden",
+  width: "100%",
+  boxSizing: "border-box",
+} as const;
+const cardHeaderStyle = {
+  margin: 0,
+  padding: "16px 24px",
+  fontSize: "16px",
+  fontWeight: 700,
+  color: "#111827",
+  borderBottom: "1px solid #f3f4f6",
+  backgroundColor: "#f9fafb",
+} as const;
+const cardBodyStyle = { padding: "24px" } as const;
 const formIntroStyle = {
   display: "flex",
   justifyContent: "space-between",
@@ -401,29 +443,28 @@ const formIntroStyle = {
   paddingBottom: "14px",
   borderBottom: "1px solid #ebebeb",
 } as const;
-const formTitleStyle = { color: "#202223", fontSize: "15px", fontWeight: 700 } as const;
+const formTitleStyle = { color: "#111827", fontSize: "15px", fontWeight: 700 } as const;
 const formDescriptionStyle = {
   margin: "4px 0 0",
-  color: "#616161",
+  color: "#6b7280",
   fontSize: "13px",
   lineHeight: 1.45,
 } as const;
 const requiredHintStyle = {
   flex: "0 0 auto",
-  border: "1px solid #d6e6df",
+  border: "1px solid #bbf7d0",
   borderRadius: "999px",
-  padding: "5px 10px",
-  background: "#f1f8f5",
-  color: "#0b5137",
+  padding: "5px 12px",
+  background: "#f0fdf4",
+  color: "#166534",
   fontSize: "12px",
   fontWeight: 650,
 } as const;
 const formGroupStyle = { display: "grid", gap: "10px" } as const;
 const groupHeadingStyle = {
-  color: "#303030",
+  color: "#374151",
   fontSize: "13px",
   fontWeight: 700,
-  letterSpacing: 0,
 } as const;
 const formGridStyle = {
   display: "grid",
@@ -434,24 +475,25 @@ const fieldLabelStyle = {
   display: "grid",
   alignContent: "start",
   gap: "6px",
-  color: "#202223",
+  color: "#111827",
   fontSize: "13px",
   fontWeight: 600,
 } as const;
 const labelTextStyle = { display: "inline-flex", alignItems: "center", gap: "3px" } as const;
-const requiredMarkStyle = { color: "#d72c0d", fontWeight: 700 } as const;
+const requiredMarkStyle = { color: "#dc2626", fontWeight: 700 } as const;
 const inputWrapStyle = { position: "relative", display: "block" } as const;
 const inputBaseStyle = {
   boxSizing: "border-box",
-  border: "1px solid #8c9196",
+  border: "1px solid #d1d5db",
   borderRadius: "8px",
-  padding: "0 12px",
-  height: "40px",
+  padding: "0 14px",
+  height: "42px",
+  minHeight: "42px",
   fontSize: "14px",
   lineHeight: "20px",
   width: "100%",
   background: "#ffffff",
-  color: "#202223",
+  color: "#111827",
   outline: "none",
 } as const;
 const inputStyle = inputBaseStyle;
@@ -459,9 +501,9 @@ const inputWithSuffixStyle = { ...inputBaseStyle, paddingRight: "56px" } as cons
 const suffixStyle = {
   position: "absolute",
   top: "50%",
-  right: "12px",
+  right: "14px",
   transform: "translateY(-50%)",
-  color: "#616161",
+  color: "#6b7280",
   fontSize: "13px",
   pointerEvents: "none",
 } as const;
@@ -469,12 +511,12 @@ const textareaStyle = {
   ...inputBaseStyle,
   height: "auto",
   minHeight: "80px",
-  padding: "10px 12px",
+  padding: "10px 14px",
   resize: "vertical",
   fontFamily: "inherit",
 } as const;
 const helpTextStyle = {
-  color: "#6d7175",
+  color: "#6b7280",
   fontSize: "12px",
   fontWeight: 400,
   lineHeight: 1.35,
@@ -484,34 +526,14 @@ const formActionsStyle = {
   justifyContent: "flex-start",
   paddingTop: "4px",
 } as const;
-const buttonStyle = (disabled: boolean) =>
-  ({
-    border: "0",
-    borderRadius: "8px",
-    padding: "0 20px",
-    height: "40px",
-    background: disabled ? "#8bbbab" : "#008060",
-    color: "#fff",
-    fontWeight: 650,
-    fontSize: "14px",
-    cursor: disabled ? "default" : "pointer",
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    boxShadow: "0 1px 2px rgba(0, 0, 0, 0.12)",
-  }) as const;
-const smallBtnStyle = { height: "32px", border: "1px solid #c9cccf", borderRadius: "6px", padding: "0 12px", background: "#fff", color: "#202223", cursor: "pointer", fontSize: "13px", fontWeight: 600, display: "inline-flex", alignItems: "center" } as const;
-const dangerBtnStyle = { ...smallBtnStyle, color: "#d72c0d", borderColor: "#d72c0d" } as const;
 const linkStyle = { color: "#2c6ecb", textDecoration: "none", fontWeight: 600 } as const;
-const tableWrapStyle = { overflowX: "auto" } as const;
-const tableStyle = { width: "100%", borderCollapse: "collapse", fontSize: "14px" } as const;
-const thStyle = { textAlign: "left", borderBottom: "1px solid #dfe3e8", padding: "12px 10px", whiteSpace: "nowrap", color: "#5c5f62", fontSize: "13px", fontWeight: 650 } as const;
-const tdStyle = { borderBottom: "1px solid #f1f2f3", padding: "12px 10px", verticalAlign: "middle" } as const;
+const emptyCardStyle = { padding: "24px", background: "#ffffff", border: "1px solid #e5e7eb", borderRadius: "12px", textAlign: "left" } as const;
+const tableWrapStyle = { overflowX: "auto", border: "1px solid #e5e7eb", borderRadius: "12px", background: "#ffffff", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" } as const;
+const tableStyle = { width: "100%", borderCollapse: "separate", borderSpacing: "0", fontSize: "14px" } as const;
+const thStyle = { textAlign: "left", borderBottom: "1px solid #e5e7eb", padding: "14px 12px", whiteSpace: "nowrap", backgroundColor: "#f9fafb", color: "#4b5563", fontSize: "13px", fontWeight: 650 } as const;
+const tdStyle = { borderBottom: "1px solid #f3f4f6", padding: "14px 12px", verticalAlign: "middle", color: "#111827" } as const;
 const noticeStyle = (ok: boolean) => ({ border: `1px solid ${ok ? "#95c9b4" : "#e0b3b2"}`, background: ok ? "#effaf5" : "#fff4f4", borderRadius: "8px", marginTop: "12px", marginBottom: "12px", padding: "12px 16px", color: ok ? "#0f5132" : "#8a1f11", fontWeight: 550 }) as const;
 
-
-// Shopify requires ErrorBoundary on every route that calls authenticate.admin
-// so that thrown 200/401 responses (App Bridge re-auth) are handled correctly.
 export function ErrorBoundary() {
   const error = useRouteError();
   const boundaryError = boundary.error(error);
@@ -538,8 +560,7 @@ export function ErrorBoundary() {
     </div>
   );
 }
+
 export const headers: HeadersFunction = (headersArgs) => {
   return boundary.headers(headersArgs);
 };
-
-

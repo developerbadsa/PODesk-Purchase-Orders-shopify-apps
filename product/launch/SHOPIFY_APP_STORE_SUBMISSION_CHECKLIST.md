@@ -23,7 +23,7 @@ This checklist tracks all submission requirements mandated by Shopify for listin
 | GDPR Webhooks Implementation | Done | Webhook handler for `customers/data_request`, `customers/redact`, and `shop/redact` implemented in `app/routes/webhooks.privacy.tsx` and subscribed with `compliance_topics` in `shopify.app.toml`. |
 | Public Legal & Support App Routes | Done | `/privacy`, `/terms`, `/data-deletion`, `/support`, `/support/getting-started`, `/support/troubleshooting`, and `/brand/*` routes verified returning 200 OK. |
 | Production Webhost & HTTPS Setup | Done | Live host `https://podesk-purchase-orders.vercel.app` provisioned with active SSL and PostgreSQL backend. |
-| Manual QA Pass | Done | Browser QA across desktop/mobile viewports executed (`product/launch/LIVE_QA_REPORT.md`). |
+| Manual QA Pass | Done | Browser QA across desktop/mobile viewports executed (`product/launch/LIVE_QA_REPORT.md`). Final verification pass completed on 2026-08-06. |
 | Security & Dependency Audit | Blocked | `npm audit` reports high React Router vulnerability from Shopify app template dependencies. Launch blocked until upstream safe patch. |
 | Production Billing Enforcement | Later | App is 100% free during initial launch beta. Billing scaffold exists but is intentionally unenforced. |
 

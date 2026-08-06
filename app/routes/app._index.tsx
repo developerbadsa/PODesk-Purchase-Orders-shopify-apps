@@ -217,14 +217,17 @@ export default function Index() {
   }
 
   return (
-    <s-page heading="Dashboard">
-      <div style={betaBannerStyle}>
-        <strong>Free Beta:</strong> All features are unlocked in this development build. No subscription required.
-      </div>
+    <>
+      <ui-title-bar title="Dashboard" />
+      <div style={{ padding: "24px 32px", maxWidth: "1600px", margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
+        <div style={betaBannerStyle}>
+          <strong>Free Beta:</strong> All features are unlocked in this development build. No subscription required.
+        </div>
 
-      {/* Main Hero Card */}
-      <s-section heading="Store Overview">
-        <div style={formCardStyle}>
+        {/* Main Hero Card */}
+        <div style={sectionCardStyle}>
+          <h2 style={cardHeaderStyle}>Store Overview</h2>
+          <div style={cardBodyStyle}>
           <div style={heroGridStyle}>
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
@@ -263,141 +266,154 @@ export default function Index() {
           {actionData?.message ? (
             <div style={noticeStyle(actionData.ok)}>{actionData.message}</div>
           ) : null}
-        </div>
-      </s-section>
-
-      {/* Dynamic Recommended Action */}
-      <s-section heading="Recommended Next Action">
-        <div style={nextActionCardStyle}>
-          <div>
-            <div style={nextActionLabelStyle}>Recommended Step</div>
-            <div style={nextActionTitleStyle}>{nextAction.title}</div>
-            <div style={{ ...mutedStyle, marginTop: "2px" }}>{nextAction.text}</div>
           </div>
-          <div>
-            {nextAction.isSync ? (
-              <Form method="post">
-                <input type="hidden" name="intent" value="sync" />
-                <button type="submit" disabled={isSyncing} style={primaryButtonStyle}>
-                  {isSyncing ? "Syncing..." : nextAction.btnText}
-                </button>
-              </Form>
+        </div>
+
+        {/* Dynamic Recommended Action */}
+        <div style={sectionCardStyle}>
+          <h2 style={cardHeaderStyle}>Recommended Next Action</h2>
+          <div style={cardBodyStyle}>
+            <div style={nextActionCardStyle}>
+              <div>
+                <div style={nextActionLabelStyle}>Recommended Step</div>
+                <div style={nextActionTitleStyle}>{nextAction.title}</div>
+                <div style={{ ...mutedStyle, marginTop: "2px" }}>{nextAction.text}</div>
+              </div>
+              <div>
+                {nextAction.isSync ? (
+                  <Form method="post">
+                    <input type="hidden" name="intent" value="sync" />
+                    <button type="submit" disabled={isSyncing} style={primaryButtonStyle}>
+                      {isSyncing ? "Syncing..." : nextAction.btnText}
+                    </button>
+                  </Form>
+                ) : (
+                  <Link to={nextAction.href} style={primaryBtnLinkStyle}>
+                    {nextAction.btnText}
+                  </Link>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* KPI Operations Snapshot */}
+        <div style={sectionCardStyle}>
+          <h2 style={cardHeaderStyle}>Operations Snapshot</h2>
+          <div style={cardBodyStyle}>
+            <div style={metricGridStyle}>
+              <Metric label="Synced Variants" value={data.metrics.variantCount} sub={`${data.metrics.totalInventory.toLocaleString()} units in stock`} accent="#008060" />
+              <Metric label="30-Day Sales" value={data.metrics.unitsSold30Days} sub="Units sold" accent="#2c6ecb" />
+              <Metric label="Suppliers & SKUs" value={data.metrics.supplierCount} sub={`${data.metrics.mappedSkuCount} mapped SKUs`} accent="#5c5f62" />
+              <Metric label="Open POs" value={data.metrics.openPurchaseOrderCount} sub={`${data.metrics.partiallyReceivedPoCount} receiving`} accent="#8a5a00" />
+            </div>
+          </div>
+        </div>
+
+        {/* Stockout Risk & Reorder Planning */}
+        <div style={sectionCardStyle}>
+          <h2 style={cardHeaderStyle}>Reorder Risk Attention</h2>
+          <div style={cardBodyStyle}>
+            {data.atRiskVariants.length === 0 ? (
+              <EmptyState
+                title="All inventory counts healthy"
+                text="No SKUs currently projected to run out within 14 days based on daily velocity and lead times."
+                actionHref="/app/reorder"
+                actionText="Open Reorder Table"
+              />
             ) : (
-              <Link to={nextAction.href} style={primaryBtnLinkStyle}>
-                {nextAction.btnText}
-              </Link>
+              <div style={tableWrapStyle}>
+                <table style={tableStyle}>
+                  <thead>
+                    <tr>
+                      <th style={thStyle}>Product / Variant</th>
+                      <th style={thStyle}>SKU</th>
+                      <th style={thStyle}>Stock</th>
+                      <th style={thStyle}>30d Demand</th>
+                      <th style={thStyle}>Days Remaining</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.atRiskVariants.map((variant) => (
+                      <tr key={variant.id}>
+                        <td style={tdStyle}>
+                          <span style={{ fontWeight: 600, color: "#202223" }}>{variant.productTitle}</span>
+                          <div style={mutedStyle}>{variant.variantTitle}</div>
+                        </td>
+                        <td style={tdStyle}>{variant.sku || "-"}</td>
+                        <td style={tdStyle}>{variant.inventoryQuantity}</td>
+                        <td style={tdStyle}>{variant.unitsSold30Days}</td>
+                        <td style={tdStyle}>
+                          {variant.daysUntilStockout == null ? (
+                            "-"
+                          ) : (
+                            <span style={riskBadgeStyle(variant.daysUntilStockout <= 7)}>
+                              {Math.round(variant.daysUntilStockout)} days
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         </div>
-      </s-section>
 
-      {/* KPI Operations Snapshot */}
-      <s-section heading="Operations Snapshot">
-        <div style={metricGridStyle}>
-          <Metric label="Synced Variants" value={data.metrics.variantCount} sub={`${data.metrics.totalInventory.toLocaleString()} units in stock`} accent="#008060" />
-          <Metric label="30-Day Sales" value={data.metrics.unitsSold30Days} sub="Units sold" accent="#2c6ecb" />
-          <Metric label="Suppliers & SKUs" value={data.metrics.supplierCount} sub={`${data.metrics.mappedSkuCount} mapped SKUs`} accent="#5c5f62" />
-          <Metric label="Open POs" value={data.metrics.openPurchaseOrderCount} sub={`${data.metrics.partiallyReceivedPoCount} receiving`} accent="#8a5a00" />
+        {/* Recent POs */}
+        <div style={sectionCardStyle}>
+          <h2 style={cardHeaderStyle}>Recent Purchase Orders</h2>
+          <div style={cardBodyStyle}>
+            {data.recentPurchaseOrders.length === 0 ? (
+              <EmptyState
+                title="No purchase orders created yet"
+                text="Once suppliers and SKU mappings are set up, draft your first purchase order."
+                actionHref="/app/purchase-orders"
+                actionText="Create Purchase Order"
+              />
+            ) : (
+              <div style={tableWrapStyle}>
+                <table style={tableStyle}>
+                  <thead>
+                    <tr>
+                      <th style={thStyle}>Reference</th>
+                      <th style={thStyle}>Supplier</th>
+                      <th style={thStyle}>Status</th>
+                      <th style={thStyle}>Lines</th>
+                      <th style={thStyle}>Receiving</th>
+                      <th style={thStyle}>Expected</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.recentPurchaseOrders.map((po) => (
+                      <tr key={po.id}>
+                        <td style={tdStyle}>
+                          <Link to={`/app/purchase-orders/${po.id}`} style={linkStyle}>
+                            {po.reference}
+                          </Link>
+                        </td>
+                        <td style={tdStyle}>{po.supplier}</td>
+                        <td style={tdStyle}>
+                          <span style={statusBadgeStyle(po.status)}>{po.status.replaceAll("_", " ")}</span>
+                        </td>
+                        <td style={tdStyle}>{po.lineCount}</td>
+                        <td style={tdStyle}>
+                          {po.totalOrdered > 0 ? `${po.totalReceived} / ${po.totalOrdered}` : "-"}
+                        </td>
+                        <td style={tdStyle}>
+                          {po.expectedArrival ? formatDate(po.expectedArrival) : "-"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
-      </s-section>
-
-      {/* Stockout Risk & Reorder Planning */}
-      <s-section heading="Reorder Risk Attention">
-        {data.atRiskVariants.length === 0 ? (
-          <EmptyState
-            title="All inventory counts healthy"
-            text="No SKUs currently projected to run out within 14 days based on daily velocity and lead times."
-            actionHref="/app/reorder"
-            actionText="Open Reorder Table"
-          />
-        ) : (
-          <div style={tableWrapStyle}>
-            <table style={tableStyle}>
-              <thead>
-                <tr>
-                  <th style={thStyle}>Product / Variant</th>
-                  <th style={thStyle}>SKU</th>
-                  <th style={thStyle}>Stock</th>
-                  <th style={thStyle}>30d Demand</th>
-                  <th style={thStyle}>Days Remaining</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.atRiskVariants.map((variant) => (
-                  <tr key={variant.id}>
-                    <td style={tdStyle}>
-                      <span style={{ fontWeight: 600, color: "#202223" }}>{variant.productTitle}</span>
-                      <div style={mutedStyle}>{variant.variantTitle}</div>
-                    </td>
-                    <td style={tdStyle}>{variant.sku || "-"}</td>
-                    <td style={tdStyle}>{variant.inventoryQuantity}</td>
-                    <td style={tdStyle}>{variant.unitsSold30Days}</td>
-                    <td style={tdStyle}>
-                      {variant.daysUntilStockout == null ? (
-                        "-"
-                      ) : (
-                        <span style={riskBadgeStyle(variant.daysUntilStockout <= 7)}>
-                          {Math.round(variant.daysUntilStockout)} days
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </s-section>
-
-      {/* Recent POs */}
-      <s-section heading="Recent Purchase Orders">
-        {data.recentPurchaseOrders.length === 0 ? (
-          <EmptyState
-            title="No purchase orders created yet"
-            text="Once suppliers and SKU mappings are set up, draft your first purchase order."
-            actionHref="/app/purchase-orders"
-            actionText="Create Purchase Order"
-          />
-        ) : (
-          <div style={tableWrapStyle}>
-            <table style={tableStyle}>
-              <thead>
-                <tr>
-                  <th style={thStyle}>Reference</th>
-                  <th style={thStyle}>Supplier</th>
-                  <th style={thStyle}>Status</th>
-                  <th style={thStyle}>Lines</th>
-                  <th style={thStyle}>Receiving</th>
-                  <th style={thStyle}>Expected</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.recentPurchaseOrders.map((po) => (
-                  <tr key={po.id}>
-                    <td style={tdStyle}>
-                      <Link to={`/app/purchase-orders/${po.id}`} style={linkStyle}>
-                        {po.reference}
-                      </Link>
-                    </td>
-                    <td style={tdStyle}>{po.supplier}</td>
-                    <td style={tdStyle}>
-                      <span style={statusBadgeStyle(po.status)}>{po.status.replaceAll("_", " ")}</span>
-                    </td>
-                    <td style={tdStyle}>{po.lineCount}</td>
-                    <td style={tdStyle}>
-                      {po.totalOrdered > 0 ? `${po.totalReceived} / ${po.totalOrdered}` : "-"}
-                    </td>
-                    <td style={tdStyle}>
-                      {po.expectedArrival ? formatDate(po.expectedArrival) : "-"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </s-section>
-    </s-page>
+      </div>
+    </>
   );
 }
 
@@ -1047,6 +1063,27 @@ const linkStyle = {
   textDecoration: "none",
   fontWeight: 600,
 } as const;
+
+const sectionCardStyle = {
+  background: "#ffffff",
+  border: "1px solid #e5e7eb",
+  borderRadius: "16px",
+  boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03)",
+  marginBottom: "24px",
+  overflow: "hidden",
+  width: "100%",
+  boxSizing: "border-box",
+} as const;
+const cardHeaderStyle = {
+  margin: 0,
+  padding: "16px 24px",
+  fontSize: "16px",
+  fontWeight: 700,
+  color: "#111827",
+  borderBottom: "1px solid #f3f4f6",
+  backgroundColor: "#f9fafb",
+} as const;
+const cardBodyStyle = { padding: "24px" } as const;
 
 const noticeStyle = (ok: boolean) =>
   ({

@@ -187,166 +187,180 @@ export default function MappingsPage() {
   const unmappedVariants = variants.filter((v) => !mappedVariantIds.has(v.id));
 
   return (
-    <s-page heading="SKU-Supplier Mappings">
-      {actionData?.message ? (
-        <div style={noticeStyle(actionData.ok)}>{actionData.message}</div>
-      ) : null}
+    <>
+      <ui-title-bar title="SKU-Supplier Mappings" />
+      <div style={{ padding: "24px 32px", maxWidth: "1600px", margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
+        {actionData?.message ? (
+          <div style={noticeStyle(actionData.ok)}>{actionData.message}</div>
+        ) : null}
 
-      <s-section heading="Assign SKU to supplier">
-        {suppliers.length === 0 ? (
-          <div style={{ padding: "20px", background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: "10px" }}>
-            <div style={{ fontWeight: 650, fontSize: "15px", marginBottom: "6px", color: "#202223" }}>No suppliers found</div>
-            <p style={{ margin: "0 0 14px", color: "#6d7175", fontSize: "13px" }}>
-              Add a supplier first before mapping SKUs.
-            </p>
-            <Link to="/app/suppliers" style={buttonStyle}>Add Supplier</Link>
-          </div>
-        ) : variants.length === 0 ? (
-          <div style={{ padding: "20px", background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: "10px" }}>
-            <div style={{ fontWeight: 650, fontSize: "15px", marginBottom: "6px", color: "#202223" }}>No Shopify variants synced yet</div>
-            <p style={{ margin: "0 0 14px", color: "#6d7175", fontSize: "13px" }}>
-              Sync inventory first to get your products into PODesk.
-            </p>
-            <Link to="/app" style={buttonStyle}>Go to Dashboard to Sync</Link>
-          </div>
-        ) : (
-          <div style={formCardStyle}>
-            <Form method="post">
-              <input type="hidden" name="intent" value="create-mapping" />
-              <div style={formGridStyle}>
-                <label style={fieldLabelStyle}>
-                  <span>Supplier <span style={{ color: "#d72c0d" }}>*</span></span>
-                  <SearchableSelect
-                    name="supplierId"
-                    required
-                    placeholder="Select supplier..."
-                    value={selectedSupplierId}
-                    onChange={setSelectedSupplierId}
-                    options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
-                  />
-                </label>
-                <VariantPicker variants={variants} mappedVariantIds={mappedVariantIds} />
-                <Field label="Supplier SKU (Optional)" name="supplierSku" placeholder="e.g. SUP-SKU-101" />
-                <Field label="Supplier cost ($)" name="supplierCost" type="number" step="0.01" placeholder="e.g. 15.50" />
-                <Field label="Lead time override (days)" name="supplierLeadTimeDays" type="number" placeholder="e.g. 14" />
+        {/* Assign SKU card */}
+        <div style={sectionCardStyle}>
+          <h2 style={cardHeaderStyle}>Assign SKU to Supplier</h2>
+          <div style={cardBodyStyle}>
+            {suppliers.length === 0 ? (
+              <div style={emptyCardStyle}>
+                <div style={{ fontWeight: 650, fontSize: "15px", marginBottom: "6px", color: "#202223" }}>No suppliers found</div>
+                <p style={{ margin: "0 0 14px", color: "#6d7175", fontSize: "13px" }}>
+                  Add a supplier first before mapping SKUs.
+                </p>
+                <Link to="/app/suppliers" style={buttonStyle}>Add Supplier</Link>
               </div>
-              <div style={{ margin: "14px 0 18px" }}>
-                <label style={checkboxLabelStyle}>
-                  <input type="checkbox" name="isPrimary" defaultChecked style={{ width: "16px", height: "16px", accentColor: "#008060" }} />
-                  Set as primary supplier for this SKU
-                </label>
+            ) : variants.length === 0 ? (
+              <div style={emptyCardStyle}>
+                <div style={{ fontWeight: 650, fontSize: "15px", marginBottom: "6px", color: "#202223" }}>No Shopify variants synced yet</div>
+                <p style={{ margin: "0 0 14px", color: "#6d7175", fontSize: "13px" }}>
+                  Sync inventory first to get your products into PODesk.
+                </p>
+                <Link to="/app" style={buttonStyle}>Go to Dashboard to Sync</Link>
               </div>
-              <button type="submit" disabled={isSubmitting} style={buttonStyle}>
-                {isSubmitting ? "Saving mapping..." : "Create mapping"}
-              </button>
-            </Form>
-          </div>
-        )}
-      </s-section>
-
-      <s-section heading={`Current mappings (${mappings.length})`}>
-        {mappings.length === 0 ? (
-          <div style={{ padding: "20px", background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: "10px" }}>
-            <div style={{ fontWeight: 650, fontSize: "15px", marginBottom: "6px", color: "#202223" }}>No SKU mappings created yet</div>
-            <p style={{ margin: "0 0 14px", color: "#6d7175", fontSize: "13px" }}>
-              Map your variants using the form above or import existing supplier mappings from Stocky / spreadsheets via CSV.
-            </p>
-            <Link to="/app/imports" style={buttonStyle}>Import Mappings via CSV</Link>
-          </div>
-        ) : (
-          <div style={tableWrapStyle}>
-            <table style={tableStyle}>
-              <thead>
-                <tr>
-                  <th style={thStyle}>Product</th>
-                  <th style={thStyle}>SKU</th>
-                  <th style={thStyle}>Supplier</th>
-                  <th style={thStyle}>Supplier SKU</th>
-                  <th style={thStyle}>Cost</th>
-                  <th style={thStyle}>Lead</th>
-                  <th style={thStyle}>Primary</th>
-                  <th style={thStyle}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {mappings.map((m) => (
-                  <tr key={m.id}>
-                    <td style={tdStyle}>
-                      <span style={{ fontWeight: 600, color: "#202223" }}>{m.productTitle}</span>
-                      <div style={mutedStyle}>{m.variantTitle}</div>
-                    </td>
-                    <td style={tdStyle}>{m.sku || "-"}</td>
-                    <td style={tdStyle}>
-                      <Link to={`/app/suppliers/${m.supplierId}`} style={linkStyle}>{m.supplierName}</Link>
-                    </td>
-                    <td style={tdStyle}>{m.supplierSku || "-"}</td>
-                    <td style={tdStyle}>{m.supplierCost != null ? `$${m.supplierCost.toFixed(2)}` : "-"}</td>
-                    <td style={tdStyle}>{m.supplierLeadTimeDays != null ? `${m.supplierLeadTimeDays}d` : "-"}</td>
-                    <td style={tdStyle}>{m.isPrimary ? "Yes" : ""}</td>
-                    <td style={tdStyle}>
-                      <button
-                        type="button"
-                        onClick={() => setEditingId(editingId === m.id ? null : m.id)}
-                        style={{ ...smallBtnStyle, marginRight: "4px" }}
-                      >
-                        {editingId === m.id ? "Cancel" : "Edit"}
-                      </button>
-                      <Form method="post" style={{ display: "inline" }}>
-                        <input type="hidden" name="intent" value="delete-mapping" />
-                        <input type="hidden" name="mappingId" value={m.id} />
-                        <button type="submit" style={smallBtnStyle}>Remove</button>
-                      </Form>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </s-section>
-
-      {editingId && (() => {
-        const target = mappings.find((m) => m.id === editingId);
-        if (!target) return null;
-        return (
-          <s-section heading={`Edit Mapping: ${target.productTitle} (${target.variantTitle})`}>
-            <div style={formCardStyle}>
-              <Form method="post" onSubmit={() => setEditingId(null)}>
-                <input type="hidden" name="intent" value="update-mapping" />
-                <input type="hidden" name="mappingId" value={target.id} />
+            ) : (
+              <Form method="post">
+                <input type="hidden" name="intent" value="create-mapping" />
                 <div style={formGridStyle}>
-                  <Field label="Supplier SKU" name="supplierSku" defaultValue={target.supplierSku ?? ""} />
-                  <Field label="Supplier cost ($)" name="supplierCost" type="number" step="0.01" defaultValue={target.supplierCost != null ? String(target.supplierCost) : ""} />
-                  <Field label="Lead time override (days)" name="supplierLeadTimeDays" type="number" defaultValue={target.supplierLeadTimeDays != null ? String(target.supplierLeadTimeDays) : ""} />
+                  <label style={fieldLabelStyle}>
+                    <span>Supplier <span style={{ color: "#d72c0d" }}>*</span></span>
+                    <SearchableSelect
+                      name="supplierId"
+                      required
+                      placeholder="Select supplier..."
+                      value={selectedSupplierId}
+                      onChange={setSelectedSupplierId}
+                      options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
+                    />
+                  </label>
+                  <VariantPicker variants={variants} mappedVariantIds={mappedVariantIds} />
+                  <Field label="Supplier SKU (Optional)" name="supplierSku" placeholder="e.g. SUP-SKU-101" />
+                  <Field label="Supplier cost ($)" name="supplierCost" type="number" step="0.01" placeholder="e.g. 15.50" />
+                  <Field label="Lead time override (days)" name="supplierLeadTimeDays" type="number" placeholder="e.g. 14" />
                 </div>
                 <div style={{ margin: "14px 0 18px" }}>
                   <label style={checkboxLabelStyle}>
-                    <input type="checkbox" name="isPrimary" defaultChecked={target.isPrimary} style={{ width: "16px", height: "16px", accentColor: "#008060" }} />
+                    <input type="checkbox" name="isPrimary" defaultChecked style={{ width: "16px", height: "16px", accentColor: "#008060" }} />
                     Set as primary supplier for this SKU
                   </label>
                 </div>
-                <div style={{ display: "flex", gap: "10px" }}>
-                  <button type="submit" disabled={isSubmitting} style={buttonStyle}>
-                    Save mapping update
-                  </button>
-                  <button type="button" onClick={() => setEditingId(null)} style={smallBtnStyle}>
-                    Cancel
-                  </button>
-                </div>
+                <button type="submit" disabled={isSubmitting} style={buttonStyle}>
+                  {isSubmitting ? "Saving mapping..." : "Create mapping"}
+                </button>
               </Form>
-            </div>
-          </s-section>
-        );
-      })()}
+            )}
+          </div>
+        </div>
 
-      <s-section heading="Unmapped variants">
-        <s-paragraph>
-          {unmappedVariants.length === 0
-            ? "All synced variants are mapped to a supplier."
-            : `${unmappedVariants.length} variant(s) without a supplier mapping.`}
-        </s-paragraph>
-      </s-section>
-    </s-page>
+        {/* Current Mappings Card */}
+        <div style={sectionCardStyle}>
+          <h2 style={cardHeaderStyle}>Current Mappings ({mappings.length})</h2>
+          <div style={cardBodyStyle}>
+            {mappings.length === 0 ? (
+              <div style={emptyCardStyle}>
+                <div style={{ fontWeight: 650, fontSize: "15px", marginBottom: "6px", color: "#202223" }}>No SKU mappings created yet</div>
+                <p style={{ margin: "0 0 14px", color: "#6d7175", fontSize: "13px" }}>
+                  Map your variants using the form above or import existing supplier mappings from Stocky / spreadsheets via CSV.
+                </p>
+                <Link to="/app/imports" style={buttonStyle}>Import Mappings via CSV</Link>
+              </div>
+            ) : (
+              <div style={tableWrapStyle}>
+                <table style={tableStyle}>
+                  <thead>
+                    <tr>
+                      <th style={thStyle}>Product</th>
+                      <th style={thStyle}>SKU</th>
+                      <th style={thStyle}>Supplier</th>
+                      <th style={thStyle}>Supplier SKU</th>
+                      <th style={{ ...thStyle, textAlign: "right" }}>Cost</th>
+                      <th style={{ ...thStyle, textAlign: "right" }}>Lead</th>
+                      <th style={{ ...thStyle, textAlign: "center" }}>Primary</th>
+                      <th style={{ ...thStyle, textAlign: "center" }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {mappings.map((m) => (
+                      <tr key={m.id}>
+                        <td style={tdStyle}>
+                          <span style={{ fontWeight: 600, color: "#202223" }}>{m.productTitle}</span>
+                          <div style={mutedStyle}>{m.variantTitle}</div>
+                        </td>
+                        <td style={tdStyle}>{m.sku || "-"}</td>
+                        <td style={tdStyle}>
+                          <Link to={`/app/suppliers/${m.supplierId}`} style={linkStyle}>{m.supplierName}</Link>
+                        </td>
+                        <td style={tdStyle}>{m.supplierSku || "-"}</td>
+                        <td style={{ ...tdStyle, textAlign: "right" }}>{m.supplierCost != null ? `$${m.supplierCost.toFixed(2)}` : "-"}</td>
+                        <td style={{ ...tdStyle, textAlign: "right" }}>{m.supplierLeadTimeDays != null ? `${m.supplierLeadTimeDays}d` : "-"}</td>
+                        <td style={{ ...tdStyle, textAlign: "center" }}>{m.isPrimary ? "Yes" : ""}</td>
+                        <td style={{ ...tdStyle, textAlign: "center" }}>
+                          <button
+                            type="button"
+                            onClick={() => setEditingId(editingId === m.id ? null : m.id)}
+                            style={{ ...smallBtnStyle, marginRight: "4px" }}
+                          >
+                            {editingId === m.id ? "Cancel" : "Edit"}
+                          </button>
+                          <Form method="post" style={{ display: "inline" }}>
+                            <input type="hidden" name="intent" value="delete-mapping" />
+                            <input type="hidden" name="mappingId" value={m.id} />
+                            <button type="submit" style={smallBtnStyle}>Remove</button>
+                          </Form>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {editingId && (() => {
+          const target = mappings.find((m) => m.id === editingId);
+          if (!target) return null;
+          return (
+            <div style={sectionCardStyle}>
+              <h2 style={cardHeaderStyle}>Edit Mapping: {target.productTitle} ({target.variantTitle})</h2>
+              <div style={cardBodyStyle}>
+                <Form method="post" onSubmit={() => setEditingId(null)}>
+                  <input type="hidden" name="intent" value="update-mapping" />
+                  <input type="hidden" name="mappingId" value={target.id} />
+                  <div style={formGridStyle}>
+                    <Field label="Supplier SKU" name="supplierSku" defaultValue={target.supplierSku ?? ""} />
+                    <Field label="Supplier cost ($)" name="supplierCost" type="number" step="0.01" defaultValue={target.supplierCost != null ? String(target.supplierCost) : ""} />
+                    <Field label="Lead time override (days)" name="supplierLeadTimeDays" type="number" defaultValue={target.supplierLeadTimeDays != null ? String(target.supplierLeadTimeDays) : ""} />
+                  </div>
+                  <div style={{ margin: "14px 0 18px" }}>
+                    <label style={checkboxLabelStyle}>
+                      <input type="checkbox" name="isPrimary" defaultChecked={target.isPrimary} style={{ width: "16px", height: "16px", accentColor: "#008060" }} />
+                      Set as primary supplier for this SKU
+                    </label>
+                  </div>
+                  <div style={{ display: "flex", gap: "10px" }}>
+                    <button type="submit" disabled={isSubmitting} style={buttonStyle}>
+                      Save mapping update
+                    </button>
+                    <button type="button" onClick={() => setEditingId(null)} style={secondaryBtnStyle}>
+                      Cancel
+                    </button>
+                  </div>
+                </Form>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Unmapped variants card */}
+        <div style={sectionCardStyle}>
+          <h2 style={cardHeaderStyle}>Unmapped Variants ({unmappedVariants.length})</h2>
+          <div style={cardBodyStyle}>
+            <p style={{ margin: 0, color: "#6b7280", fontSize: "14px" }}>
+              {unmappedVariants.length === 0
+                ? "All synced variants are mapped to a supplier."
+                : `${unmappedVariants.length} variant(s) without a supplier mapping.`}
+            </p>
+          </div>
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -462,6 +476,29 @@ const tableWrapStyle = { overflowX: "auto" } as const;
 const tableStyle = { width: "100%", borderCollapse: "collapse", fontSize: "14px" } as const;
 const thStyle = { textAlign: "left", borderBottom: "1px solid #dfe3e8", padding: "12px 10px", whiteSpace: "nowrap", color: "#5c5f62", fontSize: "13px", fontWeight: 650 } as const;
 const tdStyle = { borderBottom: "1px solid #f1f2f3", padding: "12px 10px", verticalAlign: "middle" } as const;
+const sectionCardStyle = {
+  background: "#ffffff",
+  border: "1px solid #e5e7eb",
+  borderRadius: "16px",
+  boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03)",
+  marginBottom: "24px",
+  overflow: "hidden",
+  width: "100%",
+  boxSizing: "border-box",
+} as const;
+const cardHeaderStyle = {
+  margin: 0,
+  padding: "16px 24px",
+  fontSize: "16px",
+  fontWeight: 700,
+  color: "#111827",
+  borderBottom: "1px solid #f3f4f6",
+  backgroundColor: "#f9fafb",
+} as const;
+const cardBodyStyle = { padding: "24px" } as const;
+const emptyCardStyle = { padding: "24px", background: "#ffffff", border: "1px solid #e5e7eb", borderRadius: "12px", textAlign: "left" } as const;
+const secondaryBtnStyle = { height: "40px", border: "1px solid #d1d5db", borderRadius: "8px", padding: "0 16px", background: "#ffffff", color: "#374151", fontWeight: 600, fontSize: "14px", cursor: "pointer" } as const;
+
 const noticeStyle = (ok: boolean) => ({ border: `1px solid ${ok ? "#95c9b4" : "#e0b3b2"}`, background: ok ? "#effaf5" : "#fff4f4", borderRadius: "8px", marginTop: "12px", marginBottom: "12px", padding: "12px 16px", color: ok ? "#0f5132" : "#8a1f11", fontWeight: 550 }) as const;
 
 

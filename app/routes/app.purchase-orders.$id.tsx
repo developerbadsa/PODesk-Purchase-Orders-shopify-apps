@@ -23,6 +23,7 @@ import { createUniquePoReference } from "../po.server";
 import { formatCurrency } from "../utils";
 import { calculateLineReceiving, getPoReceivingSummary } from "../receiving.server";
 import { SearchableSelect } from "../components/SearchableSelect";
+import { DatePickerField } from "../components/DatePickerField";
 import {
   Button,
   buttonPrimaryStyle,
@@ -170,9 +171,20 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     })),
   }));
 
+  const companyAddressParts = [
+    settings?.addressLine1,
+    settings?.addressLine2,
+    [settings?.city, settings?.region, settings?.postalCode].filter(Boolean).join(", "),
+    settings?.country,
+  ].filter(Boolean);
+
   return {
     currencyCode,
     companyName,
+    companyEmail: settings?.contactEmail || null,
+    companyPhone: settings?.phone || null,
+    companyAddress: companyAddressParts,
+    defaultPaymentTerms: settings?.defaultPaymentTerms || null,
     defaultSubject,
     defaultMessage,
     supplierEmail,
@@ -184,6 +196,8 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
       supplierName: po.supplier.name,
       supplierEmail: po.supplier.email,
       supplierEmailSnapshot: po.supplierEmailSnapshot,
+      supplierPhone: po.supplier.phone || null,
+      supplierPaymentTerms: po.supplier.paymentTerms || null,
       status: po.status,
       expectedArrival: po.expectedArrival?.toISOString().slice(0, 10) ?? "",
       notes: po.notes,
@@ -649,6 +663,11 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
 export default function PurchaseOrderDetailPage() {
   const {
     currencyCode,
+    companyName,
+    companyEmail,
+    companyPhone,
+    companyAddress,
+    defaultPaymentTerms,
     defaultSubject,
     defaultMessage,
     supplierEmail,
@@ -870,16 +889,7 @@ export default function PurchaseOrderDetailPage() {
             <input type="hidden" name="intent" value="record-receipt" />
 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "12px", marginBottom: "16px" }}>
-              <label style={fieldLabelStyle}>
-                Date received
-                <input
-                  name="receivedAt"
-                  type="date"
-                  defaultValue={todayIso}
-                  required
-                  style={inputStyle}
-                />
-              </label>
+              <DatePickerField label="Date received" name="receivedAt" defaultValue={todayIso} required />
               <label style={fieldLabelStyle}>
                 Notes
                 <input
@@ -1005,12 +1015,13 @@ export default function PurchaseOrderDetailPage() {
             <div><strong>Created:</strong> {formatDate(po.createdAt)}</div>
             <div><strong>Last updated:</strong> {formatDate(po.updatedAt)}</div>
           </div>
-          <Link
-            to={`/app/purchase-orders/${po.id}/print`}
+          <button
+            type="button"
+            onClick={() => window.print()}
             style={printBtnLinkStyle}
           >
-            Print PO
-          </Link>
+            🖨 Print PO
+          </button>
         </div>
   </div>
 </div>
@@ -1133,12 +1144,13 @@ export default function PurchaseOrderDetailPage() {
             </a>
           )}
 
-          <Link
-            to={`/app/purchase-orders/${po.id}/print`}
+          <button
+            type="button"
+            onClick={() => window.print()}
             style={secondaryBtnLinkStyle}
           >
-            Open printable PO
-          </Link>
+            🖨 Print / Save PDF
+          </button>
           {canMarkSent && (
             <Form method="post" style={{ display: "inline" }}>
               <input type="hidden" name="intent" value="mark-sent" />
@@ -1168,7 +1180,7 @@ export default function PurchaseOrderDetailPage() {
                 <input type="hidden" name="intent" value="update-po" />
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
                   <Field label="PO reference" name="reference" type="text" required defaultValue={po.reference} />
-                  <Field label="Expected arrival" name="expectedArrival" type="date" defaultValue={po.expectedArrival} />
+                  <DatePickerField label="Expected arrival" name="expectedArrival" defaultValue={po.expectedArrival} />
                 </div>
                 <label style={fieldLabelStyle}>
                   Notes
@@ -1199,25 +1211,8 @@ export default function PurchaseOrderDetailPage() {
                   </label>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-                  <label style={fieldLabelStyle}>
-                    Interval (Days)
-                    <input 
-                      type="number" 
-                      name="recurringIntervalDays" 
-                      defaultValue={po.recurringIntervalDays?.toString() ?? ""} 
-                      placeholder="e.g. 30" 
-                      style={inputStyle} 
-                    />
-                  </label>
-                  <label style={fieldLabelStyle}>
-                    Next Generation Date
-                    <input 
-                      type="date" 
-                      name="nextRecurringDate" 
-                      defaultValue={po.nextRecurringDate ?? ""} 
-                      style={inputStyle} 
-                    />
-                  </label>
+                  <Field label="Interval (Days)" name="recurringIntervalDays" type="number" defaultValue={po.recurringIntervalDays?.toString() ?? ""} placeholder="e.g. 30" />
+                  <DatePickerField label="Next Generation Date" name="nextRecurringDate" defaultValue={po.nextRecurringDate ?? ""} />
                 </div>
                 <div>
                   <button type="submit" disabled={isSubmitting} style={buttonStyle}>
@@ -1231,7 +1226,7 @@ export default function PurchaseOrderDetailPage() {
             <h2 style={cardHeaderStyle}>Actions</h2>
             <div style={cardContentStyle}>
               <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", alignItems: "center" }}>
-                <Link to={`/app/purchase-orders/${po.id}/print`} style={buttonSecondaryStyle}>Print PO</Link>
+                <button type="button" onClick={() => window.print()} style={buttonSecondaryStyle}>🖨 Print PO</button>
                 <Form method="post" style={{ display: "inline-flex" }}>
                   <input type="hidden" name="intent" value="duplicate" />
                   <button type="submit" disabled={isSubmitting} style={buttonSecondaryStyle}>Duplicate PO</button>
@@ -1248,19 +1243,135 @@ export default function PurchaseOrderDetailPage() {
         </div>
       </div>
       </div>
+
+      {/* ─── Inline Print Layout (hidden on screen, visible during @media print) ─── */}
+      <style>{`
+        @media print {
+          /* Hide everything except the print layout */
+          body > * { display: none !important; }
+          .shopify-app-bridge-initialized .Polaris-Frame { display: none !important; }
+          #po-print-layout { display: block !important; }
+          * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          @page { margin: 18mm 14mm; size: A4; }
+        }
+        #po-print-layout { display: none; }
+      `}</style>
+
+      <div id="po-print-layout" style={{
+        fontFamily: "'Helvetica Neue', Arial, sans-serif",
+        fontSize: "12px",
+        color: "#111",
+        lineHeight: 1.4,
+        background: "#fff",
+        position: "fixed",
+        top: 0, left: 0, right: 0, bottom: 0,
+        zIndex: 99999,
+        padding: "0",
+        overflowY: "auto",
+      }}>
+        {/* Header */}
+        <div style={{ background: "#111", color: "#fff", padding: "24px 32px", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <div>
+            <div style={{ fontSize: "9px", letterSpacing: "0.15em", textTransform: "uppercase", color: "#aaa", marginBottom: "4px" }}>Purchase Order</div>
+            <div style={{ fontSize: "22px", fontWeight: 700, letterSpacing: "-0.5px" }}>{po.reference}</div>
+            <div style={{ marginTop: "6px", fontSize: "11px", color: "#ccc" }}>Status: {po.status.replace(/_/g, " ")}</div>
+          </div>
+          <div style={{ textAlign: "right" }}>
+            <div style={{ fontSize: "15px", fontWeight: 700 }}>{companyName}</div>
+            {companyAddress.map((line, i) => <div key={i} style={{ fontSize: "11px", color: "#ccc" }}>{line}</div>)}
+            {companyEmail && <div style={{ fontSize: "11px", color: "#ccc" }}>{companyEmail}</div>}
+            {companyPhone && <div style={{ fontSize: "11px", color: "#ccc" }}>{companyPhone}</div>}
+          </div>
+        </div>
+
+        {/* Meta row */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0", borderBottom: "2px solid #e5e7eb" }}>
+          <div style={{ padding: "20px 32px", borderRight: "1px solid #e5e7eb" }}>
+            <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.1em", color: "#888", marginBottom: "8px" }}>Supplier</div>
+            <div style={{ fontWeight: 700, fontSize: "13px" }}>{po.supplierName}</div>
+            {(po.supplierEmailSnapshot || po.supplierEmail) && <div style={{ color: "#555", fontSize: "11px" }}>{po.supplierEmailSnapshot || po.supplierEmail}</div>}
+            {po.supplierPhone && <div style={{ color: "#555", fontSize: "11px" }}>{po.supplierPhone}</div>}
+            {(po.supplierPaymentTerms || defaultPaymentTerms) && <div style={{ color: "#555", fontSize: "11px", marginTop: "4px" }}>Terms: {po.supplierPaymentTerms || defaultPaymentTerms}</div>}
+          </div>
+          <div style={{ padding: "20px 32px" }}>
+            <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.1em", color: "#888", marginBottom: "8px" }}>Order Details</div>
+            <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 16px", fontSize: "12px" }}>
+              <span style={{ color: "#888" }}>Date:</span><span>{formatDate(po.createdAt)}</span>
+              <span style={{ color: "#888" }}>Expected:</span><span>{po.expectedArrival ? formatDate(po.expectedArrival + "T00:00:00Z") : "—"}</span>
+              <span style={{ color: "#888" }}>Currency:</span><span>{currencyCode}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Line items table */}
+        <div style={{ padding: "0 32px" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "16px" }}>
+            <thead>
+              <tr style={{ background: "#f9fafb" }}>
+                {["Product", "Variant", "SKU", "Qty Ordered", "Qty Received", "Remaining", "Unit Cost", "Subtotal"].map(h => (
+                  <th key={h} style={{ padding: "10px 8px", textAlign: "left", fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.08em", color: "#888", fontWeight: 600, borderBottom: "1px solid #e5e7eb" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {po.lines.map((line, i) => (
+                <tr key={line.id} style={{ background: i % 2 === 0 ? "#fff" : "#fafafa" }}>
+                  <td style={{ padding: "10px 8px", borderBottom: "1px solid #f3f4f6", fontSize: "12px" }}>{line.productTitle}</td>
+                  <td style={{ padding: "10px 8px", borderBottom: "1px solid #f3f4f6", fontSize: "11px", color: "#555" }}>{line.variantTitle}</td>
+                  <td style={{ padding: "10px 8px", borderBottom: "1px solid #f3f4f6", fontSize: "11px", color: "#777", fontFamily: "monospace" }}>{line.sku || "—"}</td>
+                  <td style={{ padding: "10px 8px", borderBottom: "1px solid #f3f4f6", textAlign: "right" }}>{line.quantity}</td>
+                  <td style={{ padding: "10px 8px", borderBottom: "1px solid #f3f4f6", textAlign: "right", color: "#16a34a" }}>{line.receivedQuantity}</td>
+                  <td style={{ padding: "10px 8px", borderBottom: "1px solid #f3f4f6", textAlign: "right", color: line.remainingQuantity > 0 ? "#d97706" : "#16a34a" }}>{line.remainingQuantity}</td>
+                  <td style={{ padding: "10px 8px", borderBottom: "1px solid #f3f4f6", textAlign: "right" }}>{line.unitCost != null ? formatCurrency(line.unitCost, currencyCode) : "—"}</td>
+                  <td style={{ padding: "10px 8px", borderBottom: "1px solid #f3f4f6", textAlign: "right", fontWeight: 600 }}>{formatCurrency(line.subtotal, currencyCode)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Totals */}
+        <div style={{ display: "flex", justifyContent: "flex-end", padding: "16px 32px 0" }}>
+          <div style={{ minWidth: "260px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderTop: "1px solid #e5e7eb", fontSize: "12px" }}>
+              <span>Total Qty Ordered</span><span style={{ fontWeight: 600 }}>{po.totalOrderedQuantity}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderTop: "1px solid #e5e7eb", fontSize: "12px" }}>
+              <span>Total Qty Received</span><span style={{ fontWeight: 600, color: "#16a34a" }}>{po.totalReceivedQuantity}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderTop: "2px solid #111", fontSize: "14px", fontWeight: 700 }}>
+              <span>Total Cost</span><span>{formatCurrency(po.totalCost, currencyCode)}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Notes */}
+        {po.notes && (
+          <div style={{ margin: "16px 32px", padding: "14px", background: "#f9fafb", borderRadius: "6px", border: "1px solid #e5e7eb" }}>
+            <div style={{ fontSize: "9px", textTransform: "uppercase", color: "#888", marginBottom: "4px" }}>Notes</div>
+            <div style={{ fontSize: "12px", color: "#444", whiteSpace: "pre-wrap" }}>{po.notes}</div>
+          </div>
+        )}
+
+        {/* Footer */}
+        <div style={{ margin: "24px 32px 0", padding: "12px 0", borderTop: "1px solid #e5e7eb", display: "flex", justifyContent: "space-between", fontSize: "10px", color: "#aaa" }}>
+          <span>Generated by PODesk</span>
+          <span>{companyName} · {new Date().toLocaleDateString("en", { dateStyle: "medium" })}</span>
+        </div>
+      </div>
     </>
   );
 }
 
 function Field({
-  label, name, type = "text", required = false, defaultValue, step,
+  label, name, type = "text", required = false, defaultValue, step, placeholder,
 }: {
-  label: string; name: string; type?: string; required?: boolean; defaultValue?: string; step?: string;
+  label: string; name: string; type?: string; required?: boolean; defaultValue?: string; step?: string; placeholder?: string;
 }) {
   return (
     <label style={fieldLabelStyle}>
       {label}
-      <input name={name} type={type} required={required} defaultValue={defaultValue} step={step} style={inputStyle} />
+      <input name={name} type={type} required={required} defaultValue={defaultValue} step={step} placeholder={placeholder} style={inputStyle} />
     </label>
   );
 }
@@ -1356,9 +1467,8 @@ const selectStyles = {
 // Shopify requires ErrorBoundary
 export function ErrorBoundary() {
   const error = useRouteError();
-  const boundaryError = boundary.error(error);
   if (error instanceof Response && (error.status === 200 || error.status === 401)) {
-    return boundaryError;
+    return boundary.error(error);
   }
   let msg = "Unknown error";
   let stack = "";
@@ -1384,5 +1494,3 @@ export function ErrorBoundary() {
 export const headers: HeadersFunction = (headersArgs) => {
   return boundary.headers(headersArgs);
 };
-
-
