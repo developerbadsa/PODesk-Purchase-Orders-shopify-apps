@@ -559,25 +559,26 @@ const thStyle = {
   borderBottom: "2px solid #374151",
   padding: "8px 10px",
   fontWeight: 700,
-  color: "#111827",
-  backgroundColor: "#f9fafb",
-} as const;
+  padding: "8px",
+  textAlign: "left",
+  borderBottom: "1px solid #e5e7eb",
+  color: "#4b5563",
+  fontSize: "12px",
+  fontWeight: 600,
+};
 
 const tdStyle = {
+  padding: "8px",
   borderBottom: "1px solid #e5e7eb",
-  padding: "10px 10px",
   verticalAlign: "top",
-  color: "#1f2937",
-  wordBreak: "break-word",
-} as const;
+  fontSize: "12px",
+  lineHeight: "1.4",
+};
 
 const tfStyle = {
-  borderTop: "2px solid #374151",
-  borderBottom: "2px solid #374151",
-  padding: "10px 10px",
-  color: "#111827",
+  padding: "10px 8px",
   fontSize: "13px",
-} as const;
+};
 
 const subTitleStyle = {
   color: "#6b7280",

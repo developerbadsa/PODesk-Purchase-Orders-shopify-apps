@@ -693,7 +693,7 @@ export default function PurchaseOrderDetailPage() {
   const todayIso = new Date().toISOString().slice(0, 10);
 
   return (
-    <s-page heading={po.reference}>
+    <s-page full-width heading={po.reference}>
       {actionData?.message ? (
         <div style={noticeStyle(actionData.ok)}>{actionData.message}</div>
       ) : null}

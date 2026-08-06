@@ -217,7 +217,7 @@ export default function Index() {
   }
 
   return (
-    <s-page heading="Dashboard">
+    <s-page full-width heading="Dashboard">
       <div style={betaBannerStyle}>
         <strong>Free Beta:</strong> All features are unlocked in this development build. No subscription required.
       </div>

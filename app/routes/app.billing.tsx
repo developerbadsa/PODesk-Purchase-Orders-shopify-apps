@@ -21,7 +21,7 @@ export default function BillingPage() {
   const { shop, subscription } = useLoaderData<typeof loader>();
 
   return (
-    <s-page heading="Billing & Plans">
+    <s-page full-width heading="Billing & Plans">
       <s-section heading="Current Plan Status">
         <div style={statusCardStyle}>
           <div style={statusLabelStyle}>Store: {shop}</div>

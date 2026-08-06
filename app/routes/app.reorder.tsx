@@ -518,7 +518,7 @@ export default function ReorderPage() {
   }
 
   return (
-    <s-page heading="Reorder Planning">
+    <s-page full-width heading="Reorder Planning">
       {actionData?.message ? (
         <div style={noticeStyle(actionData.ok)}>{actionData.message}</div>
       ) : null}

@@ -247,7 +247,7 @@ export default function SettingsPage() {
   );
 
   return (
-    <s-page heading="Settings">
+    <s-page full-width heading="Settings">
       {actionData?.message ? (
         <div style={noticeStyle(actionData.ok)}>{actionData.message}</div>
       ) : null}

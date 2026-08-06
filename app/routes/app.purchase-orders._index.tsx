@@ -239,7 +239,7 @@ export default function PurchaseOrdersPage() {
   }
 
   return (
-    <s-page heading="Purchase Orders">
+    <s-page full-width heading="Purchase Orders">
       {actionData?.message ? (
         <div style={noticeStyle(actionData.ok)}>{actionData.message}</div>
       ) : null}

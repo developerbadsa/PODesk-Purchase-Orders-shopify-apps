@@ -136,7 +136,7 @@ export default function SuppliersPage() {
   const archivedSuppliers = suppliers.filter((s) => s.isArchived);
 
   return (
-    <s-page heading="Suppliers">
+    <s-page full-width heading="Suppliers">
       {actionData?.message ? (
         <div style={noticeStyle(actionData.ok)}>{actionData.message}</div>
       ) : null}
