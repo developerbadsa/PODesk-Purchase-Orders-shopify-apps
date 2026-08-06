@@ -2,6 +2,11 @@ import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import prisma from "../db.server";
 import { sendPurchaseOrderEmail } from "../email.server";
 
+type CronResult =
+  | { type: "DRAFT_REMINDER"; poId: string }
+  | { type: "SUPPLIER_FOLLOWUP"; poId: string }
+  | { type: "RECURRING_GENERATED"; templatePoId: string; newRef: string };
+
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   // Simple check to prevent unauthorized execution (Vercel Cron sets a specific header, or we can use a token)
   const authHeader = request.headers.get("authorization");
@@ -9,7 +14,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     return new Response("Unauthorized", { status: 401 });
   }
 
-  const results: any[] = [];
+  const results: CronResult[] = [];
   const stores = await prisma.store.findMany({ include: { settings: true } });
 
   for (const store of stores) {

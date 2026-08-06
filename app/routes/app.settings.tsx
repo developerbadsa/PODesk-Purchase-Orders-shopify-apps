@@ -464,7 +464,7 @@ export default function SettingsPage() {
               />
             </div>
             <p style={{ ...sectionTextStyle, fontSize: "12px", marginTop: "12px" }}>
-              Note: Follow-up emails will only be sent if "Auto-send after review" is selected and Email Delivery is configured.
+              Note: Follow-up emails will only be sent if &quot;Auto-send after review&quot; is selected and Email Delivery is configured.
             </p>
           </div>
         </s-section>

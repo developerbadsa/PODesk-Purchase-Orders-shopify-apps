@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type {
   ActionFunctionArgs,
   HeadersFunction,
@@ -221,18 +221,7 @@ export default function MappingsPage() {
                     ))}
                   </select>
                 </label>
-                <label style={fieldLabelStyle}>
-                  <span>Variant / SKU <span style={{ color: "#d72c0d" }}>*</span></span>
-                  <select name="variantId" required style={inputStyle}>
-                    <option value="">Select variant</option>
-                    {variants.map((v) => (
-                      <option key={v.id} value={v.id}>
-                        {v.productTitle} - {v.variantTitle} {v.sku ? `(${v.sku})` : ""}
-                        {mappedVariantIds.has(v.id) ? " - (already mapped)" : ""}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <VariantPicker variants={variants} mappedVariantIds={mappedVariantIds} />
                 <Field label="Supplier SKU (Optional)" name="supplierSku" placeholder="e.g. SUP-SKU-101" />
                 <Field label="Supplier cost ($)" name="supplierCost" type="number" step="0.01" placeholder="e.g. 15.50" />
                 <Field label="Lead time override (days)" name="supplierLeadTimeDays" type="number" placeholder="e.g. 14" />
@@ -357,6 +346,111 @@ export default function MappingsPage() {
   );
 }
 
+function VariantPicker({
+  variants,
+  mappedVariantIds,
+}: {
+  variants: Array<{
+    id: string;
+    productTitle: string;
+    variantTitle: string;
+    sku: string | null;
+    shopifyVariantId: string;
+  }>;
+  mappedVariantIds: Set<string>;
+}) {
+  const [query, setQuery] = useState("");
+  const [selectedVariantId, setSelectedVariantId] = useState("");
+  const selectedVariant = variants.find((variant) => variant.id === selectedVariantId);
+
+  const filteredVariants = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    const matchingVariants = normalizedQuery
+      ? variants.filter((variant) => {
+          const searchableText = [
+            variant.productTitle,
+            variant.variantTitle,
+            variant.sku,
+            variant.shopifyVariantId,
+          ]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase();
+          return searchableText.includes(normalizedQuery);
+        })
+      : variants;
+
+    return matchingVariants.slice(0, 8);
+  }, [query, variants]);
+
+  return (
+    <div style={variantPickerStyle}>
+      <label style={fieldLabelStyle}>
+        <span>Variant / SKU <span style={{ color: "#d72c0d" }}>*</span></span>
+        <input type="hidden" name="variantId" value={selectedVariantId} />
+        <input
+          type="search"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Search product, variant, SKU, or Shopify ID"
+          style={inputStyle}
+        />
+      </label>
+
+      {selectedVariant ? (
+        <div style={selectedVariantStyle}>
+          <div>
+            <div style={selectedVariantTitleStyle}>
+              {selectedVariant.productTitle}
+            </div>
+            <div style={selectedVariantMetaStyle}>
+              {selectedVariant.variantTitle}
+              {selectedVariant.sku ? ` · SKU ${selectedVariant.sku}` : " · No SKU"}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSelectedVariantId("")}
+            style={clearSelectionButtonStyle}
+          >
+            Change
+          </button>
+        </div>
+      ) : null}
+
+      <div style={variantResultsStyle} role="listbox" aria-label="Available variants">
+        {filteredVariants.length === 0 ? (
+          <div style={variantEmptyStyle}>No variants match this search.</div>
+        ) : (
+          filteredVariants.map((variant) => {
+            const isSelected = variant.id === selectedVariantId;
+            const isMapped = mappedVariantIds.has(variant.id);
+            return (
+              <button
+                key={variant.id}
+                type="button"
+                onClick={() => setSelectedVariantId(variant.id)}
+                style={variantOptionStyle(isSelected)}
+                aria-pressed={isSelected}
+              >
+                <span style={{ minWidth: 0 }}>
+                  <span style={variantOptionTitleStyle}>{variant.productTitle}</span>
+                  <span style={variantOptionMetaStyle}>
+                    {variant.variantTitle}
+                    {variant.sku ? ` · SKU ${variant.sku}` : " · No SKU"}
+                  </span>
+                </span>
+                {isMapped ? <span style={mappedBadgeStyle}>Mapped</span> : null}
+              </button>
+            );
+          })
+        )}
+      </div>
+      <div style={helpTextStyle}>Select the exact Shopify variant that this supplier can fulfill.</div>
+    </div>
+  );
+}
+
 function Field({
   label, name, type = "text", required = false, defaultValue, step, placeholder,
 }: {
@@ -394,6 +488,31 @@ const formCardStyle = { background: "#ffffff", border: "1px solid #e1e3e5", bord
 const formGridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "16px" } as const;
 const fieldLabelStyle = { display: "flex", flexDirection: "column", gap: "6px", color: "#202223", fontSize: "13px", fontWeight: 600 } as const;
 const inputStyle = { height: "40px", border: "1px solid #8c9196", borderRadius: "8px", padding: "0 12px", fontSize: "14px", width: "100%", backgroundColor: "#ffffff", outline: "none", boxSizing: "border-box" } as const;
+const variantPickerStyle = { gridColumn: "span 2", display: "flex", flexDirection: "column", gap: "8px", minWidth: 0 } as const;
+const selectedVariantStyle = { border: "1px solid #95c9b4", background: "#effaf5", borderRadius: "8px", padding: "10px 12px", display: "flex", justifyContent: "space-between", gap: "12px", alignItems: "center" } as const;
+const selectedVariantTitleStyle = { color: "#202223", fontSize: "14px", fontWeight: 650, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } as const;
+const selectedVariantMetaStyle = { color: "#4b5563", fontSize: "12px", marginTop: "3px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } as const;
+const clearSelectionButtonStyle = { border: "1px solid #95c9b4", borderRadius: "6px", background: "#ffffff", color: "#006e52", height: "30px", padding: "0 10px", fontSize: "12px", fontWeight: 650, cursor: "pointer", flexShrink: 0 } as const;
+const variantResultsStyle = { border: "1px solid #dfe3e8", borderRadius: "8px", overflow: "hidden", background: "#ffffff", maxHeight: "288px", overflowY: "auto" } as const;
+const variantEmptyStyle = { padding: "14px", color: "#6d7175", fontSize: "13px" } as const;
+const variantOptionStyle = (selected: boolean) => ({
+  width: "100%",
+  border: 0,
+  borderBottom: "1px solid #f1f2f3",
+  background: selected ? "#f1f8f5" : "#ffffff",
+  color: "#202223",
+  padding: "11px 12px",
+  cursor: "pointer",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: "12px",
+  textAlign: "left",
+}) as const;
+const variantOptionTitleStyle = { display: "block", fontSize: "13px", fontWeight: 650, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } as const;
+const variantOptionMetaStyle = { display: "block", color: "#6d7175", fontSize: "12px", marginTop: "3px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } as const;
+const mappedBadgeStyle = { border: "1px solid #b7d8ff", background: "#f4f8ff", color: "#1f5199", borderRadius: "999px", padding: "3px 8px", fontSize: "11px", fontWeight: 650, flexShrink: 0 } as const;
+const helpTextStyle = { color: "#6d7175", fontSize: "12px" } as const;
 const buttonStyle = { height: "40px", border: "0", borderRadius: "8px", padding: "0 20px", background: "#008060", color: "#fff", fontWeight: 650, fontSize: "14px", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", textDecoration: "none" } as const;
 const smallBtnStyle = { height: "32px", border: "1px solid #c9cccf", borderRadius: "6px", padding: "0 12px", background: "#fff", color: "#202223", cursor: "pointer", fontSize: "13px", fontWeight: 600, display: "inline-flex", alignItems: "center" } as const;
 const checkboxLabelStyle = { display: "inline-flex", alignItems: "center", gap: "8px", color: "#202223", fontSize: "14px", fontWeight: 550, cursor: "pointer", userSelect: "none" } as const;
